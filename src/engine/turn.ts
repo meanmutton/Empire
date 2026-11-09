@@ -9,6 +9,7 @@ import { pruneLog } from './events';
 import { pruneDispatches } from './dispatch';
 import { relaxMarket } from './market';
 import { advanceContracts, expireRentals, refreshOffers } from './mercenaries';
+import { runTradeRoutes } from './routes';
 import { applyHazards, continuePaths, markClaims, resetMovement, resolveClaims, surveyWithFleets } from './movement';
 import { activeFaction } from './query';
 import { advanceResearch } from './research';
@@ -27,6 +28,7 @@ export function startTurn(state: GameState): void {
   }
   resolveClaims(state, f);
   runEconomy(state, f);
+  runTradeRoutes(state, f);
   runDiplomacy(state, f);
   advanceResearch(state, f);
   resetMovement(state, f);

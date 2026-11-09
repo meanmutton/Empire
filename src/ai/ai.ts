@@ -12,6 +12,7 @@ import { TECH_BY_ID, type TechField } from '../data/techs';
 import { applyAction, type Action } from '../engine/actions';
 import { talkEnd, talkStart } from './talk';
 import { offersFor } from '../engine/mercenaries';
+import { routeCapacity, routesOf } from '../engine/routes';
 import { say } from './voice';
 import { hasEmbassy, opinionOf } from '../engine/agents';
 import { getBit } from '../engine/bitset';
@@ -260,6 +261,10 @@ function build(ctx: Ctx): void {
         const d = pickDesign(ctx, hex, (x) => x.role === 'constructor');
         if (d && tryBuild({ type: 'build', hex, kind: 'ship', item: d.id })) continue;
       }
+      if (ctx.major && routesOf(state, me).length + count('civil') + queued('cargo') < routeCapacity(state, me) && routeTargets(ctx).length) {
+        const d = pickDesign(ctx, hex, (x) => x.role === 'cargo');
+        if (d && tryBuild({ type: 'build', hex, kind: 'ship', item: d.id })) continue;
+      }
       if (ctx.major && ctx.enemies.length && count('transport') + queued('transport') < 1) {
         const d = pickDesign(ctx, hex, (x) => x.role === 'transport' || x.role === 'cargo', true);
         if (d && tryBuild({ type: 'build', hex, kind: 'ship', item: d.id })) continue;
@@ -476,9 +481,38 @@ function fleets(ctx: Ctx): void {
       case 'constructor': constructor(ctx, fl, outpostTargets); break;
       case 'transport': transport(ctx, fl); break;
       case 'war': warFleet(ctx, fl); break;
+      case 'civil': tradeShip(ctx, fl); break;
       default: claimer(ctx, fl); break;
     }
   }
+}
+
+/** Systems a cargo ship could open a route to: trade partners' settled systems first, then far own ones. */
+function routeTargets(ctx: Ctx): number[] {
+  const { state, me } = ctx;
+  const used = new Set((state.routes ?? []).flatMap((r) => [r.to]));
+  const foreign: number[] = [], domestic: number[] = [];
+  state.map.hexes.forEach((h, i) => {
+    if (!h.owner || !h.system || h.system.development < 2 || used.has(i)) return;
+    if (h.owner === me) {
+      if (hexDistance(state.map, ctx.home, i) >= 6) domestic.push(i);
+      return;
+    }
+    const r = relation(state, me, h.owner);
+    if (r.status !== 'war' && r.contact && (r.agreements.includes('trade') || hasAbility(h.owner, 'freePort'))) foreign.push(i);
+  });
+  if (foreign.length) return foreign;
+  // Keep the last slot for a foreign route, which pays both sides more.
+  return routesOf(state, me).length < routeCapacity(state, me) - 1 ? domestic : [];
+}
+
+function tradeShip(ctx: Ctx, fl: Fleet): void {
+  if (act(ctx, { type: 'establishRoute', fleet: fl.id })) return;
+  if (fl.path.length) return;
+  const targets = routeTargets(ctx).filter((h) => !ctx.reserved.has(h)).sort((a, b) => hexDistance(ctx.state.map, fl.hex, a) - hexDistance(ctx.state.map, fl.hex, b));
+  if (!targets.length) return;
+  ctx.reserved.add(targets[0]);
+  if (moveTo(ctx, fl, targets[0]) && ctx.state.fleets[fl.id]?.hex === targets[0]) act(ctx, { type: 'establishRoute', fleet: fl.id });
 }
 
 function scout(ctx: Ctx, fl: Fleet, unexplored: number[]): void {

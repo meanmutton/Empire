@@ -27,6 +27,7 @@ import { isGameOver } from '../engine/victory';
 import { unreadCount, type Messaging } from './messaging';
 import { openMessages } from './screens/messages';
 import { openMarket } from './screens/market';
+import { routeCapacity, routeIncome, routesOf } from '../engine/routes';
 import { tokenImage } from './tokens';
 
 export interface GameHost {
@@ -332,6 +333,7 @@ export class GameUI {
         h('span', { class: 'k' }, 'Metals'), h('span', null, signed(inc.net.metals)),
         h('span', { class: 'k' }, 'Science'), h('span', null, signed(inc.net.science)),
         h('span', { class: 'k' }, 'Exotics'), h('span', null, signed(inc.net.exotics)),
+        h('span', { class: 'k' }, 'Trade routes'), h('span', null, `${routesOf(g, this.viewer).length}/${routeCapacity(g, this.viewer)} run, ${ICON.energy}${signed(routeIncome(g, this.viewer))} per turn`),
         h('span', { class: 'k' }, 'Population'), h('span', null, num(inc.gross.population)),
         h('span', { class: 'k' }, 'Territory'), h('span', null, `${g.map.hexes.filter((x) => x.owner === this.viewer).length} hexes, ${systems.length} systems`)),
       h('h3', null, 'Abilities'),
@@ -468,6 +470,7 @@ export class GameUI {
     if (roles.includes('colony') && hx.system && hx.system.development === 0) A('Colonize', { type: 'colonize', fleet: f.id });
     if (roles.includes('constructor') && hx.system && hx.system.development === 0) A('Found outpost', { type: 'outpost', fleet: f.id }, '30 metals, 10 energy');
     if (roles.includes('constructor') && hx.owner === this.viewer) A('Build starbase', { type: 'starbase', fleet: f.id });
+    if (roles.includes('cargo') && hx.system && hx.owner && hx.system.development >= 2) A('Open trade route', { type: 'establishRoute', fleet: f.id }, 'The cargo ship becomes a trade route back to your nearest settled system.');
     const armiesAboard = f.ships.flatMap((s) => g.ships[s].cargo).filter((c) => g.armies[c]);
     if (armiesAboard.length && hx.system && hx.owner !== this.viewer && hx.system.development > 0) A('Invade', { type: 'invade', fleet: f.id }, 'Planetary defense must be 0');
     const garrison = Object.values(g.armies).filter((a) => a.owner === this.viewer && a.hex === f.hex);

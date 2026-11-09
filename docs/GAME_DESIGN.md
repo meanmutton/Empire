@@ -279,6 +279,21 @@ energy too. Population grows 5% per turn toward capacity (faction-modified).
   Agreement with the Ophidians pays 20%.
 - For a better deal, trade one-on-one with another faction through a proposal (§9.4), where no fee applies.
 
+### 5.6 Trade routes
+- A **cargo ship** that reaches a settled system (development 2+) of an empire you have a **Trade Agreement**
+  with (or any Haldane system: Free Port) can **open a trade route**. The ship becomes the route, linked back
+  to your nearest settled system. You can also link two of your own systems at least 4 hexes apart (a
+  domestic route).
+- Every turn **both ends earn energy**: 2 + ¼ per hex of length (up to +10) + the average development of the
+  two systems, ×1.25 for a Trade Port at either end, ×1.5 if either side has Trade Hub. Domestic routes pay
+  60%.
+- You can run **2 routes, plus one per Trade Port** you own.
+- **Disruption**: armed warships of anyone at war with either partner, anywhere on the route, or a blockade
+  at either end, stop the income that turn. Ghal'tar raiders pocket what they cut. Haldane routes can't be
+  disrupted (Smugglers).
+- War between the partners, or losing either system, ends the route.
+- The Ryn'kai have no cargo ships: they don't run trade routes.
+
 ## 6. Units
 
 ### 6.1 Ship classes
@@ -427,7 +442,7 @@ plus `Vassal`/`Overlord` for minors.
 
 | Agreement | Effect |
 |-----------|--------|
-| Trade Agreement | Each side gets energy equal to 10% of the other's energy income |
+| Trade Agreement | Each side gets energy equal to 10% of the other's energy income, and they can open trade routes to each other (§5.6) |
 | Research Agreement | Each side gets 10% of the other's science |
 | Economic Agreement | Each side gets +10% metals; resources can be gifted at 1:1 |
 | Manufacturing Agreement | Ships cost 10% less, and each side can order ships built at the other's shipyard (§9.9) |

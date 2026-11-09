@@ -4,13 +4,14 @@ import { factionDef } from '../../data/factions';
 import { CLASSES, ROLES } from '../../data/ships';
 import { BASE_PRICES, exchangeFee, prices, quote } from '../../engine/market';
 import { contractCost, contractTerms, offersFor } from '../../engine/mercenaries';
+import { DOMESTIC_MIN_DISTANCE, routeCapacity, routeDisruptors, routesOf, routeValue } from '../../engine/routes';
 import { costText, factionChip } from '../format';
 import type { StockpileKind } from '../../engine/types';
 import { button, clear, h, modal } from '../dom';
 import { ICON, num } from '../format';
 import type { GameUI } from '../game-ui';
 
-export type MarketTab = 'exchange' | 'mercenaries' | 'contracts';
+export type MarketTab = 'exchange' | 'mercenaries' | 'contracts' | 'routes';
 
 const RES: StockpileKind[] = ['energy', 'metals', 'exotics'];
 
@@ -19,9 +20,9 @@ export function openMarket(ui: GameUI, tab: MarketTab = 'exchange'): void {
   modal('Market', body, { wide: true });
   const render = () => {
     clear(body);
-    const tabs: [MarketTab, string][] = [['exchange', 'Galactic exchange'], ['mercenaries', 'Mercenaries & services'], ['contracts', 'Shipyard contracts']];
+    const tabs: [MarketTab, string][] = [['exchange', 'Galactic exchange'], ['routes', 'Trade routes'], ['mercenaries', 'Mercenaries & services'], ['contracts', 'Shipyard contracts']];
     body.append(h('div', { class: 'tabs' }, ...tabs.map(([k, label]) => button(label, () => { tab = k; render(); }, { cls: `small ${tab === k ? 'on' : ''}` }))));
-    body.append(tab === 'exchange' ? exchangeTab(ui, render) : tab === 'mercenaries' ? mercenaryTab(ui, render) : contractTab(ui, render));
+    body.append(tab === 'exchange' ? exchangeTab(ui, render) : tab === 'routes' ? routesTab(ui, render) : tab === 'mercenaries' ? mercenaryTab(ui, render) : contractTab(ui, render));
   };
   render();
 }
@@ -99,5 +100,29 @@ function contractTab(ui: GameUI, rerender: () => void): HTMLElement {
     wrap.append(h('h3', null, 'Your orders'));
     for (const c of mine) wrap.append(h('div', null, `${design(c.design).name} at the ${factionDef(c.seller).short} shipyards, ${Math.ceil(c.remaining)} points to go`));
   }
+  return wrap;
+}
+
+function routesTab(ui: GameUI, rerender: () => void): HTMLElement {
+  const g = ui.game;
+  const me = ui.viewer;
+  const mine = (g.routes ?? []).filter((r) => r.owner === me || r.partner === me);
+  const wrap = h('div', null,
+    h('div', { class: 'dim', style: 'margin-bottom:8px' },
+      `Send a cargo ship to another empire's settled system (you need a Trade Agreement with them; the Haldane trade with anyone) and choose "Open trade route" there. The ship becomes a route back to your nearest settled system, and both of you earn energy every turn. You can also link two of your own systems at least ${DOMESTIC_MIN_DISTANCE} hexes apart. Enemy warships on the route, or a blockade at either end, cut it off that turn; war ends it.`),
+    h('div', null, `You run ${routesOf(g, me).length} of ${routeCapacity(g, me)} routes (each Trade Port adds one).`));
+  if (!mine.length) wrap.append(h('div', { class: 'dim', style: 'margin-top:8px' }, 'No trade routes yet.'));
+  const table = h('table', { class: 't', style: 'margin-top:8px' }, h('tr', null, h('th', null, 'Route'), h('th', null, 'With'), h('th', null, 'Per turn'), h('th', null, 'Status'), h('th', null, '')));
+  for (const r of mine) {
+    const cut = routeDisruptors(g, r);
+    const other = r.owner === me ? r.partner : r.owner;
+    table.append(h('tr', null,
+      h('td', null, `${g.map.hexes[r.from].system!.name} – ${g.map.hexes[r.to].system!.name}`),
+      h('td', null, other === me ? 'Domestic' : factionChip(other, true)),
+      h('td', null, `${ICON.energy}${num(routeValue(g, r))}`),
+      h('td', { class: cut.length ? 'bad' : 'good' }, cut.length ? `Cut by ${cut.map((f) => factionDef(f).short).join(', ')}` : 'Flowing'),
+      h('td', null, button('Close', () => { if (ui.act({ type: 'cancelRoute', route: r.id })) rerender(); }, { cls: 'small', disabled: !ui.myTurn }))));
+  }
+  if (mine.length) wrap.append(table);
   return wrap;
 }
