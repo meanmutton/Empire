@@ -7,6 +7,7 @@ import { CLASSES } from '../data/ships';
 import { log } from './events';
 import { newId } from './ids';
 import { connectedHexes, ownedHexes } from './query';
+import { techEffects } from './research';
 import { spawnShip } from './setup';
 import { RESOURCE_KINDS, type BuildOrder, type FactionId, type GameState, type Resources, type StarSystem } from './types';
 
@@ -21,6 +22,7 @@ export function slotsOf(sys: StarSystem): number {
 
 export function popCapOf(state: GameState, sys: StarSystem, owner: FactionId | null): number {
   let cap = PLANET_YIELDS[sys.planet].popCap * (0.4 + 0.2 * sys.development);
+  if (owner) cap *= 1 + techEffects(state, owner).popCap;
   for (const imp of sys.improvements) cap += IMPROVEMENTS[imp]?.popCap ?? 0;
   if (owner && hasAbility(owner, 'oceanWorlds') && PLANET_YIELDS[sys.planet].popCap >= 4) cap *= 1.5;
   return Math.round(cap * 10) / 10;
@@ -33,7 +35,7 @@ export function productionOf(state: GameState, hex: number): number {
   if (!sys || !owner) return 0;
   let p = BALANCE.productionByLevel[sys.development] + sys.population * 0.3;
   const m = modifiersOf(owner);
-  p *= 1 - m.buildTime;
+  p *= 1 - m.buildTime + techEffects(state, owner).production;
   if (state.factions[owner].flags.mobilized) p *= 2;
   p *= 1 - sys.unrest / 200;
   return Math.max(0, Math.round(p * 10) / 10);
@@ -43,7 +45,8 @@ export function productionOf(state: GameState, hex: number): number {
 export function factionMultiplier(state: GameState, faction: FactionId, res: keyof Resources): number {
   const f = state.factions[faction];
   const m = modifiersOf(faction);
-  let mult = 1 + (res === 'population' ? 0 : (m[res as 'energy' | 'metals' | 'science' | 'exotics'] ?? 0));
+  const te = techEffects(state, faction);
+  let mult = 1 + (res === 'population' ? 0 : (m[res as 'energy' | 'metals' | 'science' | 'exotics'] ?? 0) + (te[res as 'energy' | 'metals' | 'science' | 'exotics'] ?? 0));
   const plan = f.flags.planResource;
   if (plan !== undefined && plan >= 0 && RESOURCE_KINDS[plan] === res) {
     if (state.turn < f.flags.planBoostUntil) mult += 0.5;
@@ -73,6 +76,7 @@ export function systemYield(state: GameState, hex: number, connected?: Set<numbe
   const dev = BALANCE.developmentYield[sys.development];
   let metals = p.metals;
   if (sys.planet === 'asteroidBelt' && hasAbility(owner, 'deepCoreMining')) metals *= 2;
+  if (sys.planet === 'asteroidBelt') metals *= 1 + techEffects(state, owner).asteroidMetals;
   let starEnergy = st.energy;
   if (hasAbility(owner, 'stellarFeeding')) starEnergy *= 2;
   let starExotics = st.exotics;
@@ -147,7 +151,8 @@ export function runEconomy(state: GameState, faction: FactionId): IncomeReport {
   f.research.progress += report.net.science;
 
   const m = modifiersOf(faction);
-  const growthMult = 1 + m.popGrowth + (hasAbility(faction, 'rapidBreeding') ? 0.5 : 0);
+  const te = techEffects(state, faction);
+  const growthMult = 1 + m.popGrowth + te.popGrowth + (hasAbility(faction, 'rapidBreeding') ? 0.5 : 0);
   for (const hex of ownedHexes(state, faction)) {
     const sys = state.map.hexes[hex].system;
     if (!sys || sys.development < 2) continue;
@@ -158,7 +163,7 @@ export function runEconomy(state: GameState, faction: FactionId): IncomeReport {
     } else if (sys.population > cap) {
       sys.population = round1(Math.max(cap, sys.population - 0.5));
     }
-    sys.unrest = Math.max(0, sys.unrest - (hasAbility(faction, 'consensus') ? 10 : 5));
+    sys.unrest = Math.max(0, sys.unrest - (hasAbility(faction, 'consensus') ? 10 : 5) - te.unrestDecay);
   }
   advanceBuilds(state, faction);
   return report;

@@ -5,6 +5,7 @@ import { IMPROVEMENTS } from '../data/improvements';
 import { log } from './events';
 import { atWar } from './query';
 import { Rng } from './rng';
+import { techEffects } from './research';
 import type { FactionId, GameState } from './types';
 
 export type Result = { ok: true; text?: string } | { ok: false; reason: string };
@@ -45,7 +46,7 @@ export function unloadArmy(state: GameState, armyId: string): Result {
 
 export function armyStrength(state: GameState, faction: FactionId, base: number, xp: number): number {
   const m = modifiersOf(faction);
-  let s = base * (1 + m.army) * (1 + 0.1 * xp);
+  let s = base * (1 + m.army + techEffects(state, faction).army) * (1 + 0.1 * xp);
   if (hasAbility(faction, 'zealots')) s *= 1.5;
   return s;
 }

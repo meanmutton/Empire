@@ -17,6 +17,7 @@ import { neighbors } from './hex';
 import { newId } from './ids';
 import { removeShip } from './movement';
 import { atWar } from './query';
+import { techEffects } from './research';
 import { Rng } from './rng';
 import { spawnShip } from './setup';
 import type { FactionId, GameState } from './types';
@@ -38,6 +39,8 @@ interface Unit {
   weight: number;
   xp: number;
   cost: number;
+  /** Durability multiplier from tech (hull, starbase, planetary). */
+  tough: number;
 }
 
 interface Party {
@@ -57,7 +60,7 @@ function shieldEnv(state: GameState, hex: number): number {
 }
 
 function effHP(u: Unit, env: number): number {
-  return u.kind === 'ship' ? u.hull + 2 * u.shields * env : u.hull;
+  return (u.kind === 'ship' ? u.hull + 2 * u.shields * env : u.hull) * u.tough;
 }
 
 function collectParties(state: GameState, hex: number, active: FactionId): Party[] {
@@ -69,12 +72,14 @@ function collectParties(state: GameState, hex: number, active: FactionId): Party
   };
   for (const fl of Object.values(state.fleets)) {
     if (fl.hex !== hex) continue;
+    const te = techEffects(state, fl.owner);
     for (const sid of fl.ships) {
       const s = state.ships[sid];
       const d = design(s.design);
       party(fl.owner).units.push({
-        kind: 'ship', id: sid, hull: s.hull, maxHull: d.stats.hull, shields: d.stats.shields,
-        energy: d.stats.energy, missile: d.stats.missile, fighters: s.fighters, pd: d.stats.pd,
+        kind: 'ship', id: sid, hull: s.hull, maxHull: d.stats.hull, shields: d.stats.shields * (1 + te.shields),
+        energy: d.stats.energy * (1 + te.energyWeapons + te.attack), missile: d.stats.missile * (1 + te.missiles + te.attack),
+        fighters: s.fighters * (1 + te.fighters), pd: d.stats.pd * (1 + te.pointDefense), tough: 1 + te.hull,
         weight: d.cls === 'fighter' ? 0.5 : DESIGN_WEIGHT(d.cls) * (ROLES[d.role].escort ? 2.5 : 1),
         xp: s.xp, cost: d.cost.metals + d.cost.energy,
       });
@@ -83,19 +88,22 @@ function collectParties(state: GameState, hex: number, active: FactionId): Party
   for (const b of Object.values(state.starbases)) {
     if (b.hex !== hex) continue;
     const spec = BALANCE.starbase[b.tier as 1 | 2 | 3]!;
+    const te = techEffects(state, b.owner);
     party(b.owner).units.push({
-      kind: 'starbase', id: b.id, hull: b.hull, maxHull: spec.hull, shields: 0, energy: spec.defense,
+      kind: 'starbase', id: b.id, hull: b.hull, maxHull: spec.hull, shields: 0, energy: spec.defense * (1 + te.attack),
       missile: spec.defense / 2, fighters: 0, pd: spec.defense / 4, weight: 8, xp: 1, cost: spec.metals,
+      tough: 1 + te.starbaseHull,
     });
   }
   const h = state.map.hexes[hex];
   const sys = h.system;
   if (sys && sys.development > 0 && sys.defense > 0) {
     const owner = h.owner ?? INDEPENDENT;
-    const attack = sys.defense * BALANCE.defenseAttackPerPoint;
+    const pd = h.owner ? 1 + techEffects(state, h.owner).planetDefense : 1;
+    const attack = sys.defense * BALANCE.defenseAttackPerPoint * pd;
     party(owner).units.push({
       kind: 'planet', id: String(hex), hull: sys.defense * 5, maxHull: sys.defense * 5, shields: 0,
-      energy: attack / 2, missile: attack / 2, fighters: 0, pd: sys.defense / 4, weight: 6, xp: 1, cost: 0,
+      energy: attack / 2, missile: attack / 2, fighters: 0, pd: sys.defense / 4, weight: 6, xp: 1, cost: 0, tough: pd,
     });
   }
   const list = [...parties.values()];
@@ -320,6 +328,7 @@ function applyDamage(state: GameState, rng: Rng, hex: number, q: Party, pool: nu
       if (t.u.kind !== 'ship') applyUnitHull(state, hex, t.u, 0);
     } else {
       const frac = effHP(t.u, env) > 0 ? t.u.hull / effHP(t.u, env) : 1;
+      // frac converts effective damage (which includes shields and toughness) back into hull points.
       t.hp -= hit;
       applyUnitHull(state, hex, t.u, Math.max(1, t.u.hull - hit * frac));
       t.u.hull = Math.max(1, t.u.hull - hit * frac);

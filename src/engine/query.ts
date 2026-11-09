@@ -1,5 +1,7 @@
 /** Read-only helpers over the game state. */
 import { design } from '../data/designs';
+import { CLASSES } from '../data/ships';
+import { techEffects } from './research';
 import { relationKey } from './ids';
 import { neighbors } from './hex';
 import type { FactionId, GameState, Relation, RelationStatus } from './types';
@@ -68,11 +70,13 @@ export function connectedHexes(state: GameState, faction: FactionId): Set<number
 
 export function fleetSpeed(state: GameState, fleetId: string): number {
   const f = state.fleets[fleetId];
+  const te = techEffects(state, f.owner);
   let speed = Infinity;
   for (const sid of f.ships) {
     const d = design(state.ships[sid].design);
     if (d.cls === 'fighter') continue;
-    speed = Math.min(speed, d.stats.speed);
+    const small = CLASSES[d.cls].size <= CLASSES.frigate.size ? te.smallShipSpeed : 0;
+    speed = Math.min(speed, d.stats.speed + te.speed + small);
   }
   return isFinite(speed) ? speed : 0;
 }
