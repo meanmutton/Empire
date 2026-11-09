@@ -9,16 +9,25 @@ export interface GameRecord extends Lobby {
   hostToken: string;
   /** Pending lobby members who joined but have not claimed a faction: tokenHash → name. */
   pending: Record<string, string>;
+  /**
+   * Key of the stored state the game currently points at, and the one before it (kept so a player who is
+   * mid-download still gets a complete state). Older games without it use String(version).
+   */
+  stateKey?: string;
+  prevStateKey?: string;
 }
 
 export interface Store {
   getGame(code: string): Promise<GameRecord | null>;
   /** Writes the game; when `expectVersion` is given the write only succeeds if the stored version matches. */
   putGame(game: GameRecord, expectVersion?: number): Promise<boolean>;
-  /** Packed state for a version. States are written before the game record points at them. */
-  getState(code: string, version: number): Promise<string | null>;
-  putState(code: string, version: number, data: string): Promise<void>;
-  deleteState(code: string, version: number): Promise<void>;
+  /**
+   * Packed states by key. Every upload gets its own key; the game record's `stateKey` says which one is
+   * current, so a losing concurrent submission can never overwrite the winner's state.
+   */
+  getState(code: string, key: string): Promise<string | null>;
+  putState(code: string, key: string, data: string): Promise<void>;
+  deleteState(code: string, key: string): Promise<void>;
   putChunk(code: string, upload: string, i: number, data: string): Promise<void>;
   /** All chunks 0..n-1 of an upload, or null if any are missing. */
   getChunks(code: string, upload: string, n: number): Promise<string[] | null>;
@@ -48,9 +57,9 @@ export class MemoryStore implements Store {
     this.games.set(game.code, structuredClone(game));
     return true;
   }
-  async getState(code: string, version: number) { return this.states.get(`${code}@${version}`) ?? null; }
-  async putState(code: string, version: number, data: string) { this.states.set(`${code}@${version}`, data); }
-  async deleteState(code: string, version: number) { this.states.delete(`${code}@${version}`); }
+  async getState(code: string, key: string) { return this.states.get(`${code}@${key}`) ?? null; }
+  async putState(code: string, key: string, data: string) { this.states.set(`${code}@${key}`, data); }
+  async deleteState(code: string, key: string) { this.states.delete(`${code}@${key}`); }
   async putChunk(code: string, upload: string, i: number, data: string) { this.chunks.set(`${code}/${upload}/${i}`, data); }
   async getChunks(code: string, upload: string, n: number) {
     const out: string[] = [];

@@ -144,3 +144,91 @@ describe('relay chat', () => {
     expect((long[0] as { message: { text: string } }).message.text).toHaveLength(1000);
   });
 });
+
+describe('relay concurrency', () => {
+  /** Holds every conditional game write until `n` states have been stored, forcing the racy interleaving. */
+  class RaceStore extends MemoryStore {
+    armed = false;
+    private puts = 0;
+    private waiters: (() => void)[] = [];
+    constructor(private need: number) { super(); }
+    override async putState(code: string, key: string, data: string) {
+      await super.putState(code, key, data);
+      this.puts++;
+      if (this.armed && this.puts >= this.need) for (const w of this.waiters.splice(0)) w();
+    }
+    override async putGame(game: Parameters<MemoryStore['putGame']>[0], expectVersion?: number) {
+      if (this.armed && expectVersion !== undefined && this.puts < this.need) await new Promise<void>((r) => this.waiters.push(r));
+      return super.putGame(game, expectVersion);
+    }
+  }
+
+  function raceSetup() {
+    const store = new RaceStore(2);
+    const inbox = new Map<string, ServerMessage[]>();
+    const ctx: Ctx = { store, now: () => 1_000_000, send: async (c, m) => { inbox.set(c, [...(inbox.get(c) ?? []), m]); return true; } };
+    const send = async (conn: string, msg: ClientMessage) => { inbox.set(conn, []); await handleMessage(ctx, conn, JSON.stringify(msg)); return inbox.get(conn)!; };
+    return { store, inbox, ctx, send };
+  }
+
+  async function download(send: ReturnType<typeof raceSetup>['send'], code: string, token: string) {
+    const got = await send('reader', { action: 'get', req: 99, code, token });
+    return got.filter((m) => m.type === 'state').map((m) => (m as { data: string }).data).join('');
+  }
+
+  it('two simultaneous valid submissions: the loser never overwrites the winner', async () => {
+    const { store, inbox, ctx, send } = raceSetup();
+    const created = await send('h', { action: 'create', req: 1, name: 'Ann', faction: 'concord', token: 'tA', config, protocol: PROTOCOL_VERSION });
+    const code = (created[0] as { lobby: { code: string } }).lobby.code;
+    await send('h', { action: 'upload', req: 2, code, token: 'tA', upload: 'init', i: 0, n: 1, data: 'S0' });
+    await send('h', { action: 'start', req: 3, code, token: 'tA', upload: 'init', n: 1, active: 'concord', turn: 1 });
+    // The same player on two devices uploads two different turns.
+    await send('d1', { action: 'upload', req: 4, code, token: 'tA', upload: 'one', i: 0, n: 1, data: 'FROM-DEVICE-ONE' });
+    await send('d2', { action: 'upload', req: 5, code, token: 'tA', upload: 'two', i: 0, n: 1, data: 'FROM-DEVICE-TWO' });
+    store.armed = true;
+    inbox.set('d1', []); inbox.set('d2', []);
+    await Promise.all([
+      handleMessage(ctx, 'd1', JSON.stringify({ action: 'submit', req: 6, code, token: 'tA', upload: 'one', n: 1, base: 1, active: 'rynkai', turn: 1, finished: false })),
+      handleMessage(ctx, 'd2', JSON.stringify({ action: 'submit', req: 7, code, token: 'tA', upload: 'two', n: 1, base: 1, active: 'rynkai', turn: 1, finished: false })),
+    ]);
+    store.armed = false;
+    const won1 = inbox.get('d1')!.some((m) => m.type === 'ack');
+    const won2 = inbox.get('d2')!.some((m) => m.type === 'ack');
+    expect(won1 !== won2).toBe(true);
+    expect(await download(send, code, 'tA')).toBe(won1 ? 'FROM-DEVICE-ONE' : 'FROM-DEVICE-TWO');
+    expect((await store.getGame(code))!.version).toBe(2);
+  });
+
+  it('a double-clicked start keeps exactly one initial state', async () => {
+    const { store, inbox, ctx, send } = raceSetup();
+    const created = await send('h', { action: 'create', req: 1, name: 'Ann', faction: 'concord', token: 'tA', config, protocol: PROTOCOL_VERSION });
+    const code = (created[0] as { lobby: { code: string } }).lobby.code;
+    await send('h', { action: 'upload', req: 2, code, token: 'tA', upload: 'a', i: 0, n: 1, data: 'GALAXY-A' });
+    await send('h', { action: 'upload', req: 3, code, token: 'tA', upload: 'b', i: 0, n: 1, data: 'GALAXY-B' });
+    store.armed = true;
+    inbox.set('x', []); inbox.set('y', []);
+    await Promise.all([
+      handleMessage(ctx, 'x', JSON.stringify({ action: 'start', req: 4, code, token: 'tA', upload: 'a', n: 1, active: 'concord', turn: 1 })),
+      handleMessage(ctx, 'y', JSON.stringify({ action: 'start', req: 5, code, token: 'tA', upload: 'b', n: 1, active: 'concord', turn: 1 })),
+    ]);
+    store.armed = false;
+    const wonA = inbox.get('x')!.some((m) => m.type === 'ack');
+    expect(wonA !== inbox.get('y')!.some((m) => m.type === 'ack')).toBe(true);
+    expect(await download(send, code, 'tA')).toBe(wonA ? 'GALAXY-A' : 'GALAXY-B');
+    // The losing candidate was cleaned up.
+    expect([...store.states.keys()].filter((k) => k.startsWith(code))).toHaveLength(1);
+  });
+
+  it('keeps only the current and previous states', async () => {
+    const { send, store } = setup();
+    const created = await send('h', { action: 'create', req: 1, name: 'Ann', faction: 'concord', token: 'tA', config, protocol: PROTOCOL_VERSION });
+    const code = (created[0] as { lobby: { code: string } }).lobby.code;
+    await send('h', { action: 'upload', req: 2, code, token: 'tA', upload: 'u0', i: 0, n: 1, data: 'S0' });
+    await send('h', { action: 'start', req: 3, code, token: 'tA', upload: 'u0', n: 1, active: 'concord', turn: 1 });
+    for (let v = 1; v <= 4; v++) {
+      await send('h', { action: 'upload', req: 10 + v, code, token: 'tA', upload: `u${v}`, i: 0, n: 1, data: `S${v}` });
+      await send('h', { action: 'submit', req: 20 + v, code, token: 'tA', upload: `u${v}`, n: 1, base: v, active: 'concord', turn: v, finished: false });
+    }
+    expect([...store.states.keys()].filter((k) => k.startsWith(code))).toHaveLength(2);
+  });
+});
