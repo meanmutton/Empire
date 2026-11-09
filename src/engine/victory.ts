@@ -14,7 +14,6 @@ import { factionIncome } from './economy';
 import { log } from './events';
 import { relation } from './query';
 import { completedFields } from './research';
-import { routeDisruptors } from './routes';
 import type { FactionId, GameState } from './types';
 
 export function score(state: GameState, faction: FactionId): number {
@@ -69,28 +68,11 @@ export function incomeShare(state: GameState, faction: FactionId): number {
   return total > 0 ? mine / total : 0;
 }
 
-/** Who `faction` has flowing trade routes with right now. */
-function tradePartners(state: GameState, faction: FactionId): Set<FactionId> {
-  const out = new Set<FactionId>();
-  for (const r of state.routes ?? []) {
-    if (r.owner === r.partner || (r.owner !== faction && r.partner !== faction)) continue;
-    if (routeDisruptors(state, r).length) continue;
-    out.add(r.owner === faction ? r.partner : r.owner);
-  }
-  return out;
-}
-
 /** Instant condition for streak victories (checked each round). */
 function conditionNow(state: GameState, f: FactionId, v: VictoryId): boolean {
   switch (v) {
     case 'economicSupremacy':
       return incomeShare(state, f) >= ECONOMIC_SHARE;
-    case 'tradeEmpire': {
-      const partners = tradePartners(state, f);
-      const majors = majorsIn(state).filter((m) => m.alive && m.id !== f);
-      const minors = [...partners].filter((p) => state.factions[p].kind === 'minor').length;
-      return majors.every((m) => partners.has(m.id)) && minors >= 4;
-    }
     case 'singularity':
       return completedFields(state, f).length >= 5 && coreLabs(state, f) >= 3;
     case 'grandAlliance': {
@@ -140,15 +122,6 @@ export function progress(state: GameState, f: FactionId, v: VictoryId): Progress
       return out(share < ECONOMIC_SHARE ? 0.9 * share / ECONOMIC_SHARE : 0.9 + 0.1 * s / STREAK_TURNS,
         `${Math.round(share * 100)}% of galactic income (need ${ECONOMIC_SHARE * 100}%), ${streakText(s)}`, s >= STREAK_TURNS);
     }
-    case 'tradeEmpire': {
-      const partners = tradePartners(state, f);
-      const majors = others.filter((m) => m.alive);
-      const withMajors = majors.filter((m) => partners.has(m.id)).length;
-      const minors = [...partners].filter((p) => state.factions[p].kind === 'minor').length;
-      const s = streak(state, f, v);
-      const base = ((majors.length ? withMajors / majors.length : 1) + Math.min(minors, 4) / 4) / 2;
-      return out(base * 0.9 + 0.1 * s / STREAK_TURNS, `routes with ${withMajors}/${majors.length} great powers and ${minors}/4 minors, ${streakText(s)}`, s >= STREAK_TURNS);
-    }
     case 'ascendance': {
       const fields = completedFields(state, f).length;
       const gate = !!fs.flags.ascensionGate;
@@ -186,7 +159,7 @@ export function progress(state: GameState, f: FactionId, v: VictoryId): Progress
   }
 }
 
-const STREAKED: VictoryId[] = ['economicSupremacy', 'tradeEmpire', 'singularity', 'grandAlliance'];
+const STREAKED: VictoryId[] = ['economicSupremacy', 'singularity', 'grandAlliance'];
 
 /** Cheap win check: streak victories read their stored streak (updated once per round). */
 function isMet(state: GameState, f: FactionId, v: VictoryId): boolean {

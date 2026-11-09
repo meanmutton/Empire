@@ -34,7 +34,7 @@ const SECTIONS: [string, string[]][] = [
   ]],
   ['Winning', [
     'Each great power wins in its own ways (see the Victory screen and the faction cards), and each has one victory of its own: Ascendance (Concord), Glorious Campaign (Ryn’kai), Hegemony (Varrhen), World Revolution (Krasnyr), Singularity (Lattice).',
-    'Shared paths include Conquest, Economic Supremacy, Trade Empire, Grand Alliance and the Galactic Council. If nobody wins by the turn limit (200 rounds by default), the highest score wins.',
+    'Shared paths include Conquest, Economic Supremacy, Grand Alliance and the Galactic Council. If nobody wins by the turn limit (200 rounds by default), the highest score wins.',
     'Station spies at a rival’s home system to learn how close they are to winning; idle spies at your own home guard against theirs.',
   ]],
 ];

@@ -2,7 +2,7 @@
 import type { FactionId } from '../engine/types';
 
 export const VICTORY_IDS = [
-  'conquest', 'hegemony', 'gloriousCampaign', 'economicSupremacy', 'tradeEmpire', 'ascendance', 'singularity',
+  'conquest', 'hegemony', 'gloriousCampaign', 'economicSupremacy', 'ascendance', 'singularity',
   'worldRevolution', 'grandAlliance', 'galacticCouncil', 'score',
 ] as const;
 export type VictoryId = (typeof VICTORY_IDS)[number];
@@ -22,7 +22,6 @@ export const VICTORIES: Record<VictoryId, VictoryDef> = {
   hegemony: { name: 'Hegemony', family: 'conquest', unique: 'varrhen', text: 'Hold the home systems of 2 other great powers and rule 4 minor factions as vassals.' },
   gloriousCampaign: { name: 'Glorious Campaign', family: 'conquest', unique: 'rynkai', text: 'Win many battles (more on bigger maps), including at least one against every other great power.' },
   economicSupremacy: { name: 'Economic Supremacy', family: 'economic', text: 'Produce 35% of the galaxy’s income (energy, metals and exotics) for 10 turns in a row.' },
-  tradeEmpire: { name: 'Trade Empire', family: 'economic', text: 'Keep flowing trade routes with every other surviving great power and 4 minor factions for 10 turns in a row.' },
   ascendance: { name: 'Ascendance', family: 'technological', unique: 'concord', text: 'Complete every tech in 4 fields and build the Ascension Gate.' },
   singularity: { name: 'Singularity', family: 'technological', unique: 'lattice', text: 'Complete every tech in 5 fields and run Research Labs on 3 Core Worlds for 10 turns in a row.' },
   worldRevolution: { name: 'World Revolution', family: 'other', unique: 'krasnyr', text: 'Have 6 systems defect to you through subversion and rule 3 minor factions as vassals.' },
@@ -33,11 +32,11 @@ export const VICTORIES: Record<VictoryId, VictoryDef> = {
 
 /** Who may pursue what in a Classic game. */
 export const AVAILABILITY: Record<FactionId, VictoryId[]> = {
-  concord: ['ascendance', 'economicSupremacy', 'tradeEmpire', 'grandAlliance', 'galacticCouncil', 'score'],
+  concord: ['ascendance', 'economicSupremacy', 'grandAlliance', 'galacticCouncil', 'score'],
   rynkai: ['conquest', 'gloriousCampaign', 'score'],
-  varrhen: ['conquest', 'hegemony', 'economicSupremacy', 'tradeEmpire', 'grandAlliance', 'galacticCouncil', 'score'],
+  varrhen: ['conquest', 'hegemony', 'economicSupremacy', 'grandAlliance', 'galacticCouncil', 'score'],
   krasnyr: ['conquest', 'worldRevolution', 'economicSupremacy', 'grandAlliance', 'galacticCouncil', 'score'],
-  lattice: ['conquest', 'singularity', 'economicSupremacy', 'tradeEmpire', 'grandAlliance', 'galacticCouncil', 'score'],
+  lattice: ['conquest', 'singularity', 'economicSupremacy', 'grandAlliance', 'galacticCouncil', 'score'],
 };
 
 export type PresetId = 'classic' | 'peaceful' | 'totalWar';
@@ -55,6 +54,8 @@ export interface PresetDef {
 
 const ALL_MAJORS = ['concord', 'rynkai', 'varrhen', 'krasnyr', 'lattice'];
 const NON_MILITARY = VICTORY_IDS.filter((v) => VICTORIES[v].family !== 'conquest');
+/** Military victories, plus Score so the turn limit still ends the game. */
+const MILITARY = VICTORY_IDS.filter((v) => VICTORIES[v].family === 'conquest' || v === 'score');
 
 export const PRESETS: Record<PresetId, PresetDef> = {
   classic: { name: 'Classic', text: 'All five great powers, each with its own ways to win.', majors: ALL_MAJORS, victories: [...VICTORY_IDS] },
@@ -62,7 +63,10 @@ export const PRESETS: Record<PresetId, PresetDef> = {
     name: 'Peaceful', text: 'Four great powers (no Ryn’kai) and no military victories: win by economy, science, diplomacy or revolution.',
     majors: ALL_MAJORS.filter((m) => m !== 'rynkai'), victories: NON_MILITARY,
   },
-  totalWar: { name: 'Total War', text: 'Classic, except that even the Concord may win by Conquest.', majors: ALL_MAJORS, victories: [...VICTORY_IDS], extra: { concord: ['conquest'] } },
+  totalWar: {
+    name: 'Total War', text: 'Military victories only (Conquest, Hegemony, Glorious Campaign), and even the Concord may win by Conquest.',
+    majors: ALL_MAJORS, victories: MILITARY, extra: { concord: ['conquest'] },
+  },
 };
 
 /** Battles the Ryn'kai must win for a Glorious Campaign: 45 on a standard 50×30 map, scaled by map area. */

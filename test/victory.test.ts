@@ -38,7 +38,11 @@ describe('who can win how', () => {
     for (const m of p.config.majors) for (const v of ['conquest', 'hegemony', 'gloriousCampaign']) expect(availableVictories(p, m)).not.toContain(v);
     expect(() => createGame({ seed: 'peace', seats: [{ faction: 'rynkai', name: 'R' }], preset: 'peaceful' })).toThrow();
     const t = createGame({ seed: 'tw', seats: [{ faction: 'concord', name: 'A' }], preset: 'totalWar' });
-    expect(availableVictories(t, 'concord')).toContain('conquest');
+    expect([...availableVictories(t, 'concord')].sort()).toEqual(['conquest', 'score']);
+    // Total War is military victories only (plus Score at the turn limit).
+    for (const m of t.config.majors) for (const v of availableVictories(t, m)) expect(['conquest', 'hegemony', 'gloriousCampaign', 'score']).toContain(v);
+    expect(availableVictories(t, 'varrhen')).toContain('hegemony');
+    expect(availableVictories(t, 'lattice')).not.toContain('singularity');
   });
 
   it('defaults to a 200-round turn limit', () => {

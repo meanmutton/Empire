@@ -536,13 +536,15 @@ Each great power can only win in ways that fit its ideology, and each has exactl
 | **Hegemony** ★ Varrhen | Hold the home systems of 2 other great powers and rule 4 minor factions as vassals. |
 | **Glorious Campaign** ★ Ryn'kai | Win battles (a battle where you lose fewer ships than your enemies), including at least one against every other great power. 45 wins on a standard map, scaled by map area (24 small, 77 huge). *(tunable)* |
 | **Economic Supremacy** | Produce 35% of the galaxy's income (energy + metals + exotics) for 10 turns in a row. |
-| **Trade Empire** | Keep flowing trade routes with every other surviving great power and 4 minor factions for 10 turns in a row. |
 | **Ascendance** ★ Concord | Complete every tech in 4 fields and build the Ascension Gate. |
 | **Singularity** ★ Lattice | Complete every tech in 5 fields and run Research Labs on 3 Core Worlds for 10 turns in a row. |
 | **World Revolution** ★ Krasnyr | Have 6 systems defect to you through subversion, and rule 3 minor factions as vassals. |
 | **Grand Alliance** | Every surviving great power is allied with you for 10 turns, and you hold the most systems among them. |
 | **Galactic Council** | Win two council elections in a row with two-thirds of the vote. |
 | **Score** | Highest score when the turn limit (default **200 rounds**) is reached. |
+
+Games are expected to be decided around **rounds 95–110**. The 200-round limit is a maximum length, and Score
+decides only games that reach it.
 
 **Galactic Council**: every 20 turns, every living faction (minors included) casts its population as votes
 for the eligible great power it likes most, counting itself at +50 if it is a candidate. Vassals vote with
@@ -556,7 +558,6 @@ its vassals).
 | Conquest | — | ✓ | ✓ | ✓ | ✓ |
 | Unique (★) | Ascendance | Glorious Campaign | Hegemony | World Revolution | Singularity |
 | Economic Supremacy | ✓ | — | ✓ | ✓ | ✓ |
-| Trade Empire | ✓ | — | ✓ | — | ✓ |
 | Grand Alliance | ✓ | — | ✓ | ✓ | ✓ |
 | Galactic Council | ✓ | — | ✓ | ✓ | ✓ |
 | Score | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -568,7 +569,8 @@ a good empire for new players.
 - **Classic**: all five great powers, as in the table.
 - **Peaceful**: four great powers (no Ryn'kai), and no military victories (Conquest, Hegemony, Glorious
   Campaign).
-- **Total War**: Classic, plus the Concord may also win by Conquest.
+- **Total War**: military victories only (Conquest, Hegemony, Glorious Campaign), and the Concord may win by
+  Conquest too. Score still decides a game that reaches the turn limit.
 
 ### 10.3 Knowing how close your rivals are
 You always see your own progress. A rival's progress is secret unless your spies are at its home system:
