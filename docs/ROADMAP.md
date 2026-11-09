@@ -14,9 +14,9 @@ Status key: `[ ]` not started, `[~]` PR open, `[x]` merged.
 
 - [~] **01 Design and scaffold**: game design doc, this roadmap, Vite + TypeScript + Vitest project,
   single-file HTML build, CI.
-- [ ] **02 Engine core**: seeded RNG, hex math (axial/offset, neighbors, distance, rings, pathfinding),
+- [~] **02 Engine core**: seeded RNG, hex math (axial/offset, neighbors, distance, rings, pathfinding),
   core state types, serialization.
-- [ ] **03 Faction and unit data**: 5 majors, 30 minors, abilities, ship classes, roles, per-faction rosters,
+- [~] **03 Faction and unit data**: 5 majors, 30 minors, abilities, ship classes, roles, per-faction rosters,
   improvements, balance constants.
 - [ ] **04 Map generation**: hex types, major/minor placement with spacing, starting territories,
   fairness pass, wormholes; tests on the spacing and adjacency rules.
