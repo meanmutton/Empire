@@ -8,7 +8,7 @@ export const BALANCE = {
   defenseAttackPerPoint: 1.2,
   maxShipsPerFleet: 6,
 
-  ownedHexEnergy: 0.5,
+  ownedHexEnergy: 0.3,
   disconnectedPenalty: 0.5,
   populationGrowth: 0.05,
   repairFriendly: 0.1,

@@ -21,7 +21,7 @@ export interface ImprovementDef {
 }
 
 export const IMPROVEMENTS: Record<string, ImprovementDef> = {
-  mine:         { name: 'Mine',            text: '+3 metals.',                               cost: { metals: 20, energy: 10, exotics: 0 }, buildPoints: 6,  yields: { metals: 3 }, minLevel: 1, tech: null },
+  mine:         { name: 'Mine',            text: '+4 metals.',                               cost: { metals: 20, energy: 10, exotics: 0 }, buildPoints: 6,  yields: { metals: 4 }, minLevel: 1, tech: null },
   powerPlant:   { name: 'Power Plant',     text: '+3 energy.',                               cost: { metals: 20, energy: 5,  exotics: 0 }, buildPoints: 6,  yields: { energy: 3 }, minLevel: 1, tech: null },
   lab:          { name: 'Research Lab',    text: '+3 science.',                              cost: { metals: 25, energy: 15, exotics: 0 }, buildPoints: 8,  yields: { science: 3 }, minLevel: 1, tech: null },
   habitat:      { name: 'Habitat',         text: '+4 population capacity.',                  cost: { metals: 30, energy: 10, exotics: 0 }, buildPoints: 8,  popCap: 4, minLevel: 2, tech: null },
@@ -36,7 +36,7 @@ export const IMPROVEMENTS: Record<string, ImprovementDef> = {
 
 /** Base yields of a planet type at development multiplier 1. */
 export const PLANET_YIELDS: Record<PlanetKind, { name: string; energy: number; metals: number; science: number; exotics: number; popCap: number }> = {
-  terran:       { name: 'Terran',        energy: 2, metals: 2, science: 2, exotics: 0, popCap: 10 },
+  terran:       { name: 'Terran',        energy: 2, metals: 3, science: 2, exotics: 0, popCap: 10 },
   ocean:        { name: 'Ocean',         energy: 2, metals: 1, science: 2, exotics: 0, popCap: 9 },
   jungle:       { name: 'Jungle',        energy: 1, metals: 1, science: 3, exotics: 0, popCap: 8 },
   desert:       { name: 'Desert',        energy: 3, metals: 2, science: 1, exotics: 0, popCap: 5 },
