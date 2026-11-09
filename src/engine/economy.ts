@@ -199,7 +199,9 @@ export function checkBuild(state: GameState, faction: FactionId, hex: number, ki
       if (!yard) return { ok: false, reason: 'Needs a shipyard.' };
       if (yard === 'light' && CLASSES[d.cls].size > CLASSES.destroyer.size) return { ok: false, reason: 'Needs a heavy shipyard.' };
       if (d.cost.population > 0 && sys.population < d.cost.population + 1) return { ok: false, reason: 'Not enough population for the crew.' };
-      return { ok: true, cost: { ...d.cost, points: d.buildPoints } };
+      const manufacturing = Object.values(state.relations).some((r) => (r.a === faction || r.b === faction) && r.status !== 'war' && r.agreements.includes('manufacturing'));
+      const mult = manufacturing ? 0.9 : 1;
+      return { ok: true, cost: { ...d.cost, metals: Math.round(d.cost.metals * mult), energy: Math.round(d.cost.energy * mult), points: d.buildPoints } };
     }
     case 'army': {
       if (sys.population < BALANCE.army.population + 1) return { ok: false, reason: 'Not enough population.' };

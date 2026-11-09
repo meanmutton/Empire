@@ -72,6 +72,7 @@ export function createGame(opts: NewGameOptions): GameState {
     starbases: {},
     relations: {},
     proposals: {},
+    payments: [],
     log: [],
     battles: {},
     seq: 0,

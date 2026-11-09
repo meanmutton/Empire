@@ -127,6 +127,8 @@ export interface Agent {
   resident: boolean;
   /** Captured by this faction (held prisoner). */
   capturedBy: FactionId | null;
+  /** Hexes already moved this turn. */
+  moved?: number;
 }
 
 export interface Starbase {
@@ -188,8 +190,21 @@ export interface Proposal {
   from: FactionId;
   to: FactionId;
   turn: number;
+  /** What the proposer gives. */
   give: TradeItem[];
+  /** What the proposer asks for. */
   receive: TradeItem[];
+  /** Set once answered. */
+  answer: 'accepted' | 'rejected' | null;
+}
+
+export interface Payment {
+  from: FactionId;
+  to: FactionId;
+  resource: StockpileKind;
+  amount: number;
+  /** Last turn (inclusive) on which it is paid. */
+  until: number;
 }
 
 export type TradeItem =
@@ -248,6 +263,8 @@ export interface GameState {
   starbases: Record<Id, Starbase>;
   relations: Record<string, Relation>;
   proposals: Record<Id, Proposal>;
+  /** Recurring resource transfers agreed in trades. */
+  payments: Payment[];
   log: GameEvent[];
   /** Hex index → combat sequence number of the last round fought there (to detect a battle's first round). */
   battles: Record<number, number>;
