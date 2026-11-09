@@ -15,11 +15,13 @@ import { offersFor } from '../engine/mercenaries';
 import { routeCapacity, routesOf } from '../engine/routes';
 import { perceivedThreat } from '../engine/intel';
 import { availableVictories, score } from '../engine/victory';
+import { armiesNeeded, campaignTarget, defenseAt, gatheredPower, isRunaway, spyTarget, stagingHex, starbaseSite, warsAgainst } from './strategy';
 import { say } from './voice';
 import { hasEmbassy, opinionOf } from '../engine/agents';
 import { getBit } from '../engine/bitset';
 import { canPropose, militaryStrength, proposalScore, sharedEnemies } from '../engine/diplomacy';
 import { checkBuild, factionIncome, rushCost, slotsOf } from '../engine/economy';
+import { cargoFree } from '../engine/ground';
 import { hexDistance, hexesWithin, neighbors } from '../engine/hex';
 import { planPath } from '../engine/movement';
 import { atWar, ownedHexes, relation } from '../engine/query';
@@ -44,6 +46,8 @@ interface Ctx {
   enemies: FactionId[];
   /** Net energy per turn after upkeep. */
   netEnergy: number;
+  /** The system the war effort concentrates on this turn (see strategy.ts). */
+  campaign: number | null;
   reserved: Set<number>;
   owned: Set<number>;
   home: number;
@@ -61,6 +65,7 @@ export function aiTurn(state: GameState, me: FactionId, opts: AiOptions = {}): v
     caretaker: !!opts.caretaker,
     enemies: Object.keys(state.factions).filter((o) => o !== me && state.factions[o].alive && atWar(state, me, o)),
     netEnergy: factionIncome(state, me).net.energy,
+    campaign: null,
     reserved: new Set(), owned: new Set(ownedHexes(state, me)), home: f.home,
   };
   research(ctx);
@@ -69,6 +74,7 @@ export function aiTurn(state: GameState, me: FactionId, opts: AiOptions = {}): v
     answerProposals(ctx);
     diplomacy(ctx);
   }
+  if (ctx.major && !ctx.caretaker) ctx.campaign = campaignTarget(state, me, ctx.enemies);
   powers(ctx);
   trade(ctx);
   build(ctx);
@@ -174,9 +180,12 @@ function diplomacy(ctx: Ctx): void {
     if (treaty && (hasAbility(me, 'honorBound') || ctx.rng.next() > p.treachery * 0.5)) continue;
     const ratio = myStrength / Math.max(1, militaryStrength(state, o));
     const op = opinionOf(state, me, o);
-    // A rival known (through spies) to be close to winning makes a much more tempting target.
+    // A rival known (through spies) to be close to winning, or running away with the game, is a tempting
+    // target; one already fighting two great powers is left alone (no pile-ons).
     const threat = perceivedThreat(state, me, o);
-    const need = 2.2 - p.aggression * 1.2 + op / 100 - (threat >= 0.7 ? 0.8 : 0);
+    const runaway = state.factions[o].kind === 'major' && isRunaway(state, o);
+    if (warsAgainst(state, o) >= 2 && threat < 0.7 && !runaway) continue;
+    const need = 2.2 - p.aggression * 1.2 + op / 100 - (threat >= 0.7 ? 0.8 : 0) - (runaway ? 0.5 : 0);
     if (ratio > need && ratio > bestRatio) { bestRatio = ratio; target = o; }
   }
   const lattice = hasAbility(me, 'distributedCognition') ? ctx.rng.chance(0.5) : true;
@@ -269,11 +278,15 @@ function build(ctx: Ctx): void {
         const d = pickDesign(ctx, hex, (x) => x.role === 'cargo');
         if (d && tryBuild({ type: 'build', hex, kind: 'ship', item: d.id })) continue;
       }
-      if (ctx.major && ctx.enemies.length && count('transport') + queued('transport') < 1) {
+      // Invasion forces sized to the campaign target's defenders.
+      const campaignEnemy = ctx.campaign !== null && state.map.hexes[ctx.campaign].owner !== null && ctx.enemies.includes(state.map.hexes[ctx.campaign].owner!);
+      const wantArmies = campaignEnemy ? Math.min(8, armiesNeeded(state, me, ctx.campaign!)) : ctx.enemies.length ? 2 : 0;
+      const transportsWanted = wantArmies ? Math.max(1, Math.ceil(wantArmies / 4)) : 0;
+      if (ctx.major && count('transport') + queued('transport') < transportsWanted) {
         const d = pickDesign(ctx, hex, (x) => x.role === 'transport' || x.role === 'cargo', true);
         if (d && tryBuild({ type: 'build', hex, kind: 'ship', item: d.id })) continue;
       }
-      if (ctx.major && ctx.enemies.length && armies < 4 && sys.homeOf === me) {
+      if (ctx.major && armies < wantArmies && sys.population >= 3) {
         if (tryBuild({ type: 'build', hex, kind: 'army', item: '' })) continue;
       }
       // Warships, as long as the energy economy can carry their upkeep.
@@ -390,19 +403,14 @@ function agents(ctx: Ctx): void {
       if (targets.length) act(ctx, { type: 'sendDiplomat', agent: a.id, target: targets[0] });
     } else if (!ctx.caretaker) {
       if (a.mission) continue;
-      const here = state.map.hexes[a.hex];
-      if (here.owner && here.owner !== me && here.system) {
-        const mission = hasAbility(me, 'fifthColumn') && !here.system.homeOf ? 'subversion' : ctx.rng.pick(['stealTech', 'sabotage', 'incite'] as const);
-        if (act(ctx, { type: 'mission', agent: a.id, mission })) continue;
-      }
       if (a.path.length) continue;
-      const rivals = Object.keys(state.factions).filter((o) => o !== me && state.factions[o].alive && state.factions[o].kind === 'major' && relation(state, me, o).contact);
-      if (rivals.length === 0) continue;
-      const rival = ctx.enemies.find((e) => state.factions[e].kind === 'major') ?? ctx.rng.pick(rivals);
-      const theirSystems = ownedHexes(state, rival).filter((h) => state.map.hexes[h].system && state.map.hexes[h].system!.development > 0);
-      if (theirSystems.length) {
-        theirSystems.sort((x, y) => hexDistance(state.map, a.hex, x) - hexDistance(state.map, a.hex, y));
-        act(ctx, { type: 'moveAgent', agent: a.id, to: theirSystems[0] });
+      // Work the most valuable target in reach: shipyards of enemies, techs we lack, unrest for the Krasnyr.
+      const t = spyTarget(state, me, a.hex, ctx.enemies);
+      if (!t) continue;
+      if (a.hex === t.hex) {
+        if (!act(ctx, { type: 'mission', agent: a.id, mission: t.mission })) act(ctx, { type: 'mission', agent: a.id, mission: 'incite' });
+      } else {
+        act(ctx, { type: 'moveAgent', agent: a.id, to: t.hex });
       }
     }
   }
@@ -563,9 +571,11 @@ function constructor(ctx: Ctx, fl: Fleet, targets: number[]): void {
   if (here.system && here.system.development === 0 && (!here.owner || here.owner === ctx.me) && act(ctx, { type: 'outpost', fleet: fl.id })) return;
   const t = targets.filter((h) => !ctx.reserved.has(h)).sort((a, b) => hexDistance(ctx.state.map, fl.hex, a) - hexDistance(ctx.state.map, fl.hex, b))[0];
   if (t === undefined) {
-    // Nothing to settle: build a starbase at home if possible.
-    if (fl.hex === ctx.home) act(ctx, { type: 'starbase', fleet: fl.id });
-    else moveTo(ctx, fl, ctx.home);
+    // Nothing to settle: fortify the border facing our nearest rival (or home).
+    const site = ctx.major ? starbaseSite(ctx.state, ctx.me) : null;
+    const dest = site ?? ctx.home;
+    if (fl.hex === dest) act(ctx, { type: 'starbase', fleet: fl.id });
+    else moveTo(ctx, fl, dest);
     return;
   }
   ctx.reserved.add(t);
@@ -623,6 +633,29 @@ function transport(ctx: Ctx, fl: Fleet): void {
   if (here.system && here.system.development > 0 && here.owner !== me && here.system.defense === 0) {
     if (act(ctx, { type: 'invade', fleet: fl.id })) return;
   }
+  // Campaign: wait at the staging hex until the fleet has the target's defenses down, then land.
+  const c = ctx.campaign;
+  if (c !== null && state.map.hexes[c].owner && ctx.enemies.includes(state.map.hexes[c].owner!)) {
+    // Collect enough armies first: pick them up wherever they are garrisoned.
+    const aboard = fl.ships.flatMap((s) => state.ships[s].cargo).filter((x) => state.armies[x]).length;
+    const space = ships.reduce((a, s) => a + cargoFree(state, s), 0);
+    if (aboard < armiesNeeded(state, me, c) && space > 0) {
+      const here = Object.values(state.armies).filter((a) => a.owner === me && a.hex === fl.hex);
+      for (const a of here) for (const s of ships) if (act(ctx, { type: 'loadArmy', army: a.id, ship: s })) break;
+      const elsewhere = Object.values(state.armies).filter((a) => a.owner === me && a.hex !== null && a.hex !== fl.hex)
+        .sort((x, y) => hexDistance(state.map, fl.hex, x.hex!) - hexDistance(state.map, fl.hex, y.hex!))[0];
+      if (elsewhere && fl.ships.flatMap((s) => state.ships[s].cargo).filter((x) => state.armies[x]).length < armiesNeeded(state, me, c)) {
+        moveTo(ctx, fl, elsewhere.hex!);
+        return;
+      }
+    }
+    const sys = state.map.hexes[c].system!;
+    const ours = Object.values(state.fleets).some((x) => x.owner === me && x.hex === c && classifyFleet(state, x) === 'war');
+    if (sys.defense === 0 && ours) { moveTo(ctx, fl, c); return; }
+    const staging = stagingHex(state, me, c);
+    if (fl.hex !== staging) moveTo(ctx, fl, staging);
+    return;
+  }
   const targets = state.map.hexes.map((h, i) => ({ h, i })).filter(({ h }) =>
     h.system && h.system.development > 0 && h.system.defense === 0 && h.owner !== me &&
     (h.owner ? ctx.enemies.includes(h.owner) : ctx.p.aggression > 0.4) &&
@@ -654,6 +687,16 @@ function warFleet(ctx: Ctx, fl: Fleet): void {
     if (hexDistance(state.map, fl.hex, ctx.home) > 2) { moveTo(ctx, fl, ctx.home); return; }
     claimer(ctx, fl);
     return;
+  }
+  // Campaign: gather at the staging hex, strike together once strong enough, then hold the target.
+  if (ctx.campaign !== null && fl.ships.length >= 2) {
+    const target = ctx.campaign;
+    if (fl.hex === target) return;
+    const staging = stagingHex(state, me, target);
+    const enough = gatheredPower(state, me, staging, target) >= defenseAt(state, target, me) * 1.3;
+    if (enough || hexDistance(state.map, fl.hex, target) <= 1) { if (moveTo(ctx, fl, target)) return; }
+    else if (hexDistance(state.map, fl.hex, staging) > 1) { if (moveTo(ctx, fl, staging)) return; }
+    else return;
   }
   if (ctx.enemies.length && fl.ships.length >= 3) {
     // Attack the closest enemy target we can beat: fleets, then systems.
