@@ -15,7 +15,7 @@ import { activeFaction, relation } from '../engine/query';
 import { techCost } from '../engine/research';
 import type { Fleet, GameState } from '../engine/types';
 import { canSeeFleet } from '../engine/visibility';
-import { bar, button, clear, h, toast } from './dom';
+import { bar, button, clear, h, modal, toast } from './dom';
 import { costText, factionChip, ICON, num, signed } from './format';
 import { MapView, Minimap } from './mapview';
 import { openDiplomacy } from './screens/diplomacy';
@@ -228,6 +228,8 @@ export class GameUI {
     const res = (icon: string, val: number, net?: number, title?: string) =>
       h('span', { class: 'res', title }, icon, h('b', null, num(val)), net !== undefined ? h('span', { class: net >= 0 ? 'good' : 'bad' }, `(${signed(net)})`) : null);
     const researchText = r.current ? `${TECH_BY_ID[r.current].name} ${Math.min(100, Math.floor((r.progress / techCost(r.current)) * 100))}%` : 'choose research';
+    const endTurnButton = button('End Turn', () => this.endTurn(), { cls: 'primary', disabled: !this.myTurn });
+    endTurnButton.id = 'endturn';
     const waiting = !this.myTurn ? (this.host.waitingText?.(this) ?? `Waiting: ${factionDef(activeFaction(g)).short}`) : '';
     clear(this.top).append(...[
       factionChip(this.viewer, true),
@@ -244,15 +246,22 @@ export class GameUI {
       g.winner ? h('b', { class: 'good' }, `${factionDef(g.winner).name} won`) : null,
       waiting ? h('span', { class: 'dim' }, waiting) : null,
       button('Menu', () => this.host.openMenu(this)),
-      button('End Turn', () => this.endTurn(), { cls: 'primary', disabled: !this.myTurn }),
+      button('Empire', () => this.openEmpire(), { cls: 'mobile-only' }),
+      endTurnButton,
     ].filter((x): x is HTMLElement => x !== null));
   }
 
   // -------------------------------------------------------------------------------------------------------
   // Side panel
 
+  /** Empire overview in a dialog (used on phones, where the side panel only shows selections). */
+  openEmpire(): void {
+    modal('Empire', this.empirePanel());
+  }
+
   private renderSide(): void {
     const s = clear(this.side);
+    this.side.classList.toggle('empty', this.selHex === null);
     if (this.selHex === null) {
       s.append(this.empirePanel());
       return;

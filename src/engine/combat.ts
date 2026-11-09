@@ -84,7 +84,8 @@ function collectParties(state: GameState, hex: number, active: FactionId): Party
         kind: 'ship', id: sid, hull: s.hull, maxHull: d.stats.hull, shields: d.stats.shields * (1 + te.shields),
         energy: d.stats.energy * (1 + te.energyWeapons + te.attack), missile: d.stats.missile * (1 + te.missiles + te.attack),
         fighters: s.fighters * (1 + te.fighters), pd: d.stats.pd * (1 + te.pointDefense), tough: 1 + te.hull,
-        weight: d.cls === 'fighter' ? 0.5 : DESIGN_WEIGHT(d.cls) * (ROLES[d.role].escort ? 2.5 : 1),
+        weight: (d.cls === 'fighter' ? 0.5 : DESIGN_WEIGHT(d.cls) * (ROLES[d.role].escort ? 2.5 : 1))
+          * (d.role === 'cargo' && hasAbility(fl.owner, 'smugglers') ? 0.1 : 1),
         xp: s.xp, cost: d.cost.metals + d.cost.energy,
       });
     }
@@ -234,7 +235,8 @@ export function resolveBattleAt(state: GameState, hex: number, active: FactionId
       if (u.kind !== 'ship') continue;
       const ship = state.ships[u.id];
       if (!ship) continue;
-      const captor = enemies.find((e) => e !== INDEPENDENT && (hasAbility(e, 'boardingActions') || hasAbility(e, 'boardingParties')));
+      const smuggler = design(ship.design).role === 'cargo' && hasAbility(ship.owner, 'smugglers');
+      const captor = smuggler ? undefined : enemies.find((e) => e !== INDEPENDENT && (hasAbility(e, 'boardingActions') || hasAbility(e, 'boardingParties')));
       if (captor && rng.chance(0.25)) {
         captureShip(state, ship.id, captor, hex);
         captured++;
@@ -299,6 +301,8 @@ function partyMultiplier(state: GameState, hex: number, p: Party, enemies: Party
   const terrain = state.map.hexes[hex].terrain;
   if (hasAbility(f, 'ambush') && (terrain === 'nebula' || terrain === 'asteroids')) m += 0.3;
   if (hasAbility(f, 'stampede') && state.map.hexes[hex].owner === f) m += 0.2;
+  const owner = state.map.hexes[hex].owner;
+  if (owner && owner !== f && hasAbility(owner, 'bribery') && enemies.some((e) => e.faction === owner)) m -= 0.3;
   if (hasAbility(f, 'grudge') && enemies.some((e) => e.faction === 'lattice')) m += 0.25;
   if (enemies.some((e) => state.factions[f].flags[`grudge:${e.faction}`])) m += 0.1;
   if (hasAbility(f, 'huntersInstinct')) {

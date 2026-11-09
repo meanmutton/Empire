@@ -11,6 +11,7 @@ import type { GameState } from '../engine/types';
 import { button, clear, h, modal, toast } from './dom';
 import { rosterStrip } from './gallery';
 import { GameUI } from './game-ui';
+import { openHelp } from './screens/help';
 import { openReport } from './screens/report';
 import { injectStyles } from './styles';
 
@@ -186,6 +187,7 @@ export class OnlineSession {
       h('div', null, 'Game code: ', h('b', { style: 'font-size:18px;letter-spacing:.2em' }, lobby.code)),
       h('div', { class: 'dim' }, 'Players: ', lobby.seats.map((s) => `${s.name} (${factionDef(s.faction).short})`).join(', ')),
       h('div', { class: 'row wrap', style: 'margin-top:10px' },
+        button('How to play', () => { m.close(); openHelp(); }),
         button('Reload from relay', async () => { m.close(); await this.fetchState(); }),
         other && overdue ? button(`Play a caretaker turn for ${factionDef(other).short}`, () => { m.close(); void this.caretaker(other); }, { title: `They have had more than ${lobby.config.timeoutHours} hours.` }) : null,
         button('Leave to title', () => { m.close(); this.quit(); })));

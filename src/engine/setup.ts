@@ -116,6 +116,9 @@ export function createGame(opts: NewGameOptions): GameState {
 
   for (const id of all) addStartingUnits(state, id);
   for (const id of all) {
+    if (hasAbility(id, 'fortressWorlds')) state.map.hexes[state.factions[id].home].system!.defense *= 2;
+  }
+  for (const id of all) {
     if (hasAbility(id, 'ancientArchives')) {
       const tier1 = TECHS.filter((t) => t.tier <= 2 && t.requires.length === 0);
       for (const t of rng.shuffle(tier1).slice(0, 3)) grantTech(state, id, t.id);

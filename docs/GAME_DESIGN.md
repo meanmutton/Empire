@@ -131,7 +131,7 @@ major (§9.5). Each has 1–2 special abilities and a small roster (2–4 classe
 | 1 | Myrr Choir | Psionic pacifist theocracy | Science | **Mind Shield** (immune to espionage); **Harmonic Calm** (attackers −20% damage in round 1) |
 | 2 | Quorr Salvage Fleets | Nomadic anarchist scavengers | Metals | **Salvagers** (gain metals equal to 25% of the cost of ships destroyed in their battles) |
 | 3 | Thessic Banking Houses | Mercantile plutocracy | Energy | **Trade Hub** (trade agreements +50% for both sides); **Mercenary Contracts** (sell ships to majors) |
-| 4 | Ghal'tar Pirate Clans | Raider clans | Raiding | **Raiders** (steal 10% of a system's income when in enemy territory); **Ambush** (+30% attack in nebulae and asteroids) |
+| 4 | Ghal'tar Pirate Clans | Raider clans | Raiding | **Raiders** (fleets in an enemy system steal 10% of its energy and metals each turn); **Ambush** (+30% attack in nebulae and asteroids) |
 | 5 | Ixxi Swarm | Insectoid hive mind | Numbers | **Swarm Tactics** (Fighters and Corvettes −30% cost); **Rapid Breeding** (+50% population growth) |
 | 6 | Celestine Order | Monastic knightly theocracy | Armies | **Zealots** (armies +50% strength); **Aegis of Faith** (shields +20%) |
 | 7 | Voidborn Drifters | Deep-space nomads | Mobility | **Void-Adapted** (no hazard penalties); **Elusive** (50% chance to retreat from a losing battle) |
@@ -140,13 +140,13 @@ major (§9.5). Each has 1–2 special abilities and a small roster (2–4 classe
 | 10 | Sylph Gardeners | Ecological plant-collective | Growth | **Terraformers** (system development −40% cost); **Regrowth** (ships repair +10% per turn) |
 | 11 | Nhar Shadow Court | Secretive oligarchy of spymasters | Stealth | **Cloaking Fields** (ships invisible unless an enemy has sensors ≥ their stealth); **Infiltrators** (+40% spy success) |
 | 12 | Brakk Warbands | Feudal warlords | Brute force | **Berserkers** (+30% attack, −30% shields); **Boarding Parties** (capture crippled ships) |
-| 13 | Ophidian Syndicate | Criminal cartel | Commerce | **Black Market** (trade resources at 1:1 instead of 2:1); **Bribery** (spend energy to make a hostile fleet stand down for a turn) |
+| 13 | Ophidian Syndicate | Criminal cartel | Commerce | **Black Market** (trade resources at 1:1 instead of 2:1); **Bribery** (enemies fighting in their territory deal −30% damage) |
 | 14 | Lumen Collective | Beings of pure energy | Energy | **Photonic Weapons** (energy weapons +25%); **Stellar Feeding** (double energy from stars) |
 | 15 | Cryx Remnant | Cybernetic husk of a fallen empire | Attrition | **Assimilation** (20% of enemy ships destroyed in their battles join the Cryx at 25% hull) |
 | 16 | Taurine Herd Assembly | Pastoral defensive democracy | Defense | **Fortress Worlds** (planetary defenses +100%); **Stampede** (+20% attack in own territory) |
 | 17 | Echo Engineers | Isolationist genius-caste | Engines | **Advanced Engines** (+1 movement); **Prototype Lab** (trade techs 30% cheaper) |
-| 18 | Vesh Prophets | Missionary faith | Influence | **Conversion** (raise unrest in adjacent foreign systems; may flip minors' loyalty) |
-| 19 | Haldane Free Traders | Libertarian convoy culture | Trade | **Smugglers** (cargo ships ignore blockades and can't be captured); **Free Port** (anyone may trade with them without a diplomat) |
+| 18 | Vesh Prophets | Missionary faith | Influence | **Conversion** (+5 unrest per turn, up to 60, in foreign systems within 3 hexes) |
+| 19 | Haldane Free Traders | Libertarian convoy culture | Trade | **Smugglers** (cargo ships draw 90% less fire and can't be boarded); **Free Port** (anyone may trade with them without a diplomat) |
 | 20 | Grendis Iron Legion | Mercenary army-state | Armies | **For Hire** (rent armies to majors); **Veterans** (armies start at elite rank) |
 | 21 | Pelagic Union | Aquatic federation | Population | **Ocean Worlds** (+50% population on habitable worlds); **Deep Shelters** (systems can't be bombarded below 1 population) |
 | 22 | Zenith Observatory | Scholar-astronomers | Sensors | **Long-Range Sensors** (sensor range +3); **Star Charts** (sell map knowledge to others) |

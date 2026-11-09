@@ -6,6 +6,7 @@ import { VERSION } from '../../version';
 import { button, clear, h } from '../dom';
 import { rosterStrip } from '../gallery';
 import { injectStyles } from '../styles';
+import { openHelp } from './help';
 
 export interface SetupChoice extends NewGameOptions {
   online: boolean;
@@ -40,8 +41,9 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
 
   const render = () => {
     clear(screen);
-    screen.append(h('div', { class: 'title' }, 'EMPIRE'), h('div', { class: 'subtitle' }, `A game of galactic conquest · v${VERSION}`));
-    const cols = h('div', { style: 'display:grid;grid-template-columns:minmax(280px, 420px) minmax(300px, 1fr);gap:20px;max-width:1200px;margin:0 auto' });
+    screen.append(h('div', { class: 'title' }, 'EMPIRE'), h('div', { class: 'subtitle' }, `A game of galactic conquest · v${VERSION} · `,
+      h('a', { href: '#', style: 'color:var(--accent)', onclick: (e: Event) => { e.preventDefault(); openHelp(); } }, 'How to play')));
+    const cols = h('div', { class: 'setup-cols' });
     const left = h('div');
     const saves = actions.saves();
     const onlineGames = actions.onlineGames?.() ?? [];
