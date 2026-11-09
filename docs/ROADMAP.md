@@ -26,7 +26,7 @@ Status key: `[ ]` not started, `[~]` PR open, `[x]` merged.
 - [~] **07 Combat**: simultaneous en-masse resolution, shields/missiles/PD/fighters, lethality tuning test
   (equal forces lose ~50%), planetary defense, invasion, capture, retreat.
 - [~] **08 Research**: tech tree (6 fields), unlocks, research progress.
-- [ ] **09 Diplomacy and espionage**: diplomats (travel, capture, embassies), relation states, agreements,
+- [~] **09 Diplomacy and espionage**: diplomats (travel, capture, embassies), relation states, agreements,
   trade proposals, vassals, opinion; spies and missions.
 - [ ] **10 Turn engine**: turn order, phases, orders → resolution, victory checks, event log.
 - [ ] **11 Computer players**: AI for majors (personalities) and minors.
