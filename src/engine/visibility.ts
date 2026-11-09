@@ -5,6 +5,7 @@ import { hasAbility } from '../data/factions';
 import { getBit, setBits } from './bitset';
 import { hexDistance, hexesWithin } from './hex';
 import { friendly } from './query';
+import { techEffects } from './research';
 import type { FactionId, Fleet, GameState } from './types';
 
 /** Marks hexes around a point as explored. */
@@ -31,6 +32,7 @@ function observers(state: GameState, faction: FactionId): Observer[] {
       range = Math.max(range, d.stats.sensors);
       if (d.role === 'science') detects = true;
     }
+    range += techEffects(state, fl.owner).sensors;
     if (state.map.hexes[fl.hex].terrain === 'pulsar') range = Math.max(1, range - 1);
     out.push({ hex: fl.hex, range, detects });
   }
@@ -64,7 +66,11 @@ export function canSeeFleet(state: GameState, faction: FactionId, fleet: Fleet, 
   if (sameHex) return true;
   // Nebulae hide fleets from sensors outside the hex.
   if (state.map.hexes[fleet.hex].terrain === 'nebula') return false;
-  const stealth = Math.min(...fleet.ships.map((sid) => design(state.ships[sid].design).stats.stealth));
+  const cloak = techEffects(state, fleet.owner).stealth;
+  const stealth = Math.min(...fleet.ships.map((sid) => {
+    const d = design(state.ships[sid].design);
+    return d.stats.stealth + (d.role === 'scout' || d.role === 'raider' ? cloak : 0);
+  }));
   if (stealth <= 0) return true;
   if (hasAbility(faction, 'tracking') && obs.some((o) => hexDistance(state.map, o.hex, fleet.hex) <= 2)) return true;
   return obs.some((o) => o.detects && hexDistance(state.map, o.hex, fleet.hex) <= o.range);

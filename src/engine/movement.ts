@@ -10,6 +10,7 @@ import { newId } from './ids';
 import { findPath, reachable } from './path';
 import { atWar, fleetSpeed, friendly } from './query';
 import { Rng } from './rng';
+import { techEffects } from './research';
 import type { FactionId, Fleet, GameState } from './types';
 import { revealAround } from './visibility';
 
@@ -37,7 +38,7 @@ export function wormholeLinks(state: GameState): (hex: number) => number[] {
 function stepCost(state: GameState, faction: FactionId) {
   return (from: number, to: number) => {
     const fw = state.map.hexes[from].wormhole;
-    if (fw === to) return hasAbility(faction, 'wormholeNavigation') ? 0 : 1;
+    if (fw === to) return hasAbility(faction, 'wormholeNavigation') || techEffects(state, faction).wormholeFree ? 0 : 1;
     return enterCost(state, faction, to);
   };
 }
@@ -116,6 +117,7 @@ export function advanceFleet(state: GameState, fleetId: string): void {
 export function fleetSensors(state: GameState, f: Fleet): number {
   let s = 1;
   for (const sid of f.ships) s = Math.max(s, design(state.ships[sid].design).stats.sensors);
+  s += techEffects(state, f.owner).sensors;
   if (state.map.hexes[f.hex].terrain === 'pulsar') s = Math.max(1, s - 1);
   return s;
 }

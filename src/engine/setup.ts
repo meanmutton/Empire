@@ -6,6 +6,8 @@ import { emptyBits, setBits } from './bitset';
 import { hexesWithin } from './hex';
 import { newId, relationKey } from './ids';
 import { generateMap } from './mapgen';
+import { grantTech } from './research';
+import { TECHS } from '../data/techs';
 import { Rng, seedRng } from './rng';
 import {
   STATE_SCHEMA_VERSION, type FactionId, type FactionState, type GameConfig, type GameState, type HumanSeat,
@@ -112,6 +114,12 @@ export function createGame(opts: NewGameOptions): GameState {
   }
 
   for (const id of all) addStartingUnits(state, id);
+  for (const id of all) {
+    if (hasAbility(id, 'ancientArchives')) {
+      const tier1 = TECHS.filter((t) => t.tier <= 2 && t.requires.length === 0);
+      for (const t of rng.shuffle(tier1).slice(0, 3)) grantTech(state, id, t.id);
+    }
+  }
   return state;
 }
 
