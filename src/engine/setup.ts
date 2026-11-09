@@ -71,6 +71,8 @@ export function createGame(opts: NewGameOptions): GameState {
     relations: {},
     proposals: {},
     log: [],
+    battles: {},
+    seq: 0,
     nextId: 0,
     winner: null,
   };
@@ -130,7 +132,8 @@ export function spawnShip(state: GameState, faction: FactionId, d: ShipDesign, h
   if (!fid) {
     fid = newId(state, 'f');
     state.fleets[fid] = {
-      id: fid, owner: faction, name: '', hex, ships: [], movesLeft: d.stats.speed, path: [], stance: 'aggressive',
+      id: fid, owner: faction, name: '', hex, ships: [], movesLeft: d.stats.speed, path: [],
+      stance: d.stats.energy + d.stats.missile + d.stats.hangar > 0 && d.role !== 'scout' ? 'aggressive' : 'passive',
     };
   }
   const sid = newId(state, 's');

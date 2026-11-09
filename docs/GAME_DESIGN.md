@@ -334,8 +334,13 @@ faction's turn, every hex where its forces share a hex with an enemy fights one 
 4. Damage is spread over enemy ships, weighted toward larger targets, with Escorts soaking up a share for
    their group. Each ship's shields absorb energy damage once per round; the remainder hits the hull.
 5. **All damage is applied simultaneously.** Ships at 0 hull are destroyed.
-6. **Lethality**: the base damage coefficient is tuned so that two equal fleets each destroy about **half**
-   of the other per round *(tunable `COMBAT_LETHALITY`; the test suite checks 40–60%)*.
+6. **Lethality** (Lanchester style): a party's *strength* is its effective attack (after enemy shields and
+   point defense) × its durability (hull + 2 × shields). The fraction of a party destroyed in a round is
+   `0.5 × (enemy strength ÷ own strength)^0.75`, capped at 100%, ×[0.8, 1.2]. So two equal forces each lose
+   about **half** per round, and a force twice as strong loses ~30% while destroying ~85%. The test suite
+   checks 40–60% for equal forces of every class.
+   Damage is focus-fired: targets are picked one at a time (bigger ships ×size, escorts ×2.5) and destroyed,
+   so losses show up as destroyed ships, not light damage spread across everyone.
 7. Damaged ships remain damaged and repair in friendly territory (10%/turn), at a shipyard or starbase (30%/turn),
    or by faction abilities.
 
