@@ -451,7 +451,33 @@ personality.
   turn), recipients who are connected get it immediately, and the relay only hands a message to its
   sender and recipients. **Hot seat** chat is saved with the game, and each player only sees their own
   conversations.
-- Talking with computer powers is still being designed.
+- Computer powers have their own conversations; see §9.8.
+
+### 9.8 Talking with computer powers
+Computer-run great powers can't read free text, but they talk, and they understand diplomatic statements.
+
+**They speak to you** in their own voice when something happens between you: first contact, an embassy
+opening, declaring war (or being attacked), peace, signing a pact or alliance, being betrayed, sending you
+a proposal, accepting or refusing yours, receiving a gift, your warships trespassing in their space (at
+most every 5 turns), and winning or losing a battle against you. The Concord is warm and earnest, the
+Ryn'kai formal and honor-bound, the Varrhen coldly superior, the Krasnyr full of comradely double-talk,
+the Lattice terse and numeric. Minor factions don't talk.
+
+**You can make statements** to them, on your turn. Each power answers, and acts on its answer, at the
+start of its next turn. Each kind of statement can be made to a power once every 3 turns.
+
+| Statement | How they decide |
+|-----------|-----------------|
+| Demand they withdraw | Complies (fleets leave your territory and stay out for 8 turns) if it likes you, or you are about as strong and it isn't very aggressive; otherwise refuses and likes you a little less. Not at war. |
+| Ask for help against X | Already at war with X: welcomes you. Otherwise joins your war if its opinion of you, its dislike of X, its aggression, an alliance with you and your combined strength add up, unless a treaty with X stops it. |
+| Threaten | Always costs opinion. A clearly weaker, not-too-aggressive power backs down (no war on you for 10 turns, fleets withdraw). An aggressive power that thinks itself stronger declares war. The Ryn'kai never back down. |
+| Reassure | Raises its opinion of you, unless it already distrusts you (very low opinion, a grudge, or at war). |
+| Ask their intentions | At war: says so. Otherwise names who it has its eye on. If that is you, honest powers warn you; treacherous ones (Krasnyr, Varrhen) lie. |
+| Denounce X | Agrees if it dislikes X (likes you more, X less), objects if it likes X, otherwise shrugs. |
+
+Conversations live in the game state, so every player's game agrees on them. *(Later, an optional
+language-model mode could let you chat with computer leaders in free text, with any real effect still
+going through these rules.)*
 
 ## 10. Victory
 

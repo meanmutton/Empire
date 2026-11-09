@@ -57,6 +57,21 @@ export function markRead(gameId: string, viewer: string, thread: string, at: num
   try { localStorage.setItem(readKey(gameId, viewer, thread), String(at)); } catch { /* storage unavailable */ }
 }
 
-export function unreadCount(messaging: Messaging, gameId: string, viewer: string): number {
-  return messaging.list(viewer).filter((m) => m.from !== viewer && m.at > lastRead(gameId, viewer, threadKey(m, viewer))).length;
+/** Computer-run great powers the viewer has met (they can be addressed with statements). */
+export function aiContacts(game: GameState, viewer: string): string[] {
+  return Object.values(game.factions)
+    .filter((f) => f.id !== viewer && f.alive && f.kind === 'major' && f.controller === 'ai')
+    .filter((f) => game.relations[[viewer, f.id].sort().join('|')]?.contact)
+    .map((f) => f.id);
+}
+
+/** Dispatches between the viewer and one computer power, oldest first. */
+export function dispatchesWith(game: GameState, viewer: string, power: string): NonNullable<GameState['dispatches']> {
+  return (game.dispatches ?? []).filter((d) => (d.from === viewer && d.to === power) || (d.from === power && d.to === viewer));
+}
+
+export function unreadCount(messaging: Messaging | undefined, game: GameState, viewer: string): number {
+  const chat = messaging ? messaging.list(viewer).filter((m) => m.from !== viewer && m.at > lastRead(game.id, viewer, threadKey(m, viewer))).length : 0;
+  const ai = (game.dispatches ?? []).filter((d) => d.to === viewer && d.n > lastRead(game.id, viewer, `ai:${d.from}`)).length;
+  return chat + ai;
 }

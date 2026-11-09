@@ -15,7 +15,8 @@ import { buildOutpost, buildStarbase, colonize, mergeFleets, moveFleet, splitFle
 import { activeFaction } from './query';
 import { setResearch } from './research';
 import { endTurn } from './turn';
-import type { BuildOrder, FactionId, Fleet, GameState, RelationStatus, TradeItem } from './types';
+import type { BuildOrder, FactionId, Fleet, GameState, RelationStatus, Statement, TradeItem } from './types';
+import { makeStatement } from './dispatch';
 import { RESOURCE_KINDS } from './types';
 
 export type Action =
@@ -51,6 +52,7 @@ export type Action =
   | { type: 'reject'; proposal: string }
   | { type: 'fiveYearPlan'; resource: (typeof RESOURCE_KINDS)[number] }
   | { type: 'mobilize'; on: boolean }
+  | { type: 'statement'; to: FactionId; statement: Statement }
   | { type: 'endTurn' };
 
 export type ActionResult = { ok: true; text?: string; id?: string } | { ok: false; reason: string };
@@ -137,6 +139,8 @@ export function applyAction(state: GameState, faction: FactionId, action: Action
       return fiveYearPlan(state, faction, action.resource);
     case 'mobilize':
       return mobilize(state, faction, action.on);
+    case 'statement':
+      return makeStatement(state, faction, action.to, action.statement);
     case 'endTurn':
       endTurn(state);
       return { ok: true };

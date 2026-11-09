@@ -29,6 +29,7 @@ const SECTIONS: [string, string[]][] = [
     'Send a diplomat to another empire’s home system to open an embassy. You need one to trade or sign treaties. Diplomats travelling through hostile space can be captured.',
     'Trade resources, technology, fleets, territory and star charts, or sign trade, research, economic and manufacturing agreements, pacts and alliances.',
     'Minor factions can become your vassals: they pay tribute and join your wars.',
+    'Computer-run great powers talk to you in Messages. You can make statements to them there (demand they withdraw, ask for help, threaten, reassure, ask their intentions, denounce a rival), and they answer on their turn.',
     'Spies sneak into enemy systems to steal technology, sabotage, incite unrest or map territory.',
   ]],
   ['Winning', [

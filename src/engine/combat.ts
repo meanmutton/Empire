@@ -287,7 +287,9 @@ export function resolveBattleAt(state: GameState, hex: number, active: FactionId
   const involved = parties.map((p) => p.faction).filter((f) => f !== INDEPENDENT);
   const name = state.map.hexes[hex].system?.name ?? 'deep space';
   const summary = report.parties.map((p) => `${p.faction} lost ${p.lost}/${p.units}${p.captured ? ` (${p.captured} captured)` : ''}`).join(', ');
-  log(state, involved, 'battle', `Battle at ${name}: ${summary}.`, hex);
+  const lost: Record<string, number> = {};
+  for (const p of report.parties) if (p.faction !== INDEPENDENT) lost[p.faction] = p.lost + p.captured;
+  log(state, involved, 'battle', `Battle at ${name}: ${summary}.`, hex, lost);
   return report;
 }
 

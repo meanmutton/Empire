@@ -6,6 +6,7 @@ import { runEconomy } from './economy';
 import { runEspionage } from './espionage';
 import { runMinorAbilities } from './abilities';
 import { pruneLog } from './events';
+import { pruneDispatches } from './dispatch';
 import { applyHazards, continuePaths, markClaims, resetMovement, resolveClaims, surveyWithFleets } from './movement';
 import { activeFaction } from './query';
 import { advanceResearch } from './research';
@@ -61,6 +62,7 @@ function advanceActive(state: GameState): void {
       if (checkVictory(state, true)) return;
       state.turn += 1;
       pruneLog(state);
+      pruneDispatches(state);
     }
     if (state.factions[activeFaction(state)].alive) break;
   }

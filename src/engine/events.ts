@@ -3,8 +3,8 @@ import type { FactionId, GameState } from './types';
 /** Rounds of history kept in the state's event log. */
 export const LOG_ROUNDS = 3;
 
-export function log(state: GameState, to: FactionId[], kind: string, text: string, hex?: number): void {
-  state.log.push({ turn: state.turn, to, kind, text, ...(hex !== undefined ? { hex } : {}) });
+export function log(state: GameState, to: FactionId[], kind: string, text: string, hex?: number, data?: Record<string, number>): void {
+  state.log.push({ turn: state.turn, seq: state.seq, to, kind, text, ...(hex !== undefined ? { hex } : {}), ...(data ? { data } : {}) });
 }
 
 export function pruneLog(state: GameState): void {

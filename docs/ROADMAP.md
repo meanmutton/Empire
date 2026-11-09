@@ -59,8 +59,11 @@ Ordered roughly by value. Open a PR per item or small group.
 7. **AI depth**: coordinated invasions with transports, starbase placement at chokepoints, smarter spy
    targeting, alliance war coordination, using Mercenary Contracts / For Hire / Star Charts actively.
 8. **Unique techs per major** and ion storms that drift (both in the design doc as later work).
-9. **Hidden information**: run the engine inside the Lambda and send each player only what they can see.
-10. **Tutorial**: a guided first few turns.
+9. **Free-text chat with computer leaders** (option 3 from the messaging discussion): an optional mode where a
+   language model voices each computer power, with replies saved in the state and any effect still going
+   through statements and proposals. Needs an API key on the relay.
+10. **Hidden information**: run the engine inside the Lambda and send each player only what they can see.
+11. **Tutorial**: a guided first few turns.
 
 ## Notes for the next session
 - Read `docs/GAME_DESIGN.md` for rules; keep it updated when rules change.
