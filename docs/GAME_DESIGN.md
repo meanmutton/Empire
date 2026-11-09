@@ -100,12 +100,12 @@ every faction has every class or role) and an AI personality. Full numbers are i
 
 #### Krasnyr People's Union
 *A vast collectivist state that would rather win a war in the shadows than on the battlefield.*
-- Attributes: Population growth +25%, Metals +10%, Science −10%, espionage +30%.
+- Attributes: Population growth +25%, Metals +10%, Science −10%, espionage +30%; *Realpolitik*: may break
+  treaties at half the usual opinion penalty.
 - **Ministry of State Security**: spies cost −40% and have +30% mission success. The Union starts with 2 spies.
 - **Five-Year Plan**: once per 10 turns, choose a resource. Its output is +50% for 5 turns, then −10% for 5 turns.
 - **Fifth Column**: spies can run *Subversion* in enemy systems, raising unrest until the system defects. A
   defected system joins the Union with its improvements intact.
-- **Realpolitik**: may break treaties at half the usual opinion penalty.
 - Roster: every class except Battle Cruiser; cheap, plentiful Corvettes and Frigates; massive Dreadnaughts.
 - AI personality: Schemer. Joins alliances, spies on everyone, betrays an ally when it calculates a gain.
 
