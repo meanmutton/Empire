@@ -140,7 +140,7 @@ major (§9.5). Each has 1–2 special abilities and a small roster (2–4 classe
 | 10 | Sylph Gardeners | Ecological plant-collective | Growth | **Terraformers** (system development −40% cost); **Regrowth** (ships repair +10% per turn) |
 | 11 | Nhar Shadow Court | Secretive oligarchy of spymasters | Stealth | **Cloaking Fields** (ships invisible unless an enemy has sensors ≥ their stealth); **Infiltrators** (+40% spy success) |
 | 12 | Brakk Warbands | Feudal warlords | Brute force | **Berserkers** (+30% attack, −30% shields); **Boarding Parties** (capture crippled ships) |
-| 13 | Ophidian Syndicate | Criminal cartel | Commerce | **Black Market** (trade resources at 1:1 instead of 2:1); **Bribery** (enemies fighting in their territory deal −30% damage) |
+| 13 | Ophidian Syndicate | Criminal cartel | Commerce | **Black Market** (no fee on the galactic exchange; trade partners pay half); **Bribery** (enemies fighting in their territory deal −30% damage) |
 | 14 | Lumen Collective | Beings of pure energy | Energy | **Photonic Weapons** (energy weapons +25%); **Stellar Feeding** (double energy from stars) |
 | 15 | Cryx Remnant | Cybernetic husk of a fallen empire | Attrition | **Assimilation** (20% of enemy ships destroyed in their battles join the Cryx at 25% hull) |
 | 16 | Taurine Herd Assembly | Pastoral defensive democracy | Defense | **Fortress Worlds** (planetary defenses +100%); **Stampede** (+20% attack in own territory) |
@@ -268,6 +268,16 @@ Academy (new units start veteran).
 `yield = base(system type) × development multiplier × improvement bonuses × faction modifiers × treaties`,
 plus 0.1 energy per owned empty hex. Upkeep: each ship costs energy per turn by class; starbases and agents cost
 energy too. Population grows 5% per turn toward capacity (faction-modified).
+
+### 5.5 The galactic exchange
+- Any faction can swap one stockpiled resource (energy, metals, exotics) for another on the public exchange,
+  at any time on its turn, without needing a partner.
+- Base prices (in energy): energy 1, metals 1.2, exotics 4. Selling a resource pushes its price down and
+  buying pushes it up (by the value traded ÷ (1,500 + 40 × turn)), within half and double the base price.
+  Prices drift 15% back toward base each round.
+- A **40% fee** applies. The Ophidian Syndicate (Black Market) pays none, and anyone with a Trade
+  Agreement with the Ophidians pays 20%.
+- For a better deal, trade one-on-one with another faction through a proposal (§9.4), where no fee applies.
 
 ## 6. Units
 
@@ -428,7 +438,12 @@ plus `Vassal`/`Overlord` for minors.
 
 ### 9.4 Trades
 Proposals can include any mix of resources (lump sum or per turn for N turns), techs, ships/battle groups,
-armies, star systems/hexes, map knowledge, and returning captured diplomats. AI factions judge proposals
+armies (garrisoned ones; they move to the new owner's home), star systems/hexes (the giver's garrison goes
+home, and a starbase there changes hands), map knowledge, and returning captured diplomats. A **resource
+swap** is a proposal with just one resource on each side.
+
+Agreements only ever add income: each side gets a share of the *other* side's output **on top of** its own,
+and nothing is taken from the partner, so both always come out ahead. AI factions judge proposals
 by value, opinion and personality.
 
 ### 9.5 Vassals

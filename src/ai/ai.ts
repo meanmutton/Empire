@@ -66,6 +66,7 @@ export function aiTurn(state: GameState, me: FactionId, opts: AiOptions = {}): v
     diplomacy(ctx);
   }
   powers(ctx);
+  trade(ctx);
   build(ctx);
   rush(ctx);
   agents(ctx);
@@ -290,6 +291,17 @@ function build(ctx: Ctx): void {
     } else if (ctx.major && ctx.p.espionage > 0.5 && f.stock.energy > 150 && Object.values(state.agents).filter((a) => a.owner === me && a.kind === 'spy').length < 3 && sys.homeOf === me) {
       tryBuild({ type: 'build', hex, kind: 'spy', item: '' });
     }
+  }
+}
+
+/** Covers shortages on the galactic exchange from a big surplus of something else. */
+function trade(ctx: Ctx): void {
+  const s = ctx.state.factions[ctx.me].stock;
+  const spare = 200 + ctx.state.turn * 2;
+  if (s.metals < 60 && s.energy > spare + 100) act(ctx, { type: 'exchange', sell: 'energy', buy: 'metals', amount: Math.min(200, s.energy - spare) });
+  else if (s.energy < 40 && s.metals > 300) act(ctx, { type: 'exchange', sell: 'metals', buy: 'energy', amount: 120 });
+  if (s.exotics < 15 && ctx.state.factions[ctx.me].research.known.includes('hull4') && s.energy > spare + 150) {
+    act(ctx, { type: 'exchange', sell: 'energy', buy: 'exotics', amount: 150 });
   }
 }
 
