@@ -232,3 +232,78 @@ describe('relay concurrency', () => {
     expect([...store.states.keys()].filter((k) => k.startsWith(code))).toHaveLength(2);
   });
 });
+
+describe('relay turn notifications', () => {
+  function mailSetup() {
+    const store = new MemoryStore();
+    const inbox = new Map<string, ServerMessage[]>();
+    const mails: { to: string; subject: string; text: string }[] = [];
+    const ctx: Ctx = {
+      store, now: () => 1_000_000,
+      send: async (c, m) => { inbox.set(c, [...(inbox.get(c) ?? []), m]); return true; },
+      mail: async (to, subject, text) => { mails.push({ to, subject, text }); },
+    };
+    const send = async (conn: string, msg: ClientMessage) => { inbox.set(conn, []); await handleMessage(ctx, conn, JSON.stringify(msg)); return inbox.get(conn)!; };
+    return { store, mails, send };
+  }
+
+  async function twoPlayerGame(t: ReturnType<typeof mailSetup>) {
+    const created = await t.send('a', { action: 'create', req: 1, name: 'Ann', faction: 'concord', token: 'tA', config, protocol: PROTOCOL_VERSION });
+    const code = (created[0] as { lobby: { code: string } }).lobby.code;
+    await t.send('b', { action: 'claim', req: 2, code, token: 'tB', faction: 'rynkai', name: 'Bob' });
+    return code;
+  }
+
+  it('stores an email privately, shows it masked, and refuses junk', async () => {
+    const t = mailSetup();
+    const code = await twoPlayerGame(t);
+    expect((await t.send('b', { action: 'notify', req: 3, code, token: 'tB', email: 'not an email' }))[0].type).toBe('error');
+    const r = await t.send('b', { action: 'notify', req: 4, code, token: 'tB', email: 'bob@example.com' });
+    expect(r[0]).toMatchObject({ type: 'lobby', email: 'b•••@example.com' });
+    expect(JSON.stringify(r)).not.toContain('bob@example.com');
+    const seenByAnn = await t.send('a', { action: 'hello', req: 5, code, token: 'tA', protocol: PROTOCOL_VERSION });
+    expect(JSON.stringify(seenByAnn)).not.toContain('example.com');
+    expect((await t.send('x', { action: 'notify', req: 6, code, token: 'nobody', email: 'x@y.z' }))[0].type).toBe('error');
+  });
+
+  it('emails the next player only when they are offline, and everyone at the end', async () => {
+    const t = mailSetup();
+    const code = await twoPlayerGame(t);
+    await t.send('b', { action: 'notify', req: 3, code, token: 'tB', email: 'bob@example.com' });
+    await t.send('a', { action: 'notify', req: 4, code, token: 'tA', email: 'ann@example.com' });
+    await t.send('a', { action: 'upload', req: 5, code, token: 'tA', upload: 'u0', i: 0, n: 1, data: 'S0' });
+    await t.send('a', { action: 'start', req: 6, code, token: 'tA', upload: 'u0', n: 1, active: 'concord', turn: 1 });
+    expect(t.mails).toHaveLength(0); // Ann is connected and it is her turn.
+    // Bob is still connected from claiming his seat: no email.
+    await t.send('a', { action: 'upload', req: 7, code, token: 'tA', upload: 'u1', i: 0, n: 1, data: 'S1' });
+    await t.send('a', { action: 'submit', req: 8, code, token: 'tA', upload: 'u1', n: 1, base: 1, active: 'rynkai', turn: 1, finished: false });
+    expect(t.mails).toHaveLength(0);
+    // Bob goes offline; Ann's next turn ends on Bob again: he gets an email.
+    await t.store.removeConnection('b');
+    await t.send('b2', { action: 'upload', req: 9, code, token: 'tB', upload: 'u2', i: 0, n: 1, data: 'S2' });
+    await t.send('b2', { action: 'submit', req: 10, code, token: 'tB', upload: 'u2', n: 1, base: 2, active: 'concord', turn: 2, finished: false });
+    await t.store.removeConnection('b2');
+    await t.send('a', { action: 'upload', req: 11, code, token: 'tA', upload: 'u3', i: 0, n: 1, data: 'S3' });
+    await t.send('a', { action: 'submit', req: 12, code, token: 'tA', upload: 'u3', n: 1, base: 3, active: 'rynkai', turn: 2, finished: false });
+    expect(t.mails.map((m) => m.to)).toEqual(['bob@example.com']);
+    expect(t.mails[0].subject).toContain(code);
+    // Turning notices off stops them; the end of the game emails whoever still wants them.
+    await t.send('b3', { action: 'notify', req: 13, code, token: 'tB', email: null });
+    await t.store.removeConnection('b3');
+    await t.send('b4', { action: 'upload', req: 14, code, token: 'tB', upload: 'u4', i: 0, n: 1, data: 'S4' });
+    await t.send('b4', { action: 'submit', req: 15, code, token: 'tB', upload: 'u4', n: 1, base: 4, active: 'concord', turn: 3, finished: true });
+    expect(t.mails.map((m) => m.to)).toEqual(['bob@example.com', 'ann@example.com']);
+    expect(t.mails[1].subject).toMatch(/over/);
+  });
+
+  it('a seat claimed while the host starts cannot undo the start', async () => {
+    const t = mailSetup();
+    const code = await twoPlayerGame(t);
+    const g = (await t.store.getGame(code))!;
+    g.status = 'playing';
+    g.version = 1;
+    await t.store.putGame(g);
+    expect((await t.send('c', { action: 'claim', req: 9, code, token: 'tC', faction: 'lattice', name: 'Cat' }))[0].type).toBe('error');
+    expect((await t.store.getGame(code))!.status).toBe('playing');
+  });
+});

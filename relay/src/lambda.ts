@@ -1,10 +1,22 @@
 /** AWS Lambda entry point for the API Gateway WebSocket API ($connect, $disconnect, $default). */
 import { ApiGatewayManagementApiClient, GoneException, PostToConnectionCommand } from '@aws-sdk/client-apigatewaymanagementapi';
-import { handleDisconnect, handleMessage, type Ctx } from './core';
+import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
+import { handleDisconnect, handleMessage, type Ctx, type Mailer } from './core';
 import { DynamoStore } from './dynamo-store';
 
 const store = new DynamoStore(process.env.TABLE_NAME ?? 'empire-relay');
 let api: ApiGatewayManagementApiClient | null = null;
+
+/** Email through Amazon SES, only when a verified sender is configured (NOTIFY_FROM). */
+const from = process.env.NOTIFY_FROM ?? '';
+const ses = from ? new SESv2Client({}) : null;
+const mail: Mailer | undefined = ses ? async (to, subject, text) => {
+  await ses.send(new SendEmailCommand({
+    FromEmailAddress: from,
+    Destination: { ToAddresses: [to] },
+    Content: { Simple: { Subject: { Data: subject }, Body: { Text: { Data: text } } } },
+  }));
+} : undefined;
 
 interface WsEvent {
   requestContext: { connectionId: string; routeKey: string; domainName: string; stage: string };
@@ -16,6 +28,7 @@ export async function handler(event: WsEvent): Promise<{ statusCode: number }> {
   api ??= new ApiGatewayManagementApiClient({ endpoint: `https://${domainName}/${stage}` });
   const ctx: Ctx = {
     store,
+    mail,
     now: () => Date.now(),
     send: async (conn, msg) => {
       try {

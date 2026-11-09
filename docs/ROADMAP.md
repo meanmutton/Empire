@@ -52,7 +52,7 @@ Ordered roughly by value. Open a PR per item or small group.
    `test/ai.test.ts`); some AIs field 150–200 ships; tune claims, upkeep and research costs after playtests.
    Aggressive AIs all pick on the weakest neighbor at once (in one seed the Concord is reduced to a single
    system by turn 80); consider making AIs less eager to join a pile-on, or more eager to defend victims.
-3. **Offline notifications**: Web Push or email when it becomes your turn (the relay knows whose turn it is).
+3. **Notifications, round two**: email is in (relay + SES, opt-in per game). Next: Web Push for players who keep a browser, a reminder email when a turn has waited a long time, and an unsubscribe link once the game has a web address.
 4. **AI depth, round two**: smarter use of starbase upgrades, Varrhen vassal diplomacy toward Hegemony, Krasnyr subversion campaigns toward World Revolution, alliance war coordination beyond rescue, and wars against non-neighbors.
 5. **Unique techs per major** and ion storms that drift (both in the design doc as later work).
 6. **Free-text chat with computer leaders** (option 3 from the messaging discussion): an optional mode where a

@@ -6,6 +6,10 @@ Parameters:
   StageName:
     Type: String
     Default: live
+  NotifyFrom:
+    Type: String
+    Default: ''
+    Description: Verified Amazon SES sender address for "your turn" emails (e.g. empire@yourdomain.com). Leave empty to disable email.
 
 Globals:
   Function:
@@ -42,9 +46,13 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref Table
+          NOTIFY_FROM: !Ref NotifyFrom
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref Table }
         - Statement:
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource: '*'
             - Effect: Allow
               Action: execute-api:ManageConnections
               Resource: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*

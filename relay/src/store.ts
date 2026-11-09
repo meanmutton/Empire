@@ -15,6 +15,8 @@ export interface GameRecord extends Lobby {
    */
   stateKey?: string;
   prevStateKey?: string;
+  /** Notification emails by seat faction. Private: never sent to clients except masked to their owner. */
+  emails?: Record<string, string>;
 }
 
 export interface Store {

@@ -51,11 +51,13 @@ export type ClientMessage =
   | { action: 'message'; req: number; code: string; token: string; to: string[]; text: string; turn: number }
   /** Fetches messages this player may read, newer than `since` (ms). */
   | { action: 'messages'; req: number; code: string; token: string; since: number }
+  /** Sets (or with null, clears) the email this player wants "your turn" notices sent to. */
+  | { action: 'notify'; req: number; code: string; token: string; email: string | null }
   | { action: 'ping'; req: number };
 
 export type ServerMessage =
   | { type: 'created'; req: number; lobby: Lobby; you: string }
-  | { type: 'lobby'; req?: number; lobby: Lobby; you?: string | null }
+  | { type: 'lobby'; req?: number; lobby: Lobby; you?: string | null; /** The caller's notification email, masked. */ email?: string | null }
   | { type: 'state'; req: number; version: number; i: number; n: number; data: string }
   | { type: 'turn'; lobby: Lobby }
   | { type: 'ack'; req: number; version?: number }
@@ -81,6 +83,16 @@ export const MAX_MESSAGE_LENGTH = 1000;
 /** Whether `faction` may read a message. */
 export function canRead(m: ChatMessage, faction: string): boolean {
   return m.from === faction || m.to.includes('all') || m.to.includes(faction);
+}
+
+/** Shows an email address without giving it away: "m•••@gmail.com". */
+export function maskEmail(email: string): string {
+  const [user, domain] = email.split('@');
+  return `${user.slice(0, 1)}•••@${domain ?? ''}`;
+}
+
+export function isEmail(s: string): boolean {
+  return s.length <= 254 && /^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(s);
 }
 
 export function chunkText(text: string, size = CHUNK_SIZE): string[] {

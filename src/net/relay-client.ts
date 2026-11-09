@@ -114,10 +114,16 @@ export class RelayClient {
     return { lobby: m.lobby, you: m.you ?? null };
   }
 
-  async hello(code: string, token: string): Promise<{ lobby: Lobby; you: string | null }> {
+  async hello(code: string, token: string): Promise<{ lobby: Lobby; you: string | null; email: string | null }> {
     const r = await this.request({ action: 'hello', code, token, protocol: PROTOCOL_VERSION });
     const m = r[0] as Extract<ServerMessage, { type: 'lobby' }>;
-    return { lobby: m.lobby, you: m.you ?? null };
+    return { lobby: m.lobby, you: m.you ?? null, email: m.email ?? null };
+  }
+
+  /** Sets (or clears, with null) this player's "your turn" email. Returns it masked. */
+  async setEmail(code: string, token: string, email: string | null): Promise<string | null> {
+    const r = await this.request({ action: 'notify', code, token, email });
+    return (r[0] as Extract<ServerMessage, { type: 'lobby' }>).email ?? null;
   }
 
   async claim(code: string, token: string, faction: string, name: string): Promise<Lobby> {

@@ -53,6 +53,8 @@ export class OnlineSession {
   private ui: GameUI | null = null;
   private busy = false;
   private connected = false;
+  /** This player's notification email as the relay shows it (masked), or null. */
+  private email: string | null = null;
   private chat: RelayMessaging;
 
   private constructor(private root: HTMLElement, url: string, private entry: OnlineEntry, private onQuit: () => void) {
@@ -85,6 +87,7 @@ export class OnlineSession {
     const s = new OnlineSession(root, url, entry, onQuit);
     s.status(`Connecting to game ${code}…`);
     const r = known ? await s.client.hello(code, entry.token) : await s.client.join(code, name, entry.token);
+    if ('email' in r) s.email = (r as { email: string | null }).email;
     remember({ ...entry, faction: r.you, label: r.you ? factionDef(r.you).short : 'joining' });
     await s.onLobby(r.lobby, r.you);
     return s;
@@ -197,10 +200,33 @@ export class OnlineSession {
       h('div', { class: 'row wrap', style: 'margin-top:10px' },
         button('How to play', () => { m.close(); openHelp(); }),
         button('Reload from relay', async () => { m.close(); await this.fetchState(); }),
+        button(this.email ? `Email notices: ${this.email}` : 'Email me when it’s my turn…', () => { m.close(); this.emailDialog(); }),
         other && overdue ? button(`Play a caretaker turn for ${factionDef(other).short}`, () => { m.close(); void this.caretaker(other); }, { title: `They have had more than ${lobby.config.timeoutHours} hours.` }) : null,
         button('Leave to title', () => { m.close(); this.quit(); })));
     const m = modal('Menu', body);
     void ui;
+  }
+
+  /** Turn notices by email (optional). The address stays on the relay and is only ever shown masked. */
+  private emailDialog(): void {
+    const input = h('input', { type: 'email', placeholder: 'you@example.com', value: localGet('empire.email') ?? '', style: 'width:260px' });
+    const save = async (email: string | null) => {
+      try {
+        this.email = await this.client.setEmail(this.entry.code, this.entry.token, email);
+        if (email) localSet('empire.email', email);
+        toast(email ? 'You will get an email when it is your turn.' : 'Email notices are off.');
+        m.close();
+        if (this.lobby?.status === 'lobby') this.renderLobby();
+      } catch (e) { toast((e as Error).message, 'error'); }
+    };
+    const body = h('div', null,
+      h('div', { class: 'dim', style: 'margin-bottom:8px' },
+        'Get an email when it becomes your turn and you are not in the game, and when the game ends. Your address is stored only on the game relay, never shown to other players, and deleted when you turn notices off or the game expires.'),
+      this.email ? h('div', { style: 'margin-bottom:6px' }, 'Currently sending to ', h('b', null, this.email)) : null,
+      h('div', { class: 'row wrap' }, input,
+        button('Save', () => void save(input.value.trim()), { cls: 'primary small' }),
+        this.email ? button('Turn off', () => void save(null), { cls: 'small' }) : null));
+    const m = modal('Email notices', body);
   }
 
   /** Lets the computer play a defensive turn for an overdue player, then hands on. */
@@ -255,6 +281,9 @@ export class OnlineSession {
           }, { cls: 'small primary' })),
         h('div', { class: 'dim' }, d.text), rosterStrip(f, 28)));
     }
+    if (this.you) screen.lastElementChild!.append(h('div', { class: 'card row wrap', style: 'margin-top:12px' },
+      h('span', { class: 'grow' }, this.email ? `Email notices go to ${this.email}.` : 'Optional: get an email when it is your turn.'),
+      button(this.email ? 'Change' : 'Set up email notices', () => this.emailDialog(), { cls: 'small' })));
     const actions = h('div', { class: 'row', style: 'margin-top:16px' },
       button('Back to title', () => this.quit()), h('span', { class: 'grow' }),
       isHost ? button('Start the game', () => void this.startGame(), { cls: 'primary' }) : h('span', { class: 'dim' }, 'Waiting for the host to start…'));
@@ -333,4 +362,11 @@ function notifyYourTurn(): void {
   try {
     if ('Notification' in window && Notification.permission === 'granted') new Notification('Empire', { body: "It's your turn." });
   } catch { /* notifications are optional */ }
+}
+
+function localGet(k: string): string | null {
+  try { return localStorage.getItem(k); } catch { return null; }
+}
+function localSet(k: string, v: string): void {
+  try { localStorage.setItem(k, v); } catch { /* storage unavailable */ }
 }
