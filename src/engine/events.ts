@@ -3,13 +3,14 @@ import type { FactionId, GameState } from './types';
 /** Rounds of history kept in the state's event log. */
 export const LOG_ROUNDS = 3;
 
-export function log(state: GameState, to: FactionId[], kind: string, text: string, hex?: number, data?: Record<string, number>): void {
-  state.log.push({ turn: state.turn, seq: state.seq, to, kind, text, ...(hex !== undefined ? { hex } : {}), ...(data ? { data } : {}) });
+export function log(state: GameState, to: FactionId[], kind: string, text: string, hex?: number, data?: Record<string, number>, ref?: string): void {
+  state.log.push({ turn: state.turn, seq: state.seq, to, kind, text, ...(hex !== undefined ? { hex } : {}), ...(data ? { data } : {}), ...(ref ? { ref } : {}) });
 }
 
 export function pruneLog(state: GameState): void {
   const keepFrom = state.turn - LOG_ROUNDS;
   if (state.log.length && state.log[0].turn < keepFrom) state.log = state.log.filter((e) => e.turn >= keepFrom);
+  if (state.battleLog?.length && state.battleLog[0].turn < keepFrom) state.battleLog = state.battleLog.filter((b) => b.turn >= keepFrom);
 }
 
 /** Events a faction may see. */

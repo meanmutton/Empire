@@ -234,6 +234,37 @@ export interface GameEvent {
   data?: Record<string, number>;
   /** state.seq when it happened (orders events within a round). */
   seq?: number;
+  /** Id of a detailed record (e.g. a BattleRecord). */
+  ref?: string;
+}
+
+/** One side of a recorded battle. */
+export interface BattleSide {
+  faction: FactionId;
+  /** Attack after shields, point defense and modifiers. */
+  attack: number;
+  /** Total effective hit points (hull + shields, × toughness). */
+  durability: number;
+  /** Damage (in effective hit points) this side dealt and took. */
+  dealt: number;
+  taken: number;
+  ships: { design: string; before: number; destroyed: number; captured: number; damaged: number; hullBefore: number; hullAfter: number }[];
+  fighters: { before: number; after: number };
+  starbase?: { tier: number; hullBefore: number; hullAfter: number };
+  planet?: { system: string; defenseBefore: number; defenseAfter: number };
+  /** Why this side hit as hard as it did (bonuses, penalties, enemy shields and point defense). */
+  notes: string[];
+}
+
+export interface BattleRecord {
+  id: Id;
+  turn: number;
+  seq: number;
+  hex: number;
+  place: string;
+  terrain: Terrain;
+  firstRound: boolean;
+  sides: BattleSide[];
 }
 
 export type Offer =
@@ -340,6 +371,8 @@ export interface GameState {
   routes?: TradeRoute[];
   /** Ships being built to order at another faction's shipyard. */
   contracts?: Contract[];
+  /** Detailed records of recent battles (kept as long as the event log). */
+  battleLog?: BattleRecord[];
   /** Galactic Council results: the last election's vote shares and consecutive wins per candidate. */
   council?: { turn: number; shares: Record<FactionId, number>; streak: Record<FactionId, number> };
   /** Galactic exchange prices (energy-equivalent value per unit). */

@@ -1,5 +1,6 @@
 import { eventsFor } from '../../engine/events';
-import { h, modal } from '../dom';
+import { button, h, modal } from '../dom';
+import { openBattle } from './battle';
 import type { GameUI } from '../game-ui';
 
 /** Turn report: everything this faction was told about in the last couple of rounds. */
@@ -14,7 +15,8 @@ export function openReport(ui: GameUI, sinceTurn?: number): void {
       body.append(h('h3', null, `Turn ${e.turn}`));
       lastTurn = e.turn;
     }
-    const row = h('div', { class: 'event', style: e.hex !== undefined ? 'cursor:pointer' : '' }, `${iconFor(e.kind)} ${e.text}`);
+    const row = h('div', { class: 'event row', style: e.hex !== undefined ? 'cursor:pointer' : '' }, h('span', { class: 'grow' }, `${iconFor(e.kind)} ${e.text}`),
+      e.kind === 'battle' && e.ref ? button('Battle report', () => openBattle(ui, e.ref!), { cls: 'small' }) : null);
     if (e.hex !== undefined) row.addEventListener('click', () => { m.close(); ui.view.centerOn(e.hex!); ui.select(e.hex!); });
     body.append(row);
   }
