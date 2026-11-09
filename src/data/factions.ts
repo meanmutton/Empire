@@ -124,7 +124,7 @@ const MAJORS: FactionDef[] = [
     id: 'krasnyr', name: "Krasnyr People's Union", short: 'Krasnyr', kind: 'major',
     species: 'Mammalian humanoids', government: 'One-party collectivist state', inspiration: 'Cold War USSR',
     text: 'A vast collectivist state that would rather win a war in the shadows than on the battlefield.',
-    color: '#f46036', style: 'hammer',
+    color: '#ff8c1a', style: 'hammer',
     modifiers: { popGrowth: 0.25, metals: 0.1, science: -0.1, espionage: 0.3, treatyBreak: 0.5 },
     abilities: ['stateSecurity', 'fiveYearPlan', 'fifthColumn'],
     roster: [
@@ -167,16 +167,16 @@ const MINOR_SPECS: MinorSpec[] = [
   ['myrr', 'Myrr Choir', 'Myrr', 'Psionic pacifist theocracy', 'Science', '#7fd1ff', 'orb', ['mindShield', 'harmonicCalm'], { science: 0.3 },
     ['corvette/escort/Hymn', 'frigate/science/Cantor', 'lightCruiser/line/Chorale'], [0.05, 0.8, 0.0, 0.2, 0.9, 0.0],
     'A choir of psionic singers whose harmonies dull the will to fight.'],
-  ['quorr', 'Quorr Salvage Fleets', 'Quorr', 'Nomadic anarchist scavengers', 'Metals', '#a07850', 'scrap', ['salvagers'], { metals: 0.25 },
+  ['quorr', 'Quorr Salvage Fleets', 'Quorr', 'Nomadic anarchist scavengers', 'Metals', '#855c2c', 'scrap', ['salvagers'], { metals: 0.25 },
     ['runabout/scout/Picker', 'corvette/line/Junker', 'frigate/cargo/Hauler', 'destroyer/line/Ragpile'], [0.5, 0.4, 0.4, 0.3, 0.2, 0.2],
     'Scavenger clans who strip every battlefield bare.'],
-  ['thessic', 'Thessic Banking Houses', 'Thessic', 'Mercantile plutocracy', 'Energy', '#e8c547', 'saucer', ['tradeHub', 'mercenaryContracts'], { energy: 0.3 },
+  ['thessic', 'Thessic Banking Houses', 'Thessic', 'Mercantile plutocracy', 'Energy', '#e7f159', 'saucer', ['tradeHub', 'mercenaryContracts'], { energy: 0.3 },
     ['runabout/cargo/Ledger', 'frigate/escort/Notary', 'lightCruiser/line/Dividend'], [0.1, 0.9, 0.3, 0.2, 0.3, 0.4],
     'Merchant houses that finance everyone and fight only for profit.'],
   ['ghaltar', "Ghal'tar Pirate Clans", "Ghal'tar", 'Raider clans', 'Raiding', '#8b1e3f', 'spike', ['raiders', 'ambush'], { attack: 0.1 },
     ['runabout/raider/Cutthroat', 'corvette/raider/Reaver', 'destroyer/raider/Marauder'], [0.9, 0.2, 0.7, 0.4, 0.1, 0.3],
     'Raider clans who hide in nebulae and asteroid belts and prey on convoys.'],
-  ['ixxi', 'Ixxi Swarm', 'Ixxi', 'Insectoid hive mind', 'Numbers', '#6fbf3a', 'insect', ['swarmTactics', 'rapidBreeding'], { popGrowth: 0.5 },
+  ['ixxi', 'Ixxi Swarm', 'Ixxi', 'Insectoid hive mind', 'Numbers', '#64b72d', 'insect', ['swarmTactics', 'rapidBreeding'], { popGrowth: 0.5 },
     ['fighter/line/Drone-mite', 'corvette/line/Stinger', 'corvette/carrier/Broodling', 'frigate/line/Mandible'], [0.7, 0.2, 0.3, 0.8, 0.2, 0.1],
     'A ravenous hive that overwhelms by sheer numbers.'],
   ['celestine', 'Celestine Order', 'Celestine', 'Monastic knightly theocracy', 'Armies', '#f0f0ff', 'cross', ['zealots', 'aegisOfFaith'], { army: 0.5, shields: 0.2 },
@@ -185,10 +185,10 @@ const MINOR_SPECS: MinorSpec[] = [
   ['voidborn', 'Voidborn Drifters', 'Voidborn', 'Deep-space nomads', 'Mobility', '#5a6b8c', 'sail', ['voidAdapted', 'elusive'], { movement: 1 },
     ['runabout/explore/Drifter', 'corvette/line/Wanderer', 'frigate/cargo/Arkship'], [0.2, 0.5, 0.2, 0.4, 0.4, 0.2],
     'Born between the stars, they never touch a planet if they can help it.'],
-  ['aurelian', 'Aurelian Republic', 'Aurelian', 'Declining elder democracy', 'Technology', '#d4af37', 'ring', ['ancientArchives', 'prestige'], { science: 0.25 },
+  ['aurelian', 'Aurelian Republic', 'Aurelian', 'Declining elder democracy', 'Technology', '#f1e3b5', 'ring', ['ancientArchives', 'prestige'], { science: 0.25 },
     ['frigate/science/Archivist', 'lightCruiser/escort/Senator', 'battleship/line/Republic'], [0.1, 0.9, 0.0, 0.1, 0.8, 0.2],
     'An ancient republic in its twilight, rich in knowledge and short on will.'],
-  ['korrigan', "Korrigan Miners' Guild", 'Korrigan', 'Syndicalist miners', 'Metals', '#9c6b30', 'brick', ['deepCoreMining'], { metals: 0.3 },
+  ['korrigan', "Korrigan Miners' Guild", 'Korrigan', 'Syndicalist miners', 'Metals', '#6b4226', 'brick', ['deepCoreMining'], { metals: 0.3 },
     ['corvette/line/Pickaxe', 'frigate/cargo/Ore-hauler', 'destroyer/line/Drillhead'], [0.3, 0.6, 0.1, 0.4, 0.2, 0.1],
     'Tough miners who own their asteroids and will fight to keep them.'],
   ['sylph', 'Sylph Gardeners', 'Sylph', 'Ecological plant-collective', 'Growth', '#3fbf7f', 'organic', ['terraformers', 'regrowth'], { popGrowth: 0.2 },
@@ -209,7 +209,7 @@ const MINOR_SPECS: MinorSpec[] = [
   ['cryx', 'Cryx Remnant', 'Cryx', 'Cybernetic husk of a fallen empire', 'Attrition', '#4f6d5a', 'scrap', ['cryxAssimilation'], { hull: 0.2 },
     ['corvette/line/Husk', 'destroyer/line/Revenant', 'battleship/line/Dirge'], [0.8, 0.1, 0.4, 0.4, 0.2, 0.1],
     'The undying machinery of an empire that should have stayed dead.'],
-  ['taurine', 'Taurine Herd Assembly', 'Taurine', 'Pastoral defensive democracy', 'Defense', '#c2a878', 'brick', ['fortressWorlds', 'stampede'], { defense: 1 },
+  ['taurine', 'Taurine Herd Assembly', 'Taurine', 'Pastoral defensive democracy', 'Defense', '#d1a493', 'brick', ['fortressWorlds', 'stampede'], { defense: 1 },
     ['corvette/escort/Calf', 'frigate/line/Bull', 'heavyCruiser/line/Aurochs'], [0.2, 0.7, 0.1, 0.2, 0.3, 0.1],
     'Peaceful grazers who turned their homeworld into a fortress.'],
   ['echo', 'Echo Engineers', 'Echo', 'Isolationist genius-caste', 'Engines', '#00c2c7', 'ring', ['advancedEngines', 'prototypeLab'], { science: 0.2, movement: 1 },
@@ -218,37 +218,37 @@ const MINOR_SPECS: MinorSpec[] = [
   ['vesh', 'Vesh Prophets', 'Vesh', 'Missionary faith', 'Influence', '#ff9ecf', 'cross', ['conversion'], { diplomacy: 0.3 },
     ['runabout/cargo/Herald', 'frigate/escort/Pilgrim', 'lightCruiser/line/Cathedral'], [0.2, 0.8, 0.3, 0.4, 0.3, 0.4],
     'Prophets whose message spreads faster than any fleet.'],
-  ['haldane', 'Haldane Free Traders', 'Haldane', 'Libertarian convoy culture', 'Trade', '#ffb347', 'sail', ['smugglers', 'freePort'], { energy: 0.25 },
+  ['haldane', 'Haldane Free Traders', 'Haldane', 'Libertarian convoy culture', 'Trade', '#f8b385', 'sail', ['smugglers', 'freePort'], { energy: 0.25 },
     ['runabout/cargo/Skiff', 'frigate/cargo/Convoy', 'destroyer/escort/Outrider'], [0.2, 0.8, 0.2, 0.2, 0.2, 0.2],
     'Free traders who answer to nobody and trade with everybody.'],
   ['grendis', 'Grendis Iron Legion', 'Grendis', 'Mercenary army-state', 'Armies', '#708090', 'hammer', ['forHire', 'veterans'], { army: 0.3 },
     ['frigate/transport/Dropship', 'destroyer/line/Legionary', 'heavyCruiser/transport/Cohort'], [0.6, 0.6, 0.4, 0.2, 0.1, 0.1],
     'A nation of soldiers whose main export is war.'],
-  ['pelagic', 'Pelagic Union', 'Pelagic', 'Aquatic federation', 'Population', '#1e90ff', 'organic', ['oceanWorlds', 'deepShelters'], { popGrowth: 0.2 },
+  ['pelagic', 'Pelagic Union', 'Pelagic', 'Aquatic federation', 'Population', '#2d64b7', 'organic', ['oceanWorlds', 'deepShelters'], { popGrowth: 0.2 },
     ['corvette/escort/Ripple', 'frigate/colony/Tidepool', 'lightCruiser/line/Kraken'], [0.2, 0.7, 0.1, 0.5, 0.4, 0.1],
     'Aquatic peoples who dream of a galaxy of oceans.'],
   ['zenith', 'Zenith Observatory', 'Zenith', 'Scholar-astronomers', 'Sensors', '#b0c4de', 'ring', ['longRangeSensors', 'starCharts'], { sensors: 3, science: 0.15 },
     ['runabout/scout/Lens', 'frigate/science/Telescope', 'destroyer/escort/Parallax'], [0.1, 0.8, 0.1, 0.1, 0.8, 0.3],
     'Star-watchers who know every corner of the map.'],
-  ['morrow', 'Morrow Bloom', 'Morrow', 'Biological horror fleet', 'Bio-weapons', '#9acd32', 'organic', ['sporePayload', 'livingHulls'], { repair: 0.2 },
+  ['morrow', 'Morrow Bloom', 'Morrow', 'Biological horror fleet', 'Bio-weapons', '#96f159', 'organic', ['sporePayload', 'livingHulls'], { repair: 0.2 },
     ['corvette/line/Spore', 'frigate/carrier/Pod-mother', 'heavyCruiser/line/Blight'], [0.8, 0.1, 0.5, 0.6, 0.1, 0.0],
     'A spreading bloom of living ships that rots everything it touches.'],
   ['kethran', 'Kethran Crystal-Minds', 'Kethran', 'Silicon crystalline consensus', 'Durability', '#e0ffff', 'crystal', ['crystallineHulls', 'slowThought'], { hull: 0.4, movement: -1 },
     ['frigate/line/Shard', 'heavyCruiser/line/Geode', 'battleship/line/Monolith'], [0.3, 0.5, 0.1, 0.2, 0.5, 0.0],
     'Slow, patient crystalline minds with nearly unbreakable ships.'],
-  ['skarn', 'Skarn Hunters', 'Skarn', 'Apex predator packs', 'Aggression', '#b22222', 'spike', ['huntersInstinct', 'tracking'], { attack: 0.15 },
+  ['skarn', 'Skarn Hunters', 'Skarn', 'Apex predator packs', 'Aggression', '#ff5d8f', 'spike', ['huntersInstinct', 'tracking'], { attack: 0.15 },
     ['runabout/raider/Stalker', 'corvette/line/Packhound', 'destroyer/line/Alpha'], [0.9, 0.2, 0.4, 0.5, 0.1, 0.2],
     'Pack hunters who track wounded prey across the stars.'],
-  ['ilyrian', 'Ilyrian Courts', 'Ilyrian', 'Dynastic monarchy', 'Diplomacy', '#c71585', 'cross', ['royalMarriage', 'courtIntrigue'], { diplomacy: 0.3 },
+  ['ilyrian', 'Ilyrian Courts', 'Ilyrian', 'Dynastic monarchy', 'Diplomacy', '#b72d8e', 'cross', ['royalMarriage', 'courtIntrigue'], { diplomacy: 0.3 },
     ['runabout/cargo/Envoy', 'frigate/escort/Herald', 'lightCruiser/line/Regent'], [0.2, 0.9, 0.5, 0.2, 0.3, 0.5],
     'Ancient royal houses who rule through marriages and whispers.'],
-  ['forgeborn', 'Forgeborn Anvil', 'Forgeborn', 'Industrial guild-state', 'Shipbuilding', '#cd5c5c', 'hammer', ['masterShipwrights'], { shipCost: -0.2, metals: 0.15 },
+  ['forgeborn', 'Forgeborn Anvil', 'Forgeborn', 'Industrial guild-state', 'Shipbuilding', '#ae6977', 'hammer', ['masterShipwrights'], { shipCost: -0.2, metals: 0.15 },
     ['corvette/line/Rivet', 'destroyer/line/Anvil', 'battleCruiser/line/Crucible'], [0.4, 0.6, 0.2, 0.3, 0.3, 0.1],
     'Guild-masters whose shipyards build for the highest bidder.'],
   ['tal', 'Tal Wanderers', 'Tal', 'Wormhole-faring archivists', 'Exploration', '#20b2aa', 'sail', ['wormholeNavigation'], { sensors: 1 },
     ['runabout/explore/Pathweaver', 'frigate/science/Chronicler', 'destroyer/escort/Gatekeeper'], [0.1, 0.7, 0.2, 0.3, 0.7, 0.2],
     'Archivists who travel the hidden wormhole roads.'],
-  ['hollowsun', 'Hollow Sun Cult', 'Hollow Sun', 'Star-worshippers', 'Exotics', '#ff4500', 'orb', ['stellarHarnessing', 'solarFlare'], { exotics: 0.3 },
+  ['hollowsun', 'Hollow Sun Cult', 'Hollow Sun', 'Star-worshippers', 'Exotics', '#ffe14d', 'orb', ['stellarHarnessing', 'solarFlare'], { exotics: 0.3 },
     ['corvette/line/Ember', 'frigate/line/Cinder', 'heavyCruiser/line/Pyre'], [0.6, 0.3, 0.3, 0.3, 0.4, 0.1],
     'A fire cult that draws power from dying stars.'],
   ['mechanist', 'Unbound Mechanists', 'Mechanist', 'Machines freed from the Lattice', 'Resilience', '#a9a9a9', 'prism', ['mechSelfRepair', 'grudge'], { repair: 0.15 },
@@ -278,6 +278,16 @@ export function factionDef(id: string): FactionDef {
 export function modifiersOf(id: string): Modifiers {
   return { ...NO_MODIFIERS, ...factionDef(id).modifiers };
 }
+
+/** Distance between two #rrggbb colors in RGB space. */
+export function colorDistance(a: string, b: string): number {
+  const p = (c: string) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+  const [x, y] = [p(a), p(b)];
+  return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
+}
+
+/** Minimum color distance between any two factions in the same game, so every empire is easy to tell apart. */
+export const MIN_COLOR_DISTANCE = 45;
 
 export function hasAbility(id: string, ability: AbilityId): boolean {
   return factionDef(id).abilities.includes(ability);

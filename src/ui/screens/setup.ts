@@ -9,6 +9,8 @@ import { injectStyles } from '../styles';
 
 export interface SetupChoice extends NewGameOptions {
   online: boolean;
+  /** Online: hours before others may play a caretaker turn for a silent player (0 = never). */
+  timeoutHours: number;
 }
 
 export interface TitleActions {
@@ -33,6 +35,7 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
   let seed = randomSeed();
   let turnLimit = '';
   let online = false;
+  let timeoutHours = '24';
   const victory = { conquest: true, domination: true, ascendance: true, alliance: true };
 
   const render = () => {
@@ -50,7 +53,7 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
     }
     if (actions.join) {
       left.append(h('h3', null, 'Join an online game'));
-      const code = h('input', { placeholder: 'Game code', maxlength: '6', style: 'width:110px;text-transform:uppercase' });
+      const code = h('input', { placeholder: 'Game code', maxlength: '6', value: new URLSearchParams(location.search).get('join') ?? '', style: 'width:110px;text-transform:uppercase' });
       const name = h('input', { placeholder: 'Your name', value: localStorageGet('empire.name') ?? '' , style: 'width:140px' });
       left.append(h('div', { class: 'row' }, code, name, button('Join', () => {
         localStorageSet('empire.name', name.value);
@@ -88,13 +91,16 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
     left.append(h('h3', null, 'Galaxy'), h('div', { class: 'kv' },
       h('span', { class: 'k' }, 'Map size'), sizeSel,
       h('span', { class: 'k' }, 'Seed'), seedIn,
-      h('span', { class: 'k' }, 'Turn limit'), limit));
+      h('span', { class: 'k' }, 'Turn limit'), limit,
+      online ? h('span', { class: 'k' }, 'Turn timeout (hours)') : null,
+      online ? h('input', { value: timeoutHours, style: 'width:70px', title: 'After this long, another player may let the computer play a caretaker turn. 0 = never.', oninput: (e: Event) => { timeoutHours = (e.target as HTMLInputElement).value; } }) : null));
     left.append(h('h3', null, 'Victory'), h('div', { class: 'row wrap' }, ...(Object.keys(victory) as (keyof typeof victory)[]).map((k) =>
       h('label', { class: 'row' }, h('input', { type: 'checkbox', checked: victory[k], onchange: (e: Event) => { victory[k] = (e.target as HTMLInputElement).checked; } }), k))));
     left.append(h('div', { style: 'margin-top:16px' }, button(online ? 'Create online game' : 'Start game', () => {
       actions.start({
         seed: seed || randomSeed(), seats: seats.map((s, i) => ({ ...s, name: s.name.trim() || `Player ${i + 1}` })),
         ...MAP_SIZES[size], turnLimit: turnLimit ? Math.max(10, Number(turnLimit)) : null, victory, online,
+        timeoutHours: Math.max(0, Number(timeoutHours) || 0),
       });
     }, { cls: 'primary' })));
 
