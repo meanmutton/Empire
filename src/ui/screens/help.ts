@@ -8,7 +8,8 @@ const SECTIONS: [string, string[]][] = [
   ]],
   ['Territory', [
     'A ship that ends your turn alone in a hex claims it at the start of your next turn, which gives enemies one round to contest it.',
-    'Enemy territory can only be claimed while at war. Defended systems must have their planetary defense and garrison beaten first.',
+    'Only empty hexes are claimed this way. Settled planets must be invaded with armies once their planetary defense is down, and enemy starbases must be destroyed first.',
+    'Enemy territory can only be claimed while at war.',
     'Territory cut off from your home produces half as much.',
   ]],
   ['Economy', [

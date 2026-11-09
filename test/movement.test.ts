@@ -3,6 +3,7 @@ import {
   buildOutpost, colonize, continuePaths, markClaims, mergeFleets, moveFleet, resetMovement, resolveClaims, splitFleet,
 } from '../src/engine/movement';
 import { canSeeFleet, isExplored } from '../src/engine/visibility';
+import { invade } from '../src/engine/ground';
 import { emptyHex, firstDesign, fleetOf, newGame, setStatus } from './helpers';
 
 function clearAround(g: ReturnType<typeof newGame>, hex: number, r: number) {
@@ -109,6 +110,40 @@ describe('claims', () => {
     for (const f of Object.values(g.fleets)) if (f.owner === 'rynkai' && f.hex === home) f.hex = rynHex + 0;
     markClaims(g, 'concord');
     expect(g.map.hexes[home].pendingClaim).toBeNull();
+  });
+
+  it('only takes empty hexes: settled planets need invasion, starbases must be destroyed', () => {
+    const g = newGame();
+    setStatus(g, 'concord', 'rynkai', 'war');
+    // An undefended Ryn'kai outpost: presence alone does not take it.
+    const outpost = g.map.hexes.findIndex((h) => h.owner === 'rynkai' && h.system && !h.system.homeOf);
+    const sys = g.map.hexes[outpost].system!;
+    sys.defense = 0;
+    sys.garrison = 0;
+    for (const f of Object.values(g.fleets)) if (f.owner === 'rynkai' && f.hex === outpost) f.hex = g.factions.rynkai.home;
+    const tr = fleetOf(g, 'concord', firstDesign('concord', (d) => d.role === 'transport'), outpost);
+    markClaims(g, 'concord');
+    expect(g.map.hexes[outpost].pendingClaim).toBeNull();
+    // Landing an army does take it.
+    const ship = g.fleets[tr].ships[0];
+    g.armies.a1 = { id: 'a1', owner: 'concord', strength: 10, xp: 0, hex: null, ship };
+    g.ships[ship].cargo.push('a1');
+    expect(invade(g, tr).ok).toBe(true);
+    expect(g.map.hexes[outpost].owner).toBe('concord');
+    // An unsettled star system is an empty hex: presence claims it.
+    const wild = g.map.hexes.findIndex((h) => h.system && !h.owner && h.system.development === 0 && h.terrain === 'space');
+    fleetOf(g, 'concord', firstDesign('concord', (d) => d.role === 'scout'), wild);
+    markClaims(g, 'concord');
+    expect(g.map.hexes[wild].pendingClaim).toBe('concord');
+    // An enemy starbase blocks the claim until it is destroyed.
+    const empty = g.map.hexes.findIndex((h, i) => h.owner === 'rynkai' && !h.system && !Object.values(g.fleets).some((f) => f.hex === i));
+    g.starbases.sb = { id: 'sb', owner: 'rynkai', hex: empty, tier: 1, hull: 150 };
+    fleetOf(g, 'concord', firstDesign('concord', (d) => d.role === 'scout'), empty);
+    markClaims(g, 'concord');
+    expect(g.map.hexes[empty].pendingClaim).toBeNull();
+    delete g.starbases.sb;
+    markClaims(g, 'concord');
+    expect(g.map.hexes[empty].pendingClaim).toBe('concord');
   });
 });
 
