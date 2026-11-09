@@ -58,6 +58,12 @@ message to its sender and recipients.
 
 States are chunked because API Gateway WebSocket frames are capped at 32 KB and messages at 128 KB.
 
+Every uploaded state is stored under its own key (`version-uploadId`). The game record points at the current
+one, and the pointer moves with a conditional write on the version. If two valid submissions race (the
+same player on two devices, or a caretaker turn arriving just as the late player submits), exactly one
+wins. The loser's state is deleted, and it can never overwrite the winner's. The relay keeps the current
+and previous states, so a player who is mid-download still gets a complete state.
+
 ## Running locally
 ```bash
 npm run relay

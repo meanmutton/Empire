@@ -164,15 +164,13 @@ async function dispatch(ctx: Ctx, conn: string, msg: ClientMessage, fail: (m: st
       const parts = await store.getChunks(code, msg.upload, msg.n);
       if (!parts) { await fail('The upload is incomplete; try again.'); return; }
       const base = g.version;
-      await store.putState(code, base + 1, parts.join(''));
-      await store.deleteChunks(code, msg.upload, msg.n);
       g.status = 'playing';
-      g.version = base + 1;
       g.active = msg.active;
       g.turn = msg.turn;
       g.pending = {};
       g.updatedAt = g.lastSubmitAt = ctx.now();
-      if (!(await store.putGame(g, base))) { await fail('Someone else changed the game; reload.'); return; }
+      if (!(await commitState(store, g, base, msg.upload, parts.join('')))) { await fail('Someone else changed the game; reload.'); return; }
+      await store.deleteChunks(code, msg.upload, msg.n);
       await ctx.send(conn, { type: 'ack', req: msg.req, version: g.version });
       await broadcast(ctx, code, { type: 'turn', lobby: publicLobby(g) });
       return;
@@ -188,15 +186,12 @@ async function dispatch(ctx: Ctx, conn: string, msg: ClientMessage, fail: (m: st
       const parts = await store.getChunks(code, msg.upload, msg.n);
       if (!parts) { await fail('The upload is incomplete; try again.'); return; }
       const base = g.version;
-      await store.putState(code, base + 1, parts.join(''));
-      g.version = base + 1;
       g.active = msg.active;
       g.turn = msg.turn;
       g.status = msg.finished ? 'finished' : 'playing';
       g.updatedAt = g.lastSubmitAt = ctx.now();
-      if (!(await store.putGame(g, base))) { await fail('Someone else submitted first; reload.'); return; }
+      if (!(await commitState(store, g, base, msg.upload, parts.join('')))) { await fail('Someone else submitted first; reload.'); return; }
       await store.deleteChunks(code, msg.upload, msg.n);
-      if (base > 1) await store.deleteState(code, base - 1);
       await ctx.send(conn, { type: 'ack', req: msg.req, version: g.version });
       await broadcast(ctx, code, { type: 'turn', lobby: publicLobby(g) });
       return;
@@ -225,7 +220,7 @@ async function dispatch(ctx: Ctx, conn: string, msg: ClientMessage, fail: (m: st
     }
     case 'get': {
       if (!me) { await fail('You are not in this game.'); return; }
-      const state = await store.getState(code, g.version);
+      const state = await store.getState(code, g.stateKey ?? String(g.version));
       if (state === null) { await fail('The game has not started yet.'); return; }
       const parts = chunkText(state);
       for (let i = 0; i < parts.length; i++) {
@@ -236,6 +231,26 @@ async function dispatch(ctx: Ctx, conn: string, msg: ClientMessage, fail: (m: st
     default:
       await fail('Unknown action.');
   }
+}
+
+/**
+ * Stores an uploaded state under its own key, then moves the game's pointer to it with a conditional write
+ * on the version. If another submission won the race, this one's state is deleted and the winner's is
+ * untouched. On success the state from two versions ago is removed.
+ */
+async function commitState(store: Store, g: GameRecord, base: number, upload: string, data: string): Promise<boolean> {
+  const key = `${base + 1}-${String(upload).replace(/[^A-Za-z0-9]/g, '').slice(0, 16) || randomBytes(4).toString('hex')}`;
+  await store.putState(g.code, key, data);
+  const stale = g.prevStateKey;
+  g.prevStateKey = g.stateKey ?? (base > 0 ? String(base) : undefined);
+  g.stateKey = key;
+  g.version = base + 1;
+  if (!(await store.putGame(g, base))) {
+    await store.deleteState(g.code, key);
+    return false;
+  }
+  if (stale) await store.deleteState(g.code, stale);
+  return true;
 }
 
 function clean(name: string): string {

@@ -44,29 +44,29 @@ export class DynamoStore implements Store {
     }
   }
 
-  async getState(code: string, version: number): Promise<string | null> {
+  async getState(code: string, key: string): Promise<string | null> {
     const r = await this.db.send(new QueryCommand({
       TableName: this.table, KeyConditionExpression: 'pk = :p AND begins_with(sk, :s)',
-      ExpressionAttributeValues: { ':p': `GAME#${code}`, ':s': `STATE#${version}#` },
+      ExpressionAttributeValues: { ':p': `GAME#${code}`, ':s': `STATE#${key}#` },
     }));
     const items = (r.Items ?? []).sort((a, b) => (a.part as number) - (b.part as number));
     if (items.length === 0) return null;
     return items.map((i) => i.data as string).join('');
   }
 
-  async putState(code: string, version: number, data: string): Promise<void> {
+  async putState(code: string, key: string, data: string): Promise<void> {
     for (let i = 0, part = 0; i < data.length || part === 0; i += PART, part++) {
       await this.db.send(new PutCommand({
         TableName: this.table,
-        Item: { pk: `GAME#${code}`, sk: `STATE#${version}#${String(part).padStart(3, '0')}`, part, data: data.slice(i, i + PART), ttl: this.ttl(90) },
+        Item: { pk: `GAME#${code}`, sk: `STATE#${key}#${String(part).padStart(3, '0')}`, part, data: data.slice(i, i + PART), ttl: this.ttl(90) },
       }));
     }
   }
 
-  async deleteState(code: string, version: number): Promise<void> {
+  async deleteState(code: string, key: string): Promise<void> {
     const r = await this.db.send(new QueryCommand({
       TableName: this.table, KeyConditionExpression: 'pk = :p AND begins_with(sk, :s)',
-      ExpressionAttributeValues: { ':p': `GAME#${code}`, ':s': `STATE#${version}#` }, ProjectionExpression: 'pk, sk',
+      ExpressionAttributeValues: { ':p': `GAME#${code}`, ':s': `STATE#${key}#` }, ProjectionExpression: 'pk, sk',
     }));
     for (const it of r.Items ?? []) await this.db.send(new DeleteCommand({ TableName: this.table, Key: { pk: it.pk, sk: it.sk } }));
   }
