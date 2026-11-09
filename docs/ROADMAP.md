@@ -39,9 +39,26 @@ Status key: `[ ]` not started, `[~]` PR open, `[x]` merged.
   relay with the same protocol, protocol tests.
 - [~] **16 Online async play**: create/join by code, seat claiming, turn upload/download, "your turn"
   notifications, reconnect, version checks.
-- [ ] **17 Polish and balance**: autoplay balance simulations, tutorial hints, sound, accessibility, mobile.
-  Known from the phase 11 simulation (`test/ai.test.ts` prints a table): territory grows fast (~200+ hexes
-  per major by turn 80); the Concord settles far fewer systems than the others; the Varrhen bank metals.
+- [~] **17 Polish and balance (first pass)**: remaining minor abilities wired in (Ghal'tar raiding, Vesh
+  conversion, Ophidian bribery, Haldane smugglers, Taurine fortress homes), "How to play" screen, phone
+  layout (stacked title screen, floating End Turn, panel only for selections), multi-seed balance survey.
+
+## Backlog (pick up here)
+Ordered roughly by value. Open a PR per item or small group.
+1. **Deploy the relay** (`docs/RELAY.md`) and host the built `dist/index.html` (GitHub Pages or S3), with
+   `EMPIRE_RELAY` baked in. Needs the owner's AWS account.
+2. **Balance from real games**: territory spreads fast (~230 hexes per major by turn 80 in
+   `test/ai.test.ts`); some AIs field 150–200 ships; tune claims, upkeep and research costs after playtests.
+3. **Diplomacy UI**: the engine supports trading territory (hexes); the proposal builder doesn't offer it yet.
+4. **Manufacturing agreements**: currently −10% ship cost; the design also lets you build at partners'
+   shipyards.
+5. **Offline notifications**: Web Push or email when it becomes your turn (the relay knows whose turn it is).
+6. **Combat presentation**: battle report dialog with before/after per side, simple animations, sound.
+7. **AI depth**: coordinated invasions with transports, starbase placement at chokepoints, smarter spy
+   targeting, alliance war coordination, using Mercenary Contracts / For Hire / Star Charts actively.
+8. **Unique techs per major** and ion storms that drift (both in the design doc as later work).
+9. **Hidden information**: run the engine inside the Lambda and send each player only what they can see.
+10. **Tutorial**: a guided first few turns.
 
 ## Notes for the next session
 - Read `docs/GAME_DESIGN.md` for rules; keep it updated when rules change.

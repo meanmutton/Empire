@@ -76,10 +76,19 @@ table.t td, table.t th { padding:4px 6px; border-bottom:1px solid #1c2440; text-
 .faction-card.taken { border-color:var(--accent); }
 input, select { background:#0a1022; color:var(--text); border:1px solid #33416b; border-radius:6px; padding:5px 8px; font:inherit; }
 .event { padding:3px 0; border-bottom:1px solid #161e38; }
+.setup-cols { display:grid; grid-template-columns:minmax(280px, 420px) minmax(300px, 1fr); gap:20px; max-width:1200px; margin:0 auto; }
+.mobile-only { display:none; }
 @media (max-width: 760px) {
-  #side { width:100%; top:auto; height:46%; border-left:none; border-top:1px solid var(--line); }
+  #side { width:100%; top:auto; height:46%; border-left:none; border-top:1px solid var(--line); padding-bottom:20px; }
+  #side.empty { display:none; }
   #mini { display:none; }
+  .mobile-only { display:inline-block; }
+  #endturn { position:fixed; right:12px; bottom:14px; z-index:6; padding:10px 16px; box-shadow:0 4px 16px #000a; }
+  #side:not(.empty) ~ #endturn-anchor { display:none; }
   .tech-grid { grid-template-columns:repeat(2, minmax(140px, 1fr)); }
+  .setup-cols { grid-template-columns:1fr; }
+  .screen { padding:14px; }
+  .title { font-size:34px; margin-top:16px; }
 }
 `;
 

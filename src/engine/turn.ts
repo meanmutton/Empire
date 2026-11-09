@@ -4,6 +4,7 @@ import { repairFleets, resolveCombat } from './combat';
 import { checkForcedVassalage, runDiplomacy, updateContacts } from './diplomacy';
 import { runEconomy } from './economy';
 import { runEspionage } from './espionage';
+import { runMinorAbilities } from './abilities';
 import { pruneLog } from './events';
 import { applyHazards, continuePaths, markClaims, resetMovement, resolveClaims, surveyWithFleets } from './movement';
 import { activeFaction } from './query';
@@ -29,6 +30,7 @@ export function startTurn(state: GameState): void {
   repairFleets(state, f);
   advanceAgents(state, f);
   runEspionage(state, f);
+  runMinorAbilities(state, f);
   continuePaths(state, f);
   checkForcedVassalage(state, f);
   updateExplored(state, f);

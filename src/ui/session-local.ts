@@ -6,6 +6,7 @@ import { runUntilHuman } from '../engine/turn';
 import type { GameState } from '../engine/types';
 import { button, clear, h, modal, toast } from './dom';
 import { GameUI, type GameHost } from './game-ui';
+import { openHelp } from './screens/help';
 import { openReport } from './screens/report';
 import { downloadSave, saveGame } from './storage';
 
@@ -63,6 +64,7 @@ export class LocalSession {
 
   private menu(ui: GameUI): void {
     const m = modal('Menu', h('div', { class: 'row wrap' },
+      button('How to play', () => { m.close(); openHelp(); }),
       button('Save', async () => { await this.save(); toast('Saved.'); m.close(); }),
       button('Download save file', () => { void downloadSave(this.game); }),
       button('Save and quit', async () => { await this.save(); m.close(); this.ui?.destroy(); this.onQuit(); }),
