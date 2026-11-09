@@ -225,6 +225,32 @@ export interface GameEvent {
   kind: string;
   text: string;
   hex?: number;
+  /** Structured details for computer players (e.g. ships lost per faction in a battle). */
+  data?: Record<string, number>;
+  /** state.seq when it happened (orders events within a round). */
+  seq?: number;
+}
+
+/** A diplomatic statement a human makes to a computer power (§9.8). */
+export type Statement =
+  | { kind: 'withdraw' }
+  | { kind: 'requestAid'; target: FactionId }
+  | { kind: 'threaten' }
+  | { kind: 'reassure' }
+  | { kind: 'askIntentions' }
+  | { kind: 'denounce'; target: FactionId };
+
+/** A message between a human and a computer power, kept in the game state so every client agrees. */
+export interface Dispatch {
+  /** Increasing number (from state.nextId), used for ordering and unread tracking. */
+  n: number;
+  turn: number;
+  from: FactionId;
+  to: FactionId;
+  text: string;
+  /** Set when a human makes a statement; the computer answers at the start of its next turn. */
+  statement?: Statement;
+  answered?: boolean;
 }
 
 export interface HumanSeat {
@@ -277,4 +303,6 @@ export interface GameState {
    * game rules never read it.
    */
   messages?: { id: string; from: FactionId; to: string[]; text: string; at: number; turn: number }[];
+  /** Conversations with computer powers. */
+  dispatches?: Dispatch[];
 }

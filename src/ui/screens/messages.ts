@@ -5,7 +5,9 @@ import { relation } from '../../engine/query';
 import { button, clear, h, modal, toast } from '../dom';
 import { factionChip } from '../format';
 import type { GameUI } from '../game-ui';
-import { lastRead, markRead, threadKey, type Messaging } from '../messaging';
+import { aiContacts, dispatchesWith, lastRead, markRead, threadKey, type Messaging } from '../messaging';
+import { STATEMENTS } from '../../engine/dispatch';
+import type { Statement } from '../../engine/types';
 
 /** Other human players the viewer may write to: those they have met. */
 export function contactsFor(ui: GameUI): string[] {
@@ -28,16 +30,37 @@ export function openMessages(ui: GameUI, messaging: Messaging, initial?: string)
   const render = () => {
     clear(body);
     const all = messaging.list(me);
-    const keys = new Set(['all', ...contactsFor(ui), ...all.map((x) => threadKey(x, me))]);
+    const humanGame = g.config.seats.length > 1;
+    const keys = new Set([...(humanGame ? ['all', ...contactsFor(ui), ...all.map((x) => threadKey(x, me))] : []),
+      ...aiContacts(g, me).map((f) => `ai:${f}`)]);
+    if (!keys.has(thread)) thread = [...keys][0] ?? 'all';
+    if (thread.startsWith('ai:')) {
+      const open = dispatchesWith(g, me, thread.slice(3));
+      if (open.length) markRead(g.id, me, thread, open[open.length - 1].n);
+    }
     const list = h('div');
     for (const k of keys) {
+      if (k.startsWith('ai:')) {
+        const f = k.slice(3);
+        const unread = dispatchesWith(g, me, f).filter((d) => d.from === f && d.n > lastRead(g.id, me, k)).length;
+        list.append(button(h('span', { class: 'row grow' }, factionChip(f, true), h('span', { class: 'dim', style: 'font-size:11px' }, 'computer'), h('span', { class: 'grow' }), unread ? h('b', { class: 'good' }, String(unread)) : ''),
+          () => { thread = k; render(); }, { cls: `list-btn small ${k === thread ? 'on' : ''}` }));
+        continue;
+      }
       const msgs = all.filter((x) => threadKey(x, me) === k);
       const unread = msgs.filter((x) => x.from !== me && x.at > lastRead(g.id, me, k)).length;
       const label = k === 'all' ? h('span', null, '📢 All players') : h('span', null, ...k.split(',').map((f) => factionChip(f, true)));
       list.append(button(h('span', { class: 'row grow' }, label, h('span', { class: 'grow' }), unread ? h('b', { class: 'good' }, String(unread)) : ''),
         () => { thread = k; render(); }, { cls: `list-btn small ${k === thread ? 'on' : ''}` }));
     }
-    list.append(h('div', { class: 'dim', style: 'margin-top:8px;font-size:12px' }, 'You can write to human players you have met. Messages are private to the people in the conversation.'));
+    list.append(h('div', { class: 'dim', style: 'margin-top:8px;font-size:12px' }, humanGame
+      ? 'You can write to human players you have met. Messages are private to the people in the conversation. Computer powers understand diplomatic statements.'
+      : 'Computer powers you have met speak to you here, and you can make diplomatic statements to them.'));
+    if (keys.size === 0) list.append(h('div', { class: 'dim' }, 'You have not met anyone yet.'));
+    if (thread.startsWith('ai:')) {
+      body.append(list, aiThread(ui, thread.slice(3), () => render()));
+      return;
+    }
 
     const msgs = all.filter((x) => threadKey(x, me) === thread);
     if (msgs.length) markRead(g.id, me, thread, msgs[msgs.length - 1].at);
@@ -84,4 +107,44 @@ export function openMessages(ui: GameUI, messaging: Messaging, initial?: string)
     void m;
   };
   render();
+}
+
+/** A conversation with a computer power: its words, your statements, and the statement picker. */
+function aiThread(ui: GameUI, power: string, rerender: () => void): HTMLElement {
+  const g = ui.game;
+  const me = ui.viewer;
+  const d = factionDef(power);
+  const items = dispatchesWith(g, me, power);
+  if (items.length) markRead(g.id, me, `ai:${power}`, items[items.length - 1].n);
+  ui.refresh();
+  const log = h('div', { style: 'flex:1;overflow:auto;max-height:50vh;display:flex;flex-direction:column;gap:6px;padding:4px' });
+  if (items.length === 0) log.append(h('div', { class: 'dim' }, `The ${d.name} have said nothing to you yet.`));
+  for (const x of items) {
+    const mine = x.from === me;
+    const bubble = h('div', { style: `align-self:${mine ? 'flex-end' : 'flex-start'};max-width:80%;background:${mine ? '#26355f' : '#18203a'};border:1px solid ${mine ? 'var(--line)' : d.color};border-radius:10px;padding:6px 9px` },
+      h('div', { class: 'dim', style: 'font-size:11px' }, mine ? 'You' : d.name, ` · turn ${x.turn}`, mine && x.statement ? (x.answered ? ' · answered' : ' · they will answer on their turn') : ''),
+      h('div', { style: 'white-space:pre-wrap;word-break:break-word' }));
+    (bubble.lastChild as HTMLElement).textContent = x.text;
+    log.append(bubble);
+  }
+  const kind = h('select', null, ...Object.entries(STATEMENTS).map(([k, v]) => h('option', { value: k, title: v.text }, v.name)));
+  const targets = Object.keys(g.factions).filter((f) => f !== me && f !== power && g.factions[f].alive && relation(g, me, f).contact);
+  const target = h('select', null, ...targets.map((t) => h('option', { value: t }, factionDef(t).name)));
+  const syncTarget = () => { target.style.display = STATEMENTS[kind.value as Statement['kind']].needsTarget ? '' : 'none'; };
+  kind.addEventListener('change', syncTarget);
+  syncTarget();
+  const send = () => {
+    const k = kind.value as Statement['kind'];
+    if (STATEMENTS[k].needsTarget && !target.value) { toast('Pick a faction.', 'error'); return; }
+    const statement = (k === 'requestAid' || k === 'denounce' ? { kind: k, target: target.value } : { kind: k }) as Statement;
+    if (ui.act({ type: 'statement', to: power, statement }, true)) rerender();
+  };
+  const r = relation(g, me, power);
+  return h('div', { style: 'display:flex;flex-direction:column;gap:8px;min-width:0' },
+    h('div', { class: 'row' }, h('b', { style: `color:${d.color}` }, d.name), h('span', { class: 'grow' }), h('span', { class: 'dim' }, `${r.status} · ${d.government}`)),
+    log,
+    h('div', { class: 'card' },
+      h('div', { class: 'dim', style: 'font-size:12px;margin-bottom:4px' }, 'Computer powers do not read free text. Make a statement and they will answer, and act on it, at the start of their turn.'),
+      h('div', { class: 'row wrap' }, kind, target, h('span', { class: 'grow' }),
+        button('Send', send, { cls: 'primary small', disabled: !ui.myTurn, title: ui.myTurn ? '' : 'Statements are made on your turn.' }))));
 }

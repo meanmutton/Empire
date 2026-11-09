@@ -10,6 +10,8 @@ import { IMPROVEMENTS, PLANET_YIELDS } from '../data/improvements';
 import { CLASSES, ROLES } from '../data/ships';
 import { TECH_BY_ID, type TechField } from '../data/techs';
 import { applyAction, type Action } from '../engine/actions';
+import { talkEnd, talkStart } from './talk';
+import { say } from './voice';
 import { hasEmbassy, opinionOf } from '../engine/agents';
 import { getBit } from '../engine/bitset';
 import { canPropose, militaryStrength, proposalScore, sharedEnemies } from '../engine/diplomacy';
@@ -58,6 +60,7 @@ export function aiTurn(state: GameState, me: FactionId, opts: AiOptions = {}): v
     reserved: new Set(), owned: new Set(ownedHexes(state, me)), home: f.home,
   };
   research(ctx);
+  if (!ctx.caretaker) talkStart(state, me);
   if (!ctx.caretaker) {
     answerProposals(ctx);
     diplomacy(ctx);
@@ -67,6 +70,7 @@ export function aiTurn(state: GameState, me: FactionId, opts: AiOptions = {}): v
   rush(ctx);
   agents(ctx);
   fleets(ctx);
+  if (!ctx.caretaker) talkEnd(state, me);
 }
 
 // ---------------------------------------------------------------------------------------------------------
@@ -103,7 +107,11 @@ function answerProposals(ctx: Ctx): void {
   for (const p of Object.values(ctx.state.proposals)) {
     if (p.to !== ctx.me || p.answer) continue;
     const score = proposalScore(ctx.state, p);
-    act(ctx, { type: score > 0 ? 'accept' : 'reject', proposal: p.id });
+    const ok = act(ctx, { type: score > 0 ? 'accept' : 'reject', proposal: p.id }) && score > 0;
+    if (ctx.state.factions[p.from].controller === 'human' && ctx.major) {
+      const gift = ok && p.receive.length === 0 && p.give.some((i) => i.kind === 'resource' || i.kind === 'tech');
+      say(ctx.state, ctx.me, p.from, gift ? 'gift' : ok ? 'accept' : 'reject');
+    }
   }
 }
 
@@ -156,6 +164,7 @@ function diplomacy(ctx: Ctx): void {
     const r = relation(state, me, o);
     if (!r.contact || r.status === 'war' || state.factions[o].overlord === me || state.factions[me].overlord) continue;
     if (!bordersOn(ctx, o, 6)) continue;
+    if ((state.factions[me].flags[`cowed:${o}`] ?? 0) > state.turn) continue;
     const treaty = r.status === 'nap' || r.status === 'alliance';
     if (treaty && (hasAbility(me, 'honorBound') || ctx.rng.next() > p.treachery * 0.5)) continue;
     const ratio = myStrength / Math.max(1, militaryStrength(state, o));
@@ -427,6 +436,12 @@ function fleets(ctx: Ctx): void {
 
   for (const fl of Object.values(state.fleets)) {
     if (fl.owner !== me || !state.fleets[fl.id]) continue;
+    // Promised to stay out of someone's territory.
+    const host = state.map.hexes[fl.hex].owner;
+    if (host && host !== me && (f.flags[`withdraw:${host}`] ?? 0) > state.turn && !atWar(state, me, host)) {
+      moveTo(ctx, fl, ctx.home);
+      continue;
+    }
     const kind = classifyFleet(state, fl);
     if (!ctx.major && kind !== 'war') {
       if (kind === 'constructor') constructor(ctx, fl, outpostTargets);

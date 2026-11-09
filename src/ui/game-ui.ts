@@ -250,8 +250,8 @@ export class GameUI {
       button('Research', () => openResearch(this)),
       button(pending ? `Diplomacy (${pending})` : 'Diplomacy', () => openDiplomacy(this), { cls: pending ? 'primary' : '' }),
       button('Report', () => openReport(this)),
-      this.host.messaging && this.game.config.seats.length > 1 ? (() => {
-        const unread = unreadCount(this.host.messaging!, this.game.id, this.viewer);
+      this.host.messaging ? (() => {
+        const unread = unreadCount(this.host.messaging, this.game, this.viewer);
         return button(unread ? `Messages (${unread})` : 'Messages', () => this.openMessages(), { cls: unread ? 'primary' : '' });
       })() : null,
       button('Next fleet', () => this.nextIdle(), { title: 'Shortcut: N' }),

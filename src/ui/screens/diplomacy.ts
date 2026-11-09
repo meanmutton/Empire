@@ -72,6 +72,8 @@ export function openDiplomacy(ui: GameUI): void {
       const actions = h('td', { class: 'row wrap' });
       if (g.factions[o].controller === 'human' && g.config.seats.length > 1) {
         actions.append(button('Message', () => ui.openMessages(o), { cls: 'small' }));
+      } else if (g.factions[o].controller === 'ai' && g.factions[o].kind === 'major') {
+        actions.append(button('Talk', () => ui.openMessages(`ai:${o}`), { cls: 'small' }));
       }
       if (ui.myTurn) {
         if (canPropose(g, me, o)) actions.append(button('Propose…', () => openProposal(ui, o, render), { cls: 'small' }));
