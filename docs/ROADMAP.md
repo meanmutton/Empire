@@ -34,7 +34,7 @@ Status key: `[ ]` not started, `[~]` PR open, `[x]` merged.
   procedural faction ship tokens, minimap.
 - [~] **13 Client: UI**: new game setup, system panel, fleet panel and battle groups, build queue,
   research, diplomacy inbox, turn report, combat report.
-- [ ] **14 Hotseat play**: play locally with several humans plus AI end to end.
+- [~] **14 Hotseat play**: play locally with several humans plus AI end to end.
 - [ ] **15 Relay backend**: AWS SAM template (API Gateway WebSocket + Lambda + DynamoDB + S3), local dev
   relay with the same protocol, protocol tests.
 - [ ] **16 Online async play**: create/join by code, seat claiming, turn upload/download, "your turn"

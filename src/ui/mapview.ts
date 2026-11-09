@@ -59,10 +59,17 @@ export class MapView {
     for (let i = 0; i < 400; i++) this.stars.push({ x: rnd(), y: rnd(), r: rnd() * 1.2 + 0.2, a: rnd() * 0.6 + 0.2 });
     this.bindInput();
     const loop = () => {
+      if (this.stopped) return;
       if (this.dirty) this.draw();
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
+  }
+
+  private stopped = false;
+
+  destroy(): void {
+    this.stopped = true;
   }
 
   setState(state: GameState, viewer: FactionId): void {

@@ -67,11 +67,20 @@ export class GameUI {
     this.mini = new Minimap(miniCanvas, this.view);
     this.view.onCamera = () => this.mini.draw();
     this.view.onHexClick = (hex) => this.clickHex(hex);
-    window.addEventListener('resize', () => { this.view.resize(); this.mini.draw(); });
+    const signal = this.listeners.signal;
+    window.addEventListener('resize', () => { this.view.resize(); this.mini.draw(); }, { signal });
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.select(null);
       if (e.key === 'n' && !(e.target instanceof HTMLInputElement)) this.nextIdle();
-    });
+    }, { signal });
+  }
+
+  private listeners = new AbortController();
+
+  /** Detaches window listeners and stops the map's render loop. */
+  destroy(): void {
+    this.listeners.abort();
+    this.view.destroy();
   }
 
   setGame(game: GameState, viewer: string, center = true): void {
