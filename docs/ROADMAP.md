@@ -49,6 +49,8 @@ Ordered roughly by value. Open a PR per item or small group.
    `EMPIRE_RELAY` baked in. Needs the owner's AWS account.
 2. **Balance from real games**: territory spreads fast (~230 hexes per major by turn 80 in
    `test/ai.test.ts`); some AIs field 150–200 ships; tune claims, upkeep and research costs after playtests.
+   Aggressive AIs all pick on the weakest neighbor at once (in one seed the Concord is reduced to a single
+   system by turn 80); consider making AIs less eager to join a pile-on, or more eager to defend victims.
 3. **Diplomacy UI**: the engine supports trading territory (hexes); the proposal builder doesn't offer it yet.
 4. **Manufacturing agreements**: currently −10% ship cost; the design also lets you build at partners'
    shipyards.
