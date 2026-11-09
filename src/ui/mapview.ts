@@ -5,6 +5,7 @@ import { factionDef } from '../data/factions';
 import { CLASSES } from '../data/ships';
 import { getBit } from '../engine/bitset';
 import { blockadedHexes } from '../engine/blockade';
+import { routeDisruptors } from '../engine/routes';
 import { AXIAL_DIRECTIONS, axialOf, axialToOffset, hexToPixel, pixelToHex } from '../engine/hex';
 import type { FactionId, Fleet, GameState, StarKind } from '../engine/types';
 import { canSeeFleet, visibleHexes } from '../engine/visibility';
@@ -266,6 +267,7 @@ export class MapView {
     for (const i of inView) if (explored(i)) this.drawTerritory(i);
     for (const i of inView) if (explored(i)) this.drawSystem(i);
     this.drawStarbases(inView, explored);
+    this.drawRoutes();
     this.drawOverlays();
     this.drawFleets(new Set(inView));
     this.drawAgents(new Set(inView));
@@ -513,6 +515,25 @@ export class MapView {
         ctx.fillStyle = '#e63946';
         ctx.fillRect(x - sz, y + sz + 1, sz * 2 * (b.hull / max), 1.5);
       }
+    }
+  }
+
+  /** The viewer's trade routes (as owner or partner): gold dashes, red when disrupted. */
+  private drawRoutes(): void {
+    const ctx = this.ctx;
+    for (const r of this.state.routes ?? []) {
+      if (!this.revealAll && r.owner !== this.viewer && r.partner !== this.viewer) continue;
+      const cut = routeDisruptors(this.state, r).length > 0;
+      ctx.strokeStyle = cut ? 'rgba(255, 107, 107, 0.8)' : 'rgba(255, 209, 102, 0.55)';
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([2, 5]);
+      ctx.beginPath();
+      r.path.forEach((h, k) => {
+        const p = hexToPixel(this.state.map, h, HEX);
+        if (k === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+      });
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
   }
 

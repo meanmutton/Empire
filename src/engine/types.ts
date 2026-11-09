@@ -240,6 +240,20 @@ export type Offer =
   | { id: Id; seller: FactionId; kind: 'army'; strength: number; xp: number; turns: number; price: number }
   | { id: Id; seller: FactionId; kind: 'charts'; price: number };
 
+export interface TradeRoute {
+  id: Id;
+  /** The faction that established it (its cargo ship became the route). */
+  owner: FactionId;
+  /** The partner (the owner itself for a domestic route). */
+  partner: FactionId;
+  /** The owner's system and the partner's system. */
+  from: number;
+  to: number;
+  /** Hexes between them, endpoints included. */
+  path: number[];
+  since: number;
+}
+
 export interface Contract {
   id: Id;
   buyer: FactionId;
@@ -319,6 +333,8 @@ export interface GameState {
   winner: FactionId | null;
   /** Mercenary market offers, refreshed every round. */
   offers?: Offer[];
+  /** Trade routes run by cargo ships (§5.6). */
+  routes?: TradeRoute[];
   /** Ships being built to order at another faction's shipyard. */
   contracts?: Contract[];
   /** Galactic exchange prices (energy-equivalent value per unit). */

@@ -18,6 +18,7 @@ import { endTurn } from './turn';
 import type { BuildOrder, FactionId, Fleet, GameState, RelationStatus, Statement, StockpileKind, TradeItem } from './types';
 import { exchange } from './market';
 import { buyOffer, orderShip } from './mercenaries';
+import { cancelRoute, establishRoute } from './routes';
 import { makeStatement } from './dispatch';
 import { isGameOver } from './victory';
 import { RESOURCE_KINDS } from './types';
@@ -59,6 +60,8 @@ export type Action =
   | { type: 'exchange'; sell: StockpileKind; buy: StockpileKind; amount: number }
   | { type: 'buyOffer'; offer: string }
   | { type: 'orderShip'; seller: FactionId; design: string }
+  | { type: 'establishRoute'; fleet: string }
+  | { type: 'cancelRoute'; route: string }
   | { type: 'endTurn' };
 
 export type ActionResult = { ok: true; text?: string; id?: string } | { ok: false; reason: string };
@@ -153,6 +156,10 @@ export function applyAction(state: GameState, faction: FactionId, action: Action
       return buyOffer(state, faction, action.offer);
     case 'orderShip':
       return orderShip(state, faction, action.seller, action.design);
+    case 'establishRoute':
+      return ownFleet(action.fleet) ? establishRoute(state, action.fleet) : no('Not your fleet.');
+    case 'cancelRoute':
+      return cancelRoute(state, faction, action.route);
     case 'endTurn':
       endTurn(state);
       return { ok: true };
