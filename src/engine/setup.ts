@@ -1,7 +1,7 @@
 /** Creating a new game: choose minors, generate the map, set up factions, starting units and relations. */
 import { BALANCE } from '../data/balance';
 import { DESIGNS_BY_FACTION, type ShipDesign } from '../data/designs';
-import { factionDef, hasAbility, MAJOR_IDS, MINOR_IDS } from '../data/factions';
+import { colorDistance, factionDef, hasAbility, MAJOR_IDS, MIN_COLOR_DISTANCE, MINOR_IDS } from '../data/factions';
 import { emptyBits, setBits } from './bitset';
 import { hexesWithin } from './hex';
 import { newId, relationKey } from './ids';
@@ -41,7 +41,7 @@ export function createGame(opts: NewGameOptions): GameState {
   }
   const rngState = seedRng(opts.seed);
   const rng = new Rng(rngState);
-  const minors = opts.minors ?? rng.shuffle(MINOR_IDS).slice(0, opts.minorCount ?? 10);
+  const minors = opts.minors ?? pickMinors(rng, opts.minorCount ?? 10);
   const config: GameConfig = {
     width: opts.width ?? MAP_SIZES.standard.width,
     height: opts.height ?? MAP_SIZES.standard.height,
@@ -122,6 +122,25 @@ export function createGame(opts: NewGameOptions): GameState {
     }
   }
   return state;
+}
+
+/** Picks minors at random, skipping any whose color is too close to a faction already in the game. */
+function pickMinors(rng: Rng, count: number): FactionId[] {
+  const chosen: FactionId[] = [];
+  const colors = MAJOR_IDS.map((m) => factionDef(m).color);
+  for (const threshold of [MIN_COLOR_DISTANCE, 30, 0]) {
+    for (const m of rng.shuffle(MINOR_IDS)) {
+      if (chosen.length >= count) break;
+      if (chosen.includes(m)) continue;
+      const c = factionDef(m).color;
+      if (colors.every((x) => colorDistance(x, c) >= threshold)) {
+        chosen.push(m);
+        colors.push(c);
+      }
+    }
+    if (chosen.length >= count) break;
+  }
+  return chosen;
 }
 
 function baseOpinion(from: FactionId, to: FactionId): number {

@@ -37,7 +37,7 @@ Status key: `[ ]` not started, `[~]` PR open, `[x]` merged.
 - [~] **14 Hotseat play**: play locally with several humans plus AI end to end.
 - [~] **15 Relay backend**: AWS SAM template (API Gateway WebSocket + Lambda + DynamoDB + S3), local dev
   relay with the same protocol, protocol tests.
-- [ ] **16 Online async play**: create/join by code, seat claiming, turn upload/download, "your turn"
+- [~] **16 Online async play**: create/join by code, seat claiming, turn upload/download, "your turn"
   notifications, reconnect, version checks.
 - [ ] **17 Polish and balance**: autoplay balance simulations, tutorial hints, sound, accessibility, mobile.
   Known from the phase 11 simulation (`test/ai.test.ts` prints a table): territory grows fast (~200+ hexes

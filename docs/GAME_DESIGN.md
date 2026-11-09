@@ -57,7 +57,7 @@ every faction has every class or role) and an AI personality. Full numbers are i
 | 1 | **Terran Concord** | Humans; cooperative social democracy | 21st-century Sweden | Azure `#3f8efc` |
 | 2 | **Ryn'kai Dominion** | Mammalian humanoid warriors; honor-bound military dictatorship | early–mid 20th-century Imperial Japan | Crimson `#d7263d` |
 | 3 | **Varrhen Ascendancy** | Reptilian humanoids; authoritarian ultranationalist state | early–mid 20th-century Germany | Olive gold `#b5a33a` |
-| 4 | **Krasnyr People's Union** | Mammalian humanoids; one-party collectivist state | Cold War USSR | Scarlet-orange `#f46036` |
+| 4 | **Krasnyr People's Union** | Mammalian humanoids; one-party collectivist state | Cold War USSR | Orange `#ff8c1a` |
 | 5 | **The Lattice** | Artificial beings; AI-run technocracy | none | Violet `#9b5de5` |
 
 #### Terran Concord

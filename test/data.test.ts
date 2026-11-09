@@ -1,6 +1,6 @@
 import { ABILITIES } from '../src/data/abilities';
 import { combatValue, DESIGNS, DESIGNS_BY_FACTION } from '../src/data/designs';
-import { FACTIONS, MAJOR_IDS, MINOR_IDS, parseRosterEntry } from '../src/data/factions';
+import { colorDistance, factionDef, FACTIONS, MAJOR_IDS, MINOR_IDS, parseRosterEntry } from '../src/data/factions';
 import { CLASSES, ROLES, SHIP_CLASSES } from '../src/data/ships';
 import { IMPROVEMENTS } from '../src/data/improvements';
 
@@ -10,6 +10,15 @@ describe('faction data', () => {
     expect(MINOR_IDS).toHaveLength(30);
     expect(new Set(FACTIONS.map((f) => f.id)).size).toBe(35);
     expect(new Set(FACTIONS.map((f) => f.color.toLowerCase())).size).toBe(35);
+  });
+
+  it('keeps every faction clearly distinguishable from the majors', () => {
+    for (const m of MAJOR_IDS) {
+      for (const f of FACTIONS) {
+        if (f.id === m) continue;
+        expect(colorDistance(factionDef(m).color, f.color), `${m} vs ${f.id}`).toBeGreaterThanOrEqual(75);
+      }
+    }
   });
 
   it('gives majors 3 abilities and minors 1–2, all defined', () => {

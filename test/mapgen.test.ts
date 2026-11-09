@@ -1,4 +1,4 @@
-import { MAJOR_IDS } from '../src/data/factions';
+import { colorDistance, factionDef, MAJOR_IDS, MIN_COLOR_DISTANCE } from '../src/data/factions';
 import { hexDistance, neighbors } from '../src/engine/hex';
 import { areaScore } from '../src/engine/mapgen';
 import { findPath } from '../src/engine/path';
@@ -18,6 +18,12 @@ describe('map generation', () => {
         expect(ids).toHaveLength(15);
         for (const m of MAJOR_IDS) expect(ids).toContain(m);
         expect(g.config.minors).toHaveLength(10);
+      });
+
+      it('picks minors whose colors are distinct', () => {
+        const colors = ids.map((id) => factionDef(id).color);
+        for (let i = 0; i < colors.length; i++)
+          for (let j = i + 1; j < colors.length; j++) expect(colorDistance(colors[i], colors[j])).toBeGreaterThanOrEqual(MIN_COLOR_DISTANCE);
       });
 
       it('spaces majors at least 9 hexes apart', () => {
