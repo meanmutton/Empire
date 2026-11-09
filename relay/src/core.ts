@@ -7,7 +7,8 @@
  */
 import { createHash, randomBytes } from 'node:crypto';
 import {
-  chunkText, isGameCode, PROTOCOL_VERSION, randomCode, type ClientMessage, type Lobby, type ServerMessage,
+  canRead, chunkText, isGameCode, MAX_MESSAGE_LENGTH, PROTOCOL_VERSION, randomCode,
+  type ChatMessage, type ClientMessage, type Lobby, type ServerMessage,
 } from '../../src/net/protocol';
 import type { GameRecord, Store } from './store';
 
@@ -198,6 +199,28 @@ async function dispatch(ctx: Ctx, conn: string, msg: ClientMessage, fail: (m: st
       if (base > 1) await store.deleteState(code, base - 1);
       await ctx.send(conn, { type: 'ack', req: msg.req, version: g.version });
       await broadcast(ctx, code, { type: 'turn', lobby: publicLobby(g) });
+      return;
+    }
+    case 'message': {
+      if (!me) { await fail('You are not in this game.'); return; }
+      const text = (msg.text ?? '').replace(/[\u0000-\u0008\u000b-\u001f]/g, '').trim().slice(0, MAX_MESSAGE_LENGTH);
+      if (!text) { await fail('Empty message.'); return; }
+      const seats = new Set(g.seats.map((s) => s.faction));
+      const to = msg.to.includes('all') ? ['all'] : [...new Set(msg.to)].filter((f) => f !== me && seats.has(f));
+      if (to.length === 0) { await fail('Pick at least one other player.'); return; }
+      const m: ChatMessage = { id: randomBytes(6).toString('hex'), from: me, to, text, at: ctx.now(), turn: Number(msg.turn) || 0 };
+      await store.putMessage(code, m);
+      await ctx.send(conn, { type: 'message', req: msg.req, message: m });
+      const conns = await store.connections(code);
+      await Promise.all(conns.filter((c) => c.conn !== conn && c.faction && canRead(m, c.faction)).map(async (c) => {
+        if (!(await ctx.send(c.conn, { type: 'message', message: m }))) await store.removeConnection(c.conn);
+      }));
+      return;
+    }
+    case 'messages': {
+      if (!me) { await fail('You are not in this game.'); return; }
+      const all = await store.listMessages(code, Number(msg.since) || 0, 500);
+      await ctx.send(conn, { type: 'messages', req: msg.req, messages: all.filter((m) => canRead(m, me)).slice(-200) });
       return;
     }
     case 'get': {

@@ -23,6 +23,8 @@ import { openDiplomacy } from './screens/diplomacy';
 import { openReport } from './screens/report';
 import { openResearch } from './screens/research';
 import { injectStyles } from './styles';
+import { unreadCount, type Messaging } from './messaging';
+import { openMessages } from './screens/messages';
 import { tokenImage } from './tokens';
 
 export interface GameHost {
@@ -34,6 +36,8 @@ export interface GameHost {
   canAct(ui: GameUI): boolean;
   /** Status text when the viewer can't act (e.g. waiting for another player). */
   waitingText?(ui: GameUI): string;
+  /** Chat between human players, when the game has more than one. */
+  messaging?: Messaging;
 }
 
 const DEV_NAMES = ['Unsettled', 'Outpost', 'Colony', 'Settlement', 'Industrial World', 'Core World'];
@@ -68,6 +72,7 @@ export class GameUI {
     this.mini = new Minimap(miniCanvas, this.view);
     this.view.onCamera = () => this.mini.draw();
     this.view.onHexClick = (hex) => this.clickHex(hex);
+    this.unsubscribe = host.messaging?.subscribe(() => { if (this.game) this.renderTop(); }) ?? null;
     const signal = this.listeners.signal;
     window.addEventListener('resize', () => { this.view.resize(); this.mini.draw(); }, { signal });
     window.addEventListener('keydown', (e) => {
@@ -79,7 +84,10 @@ export class GameUI {
   private listeners = new AbortController();
 
   /** Detaches window listeners and stops the map's render loop. */
+  private unsubscribe: (() => void) | null = null;
+
   destroy(): void {
+    this.unsubscribe?.();
     this.listeners.abort();
     this.view.destroy();
   }
@@ -242,6 +250,10 @@ export class GameUI {
       button('Research', () => openResearch(this)),
       button(pending ? `Diplomacy (${pending})` : 'Diplomacy', () => openDiplomacy(this), { cls: pending ? 'primary' : '' }),
       button('Report', () => openReport(this)),
+      this.host.messaging && this.game.config.seats.length > 1 ? (() => {
+        const unread = unreadCount(this.host.messaging!, this.game.id, this.viewer);
+        return button(unread ? `Messages (${unread})` : 'Messages', () => this.openMessages(), { cls: unread ? 'primary' : '' });
+      })() : null,
       button('Next fleet', () => this.nextIdle(), { title: 'Shortcut: N' }),
       h('span', { class: 'spacer' }),
       g.winner ? h('b', { class: 'good' }, `${factionDef(g.winner).name} won`) : null,
@@ -254,6 +266,11 @@ export class GameUI {
 
   // -------------------------------------------------------------------------------------------------------
   // Side panel
+
+  /** Opens chat, optionally at a conversation with one faction. */
+  openMessages(thread?: string): void {
+    if (this.host.messaging) openMessages(this, this.host.messaging, thread);
+  }
 
   /** Empire overview in a dialog (used on phones, where the side panel only shows selections). */
   openEmpire(): void {

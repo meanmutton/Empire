@@ -272,4 +272,9 @@ export interface GameState {
   seq: number;
   nextId: number;
   winner: FactionId | null;
+  /**
+   * Hot seat chat between humans (online games keep chat on the relay instead). Written only by the UI;
+   * game rules never read it.
+   */
+  messages?: { id: string; from: FactionId; to: string[]; text: string; at: number; turn: number }[];
 }

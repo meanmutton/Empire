@@ -1,5 +1,5 @@
 /** Browser side of the relay: one WebSocket with request/response matching, chunked transfers and reconnects. */
-import { chunkText, PROTOCOL_VERSION, type ClientMessage, type Lobby, type ServerMessage } from './protocol';
+import { chunkText, PROTOCOL_VERSION, type ChatMessage, type ClientMessage, type Lobby, type ServerMessage } from './protocol';
 
 type Pending = { resolve: (m: ServerMessage[]) => void; reject: (e: Error) => void; got: ServerMessage[]; expectChunks: boolean; timer: number };
 
@@ -23,6 +23,8 @@ export class RelayClient {
   private retry = 0;
   /** Called for pushed lobby/turn updates. */
   onPush: (lobby: Lobby) => void = () => {};
+  /** Called for chat messages pushed by the relay. */
+  onMessage: (m: ChatMessage) => void = () => {};
   onStatus: (connected: boolean) => void = () => {};
   /** Called after a reconnect so the session can re-register (hello). */
   onReconnect: () => void = () => {};
@@ -58,6 +60,10 @@ export class RelayClient {
   private receive(m: ServerMessage): void {
     if (m.type === 'turn' || (m.type === 'lobby' && m.req === undefined)) {
       this.onPush(m.lobby);
+      return;
+    }
+    if (m.type === 'message' && m.req === undefined) {
+      this.onMessage(m.message);
       return;
     }
     const id = (m as { req?: number }).req;
@@ -137,6 +143,16 @@ export class RelayClient {
     const { upload, n } = await this.upload(code, token, data);
     const r = await this.request({ action: 'start', code, token, upload, n, active, turn });
     return (r[0] as { version?: number }).version ?? 1;
+  }
+
+  async sendMessage(code: string, token: string, to: string[], text: string, turn: number): Promise<ChatMessage> {
+    const r = await this.request({ action: 'message', code, token, to, text, turn });
+    return (r[0] as Extract<ServerMessage, { type: 'message' }>).message;
+  }
+
+  async fetchMessages(code: string, token: string, since: number): Promise<ChatMessage[]> {
+    const r = await this.request({ action: 'messages', code, token, since });
+    return (r[0] as Extract<ServerMessage, { type: 'messages' }>).messages;
   }
 
   async submit(code: string, token: string, data: string, base: number, active: string, turn: number, finished: boolean, forFaction?: string): Promise<number> {

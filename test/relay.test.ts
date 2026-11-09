@@ -106,3 +106,41 @@ describe('relay', () => {
     expect(JSON.stringify(lobby)).not.toContain('hostToken');
   });
 });
+
+describe('relay chat', () => {
+  async function threePlayers() {
+    const t = setup();
+    const created = await t.send('a', { action: 'create', req: 1, name: 'Ann', faction: 'concord', token: 'tA', config, protocol: PROTOCOL_VERSION });
+    const code = (created[0] as { lobby: { code: string } }).lobby.code;
+    await t.send('b', { action: 'claim', req: 2, code, token: 'tB', faction: 'rynkai', name: 'Bob' });
+    await t.send('c', { action: 'claim', req: 3, code, token: 'tC', faction: 'lattice', name: 'Cat' });
+    return { ...t, code };
+  }
+
+  it('delivers private messages only to the people in the conversation', async () => {
+    const { send, inbox, code } = await threePlayers();
+    inbox.set('b', []); inbox.set('c', []);
+    const sent = await send('a', { action: 'message', req: 4, code, token: 'tA', to: ['rynkai'], text: 'Truce?', turn: 3 });
+    expect(sent[0]).toMatchObject({ type: 'message', message: { from: 'concord', to: ['rynkai'], text: 'Truce?', turn: 3 } });
+    expect(inbox.get('b')!.some((m) => m.type === 'message')).toBe(true);
+    expect(inbox.get('c')!.some((m) => m.type === 'message')).toBe(false);
+    const bobs = await send('b', { action: 'messages', req: 5, code, token: 'tB', since: 0 });
+    expect((bobs[0] as { messages: unknown[] }).messages).toHaveLength(1);
+    const cats = await send('c', { action: 'messages', req: 6, code, token: 'tC', since: 0 });
+    expect((cats[0] as { messages: unknown[] }).messages).toHaveLength(0);
+  });
+
+  it('broadcasts to all players, ignores non-players as recipients, and refuses outsiders', async () => {
+    const { send, inbox, code } = await threePlayers();
+    inbox.set('b', []); inbox.set('c', []);
+    await send('a', { action: 'message', req: 4, code, token: 'tA', to: ['all'], text: 'Hello galaxy', turn: 1 });
+    expect(inbox.get('b')!.some((m) => m.type === 'message')).toBe(true);
+    expect(inbox.get('c')!.some((m) => m.type === 'message')).toBe(true);
+    const bad = await send('a', { action: 'message', req: 5, code, token: 'tA', to: ['varrhen'], text: 'hi', turn: 1 });
+    expect(bad[0].type).toBe('error');
+    expect((await send('x', { action: 'message', req: 6, code, token: 'nope', to: ['all'], text: 'spam', turn: 1 }))[0].type).toBe('error');
+    expect((await send('x', { action: 'messages', req: 7, code, token: 'nope', since: 0 }))[0].type).toBe('error');
+    const long = await send('a', { action: 'message', req: 8, code, token: 'tA', to: ['all'], text: 'x'.repeat(5000), turn: 1 });
+    expect((long[0] as { message: { text: string } }).message.text).toHaveLength(1000);
+  });
+});
