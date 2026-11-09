@@ -4,6 +4,7 @@ import { design } from '../data/designs';
 import { factionDef } from '../data/factions';
 import { CLASSES } from '../data/ships';
 import { getBit } from '../engine/bitset';
+import { blockadedHexes } from '../engine/blockade';
 import { AXIAL_DIRECTIONS, axialOf, axialToOffset, hexToPixel, pixelToHex } from '../engine/hex';
 import type { FactionId, Fleet, GameState, StarKind } from '../engine/types';
 import { canSeeFleet, visibleHexes } from '../engine/visibility';
@@ -44,6 +45,7 @@ export class MapView {
   onHover: (hex: number | null) => void = () => {};
   onCamera: () => void = () => {};
   private visible = new Set<number>();
+  private blockaded = new Set<number>();
   private visibleFleets: Fleet[] = [];
   private dirty = true;
   private stars: { x: number; y: number; r: number; a: number }[] = [];
@@ -83,6 +85,7 @@ export class MapView {
     if (!this.state) return;
     this.visible = this.revealAll ? new Set(this.state.map.hexes.map((_, i) => i)) : visibleHexes(this.state, this.viewer);
     this.visibleFleets = Object.values(this.state.fleets).filter((f) => this.revealAll || canSeeFleet(this.state, this.viewer, f, this.visible));
+    this.blockaded = new Set([...blockadedHexes(this.state)].filter((h) => this.visible.has(h)));
     this.dirty = true;
   }
 
@@ -462,6 +465,13 @@ export class MapView {
       ctx.strokeStyle = factionDef(sys.homeOf).color;
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(sx, sy, starR + 4, 0, Math.PI * 2); ctx.stroke();
+    }
+    if (this.blockaded.has(i)) {
+      ctx.strokeStyle = '#ff6b6b';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.arc(px, py, Math.max(pr, 4) + 4, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
     }
     if (sys.ruins) {
       ctx.fillStyle = '#e8d38a';

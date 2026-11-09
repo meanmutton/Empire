@@ -23,5 +23,5 @@ export function openReport(ui: GameUI, sinceTurn?: number): void {
 
 function iconFor(kind: string): string {
   return ({ battle: '⚔', war: '🔥', peace: '🕊', treaty: '📜', built: '🛠', research: '🔬', colonized: '🌍', captured: '⛓', invasion: '🪖',
-    embassy: '🏛', proposal: '✉', contact: '👁', spy: '🕵', vassal: '👑', victory: '🏆', eliminated: '☠', ruins: '⌂', developed: '⬆', defection: '🚩' } as Record<string, string>)[kind] ?? '•';
+    embassy: '🏛', proposal: '✉', contact: '👁', spy: '🕵', vassal: '👑', victory: '🏆', eliminated: '☠', ruins: '⌂', developed: '⬆', defection: '🚩', blockade: '🚫', raid: '🏴' } as Record<string, string>)[kind] ?? '•';
 }

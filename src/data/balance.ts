@@ -10,6 +10,8 @@ export const BALANCE = {
 
   ownedHexEnergy: 0.1,
   disconnectedPenalty: 0.5,
+  /** Output multiplier for a blockaded system. */
+  blockadePenalty: 0.5,
   populationGrowth: 0.05,
   repairFriendly: 0.1,
   repairDock: 0.3,
