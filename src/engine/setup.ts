@@ -6,6 +6,7 @@ import { emptyBits, setBits } from './bitset';
 import { hexesWithin } from './hex';
 import { newId, relationKey } from './ids';
 import { generateMap } from './mapgen';
+import { refreshOffers } from './mercenaries';
 import { grantTech } from './research';
 import { TECHS } from '../data/techs';
 import { Rng, seedRng } from './rng';
@@ -124,6 +125,7 @@ export function createGame(opts: NewGameOptions): GameState {
       for (const t of rng.shuffle(tier1).slice(0, 3)) grantTech(state, id, t.id);
     }
   }
+  refreshOffers(state);
   return state;
 }
 

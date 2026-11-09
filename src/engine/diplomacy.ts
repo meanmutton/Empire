@@ -152,6 +152,7 @@ function validItem(state: GameState, giver: FactionId, taker: FactionId, item: T
       const a = state.armies[item.army];
       if (!a || a.owner !== giver) return { ok: false, reason: 'No such army.' };
       if (a.hex === null) return { ok: false, reason: 'Armies aboard ships cannot be traded; land them first.' };
+      if (a.rentedFrom) return { ok: false, reason: 'Hired armies are not yours to trade.' };
       return { ok: true };
     }
     case 'agreement':

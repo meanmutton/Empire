@@ -17,6 +17,7 @@ import { setResearch } from './research';
 import { endTurn } from './turn';
 import type { BuildOrder, FactionId, Fleet, GameState, RelationStatus, Statement, StockpileKind, TradeItem } from './types';
 import { exchange } from './market';
+import { buyOffer, orderShip } from './mercenaries';
 import { makeStatement } from './dispatch';
 import { isGameOver } from './victory';
 import { RESOURCE_KINDS } from './types';
@@ -56,6 +57,8 @@ export type Action =
   | { type: 'mobilize'; on: boolean }
   | { type: 'statement'; to: FactionId; statement: Statement }
   | { type: 'exchange'; sell: StockpileKind; buy: StockpileKind; amount: number }
+  | { type: 'buyOffer'; offer: string }
+  | { type: 'orderShip'; seller: FactionId; design: string }
   | { type: 'endTurn' };
 
 export type ActionResult = { ok: true; text?: string; id?: string } | { ok: false; reason: string };
@@ -146,6 +149,10 @@ export function applyAction(state: GameState, faction: FactionId, action: Action
       return makeStatement(state, faction, action.to, action.statement);
     case 'exchange':
       return exchange(state, faction, action.sell, action.buy, action.amount);
+    case 'buyOffer':
+      return buyOffer(state, faction, action.offer);
+    case 'orderShip':
+      return orderShip(state, faction, action.seller, action.design);
     case 'endTurn':
       endTurn(state);
       return { ok: true };
