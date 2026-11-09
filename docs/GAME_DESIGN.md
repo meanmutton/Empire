@@ -489,7 +489,13 @@ Each game enables any of these (default: all):
   have the most systems in it.
 - **Turn limit** *(optional, e.g. 250)*: highest score wins (systems, population, tech, fleet, vassals).
 
+The game also ends:
+- with **no winner** if every great power has been eliminated (only minor factions are left);
+- won by the **leading computer power** (highest score) if every human player has been eliminated;
+- at the **turn limit**: the highest-scoring surviving great power wins, or nobody if none survive.
+
 A human who is eliminated can keep watching. A human who leaves is replaced by the computer.
+Faction-specific victory paths are being discussed in `docs/VICTORY_IDEAS.md`.
 
 ## 11. Information and fog of war
 - Each faction sees what its ships, starbases, territory and allies' vision reveal. Explored but unseen

@@ -52,9 +52,10 @@ export class LocalSession {
       this.ui.refresh();
       if (!first || this.hotseat) openReport(this.ui, g.turn - 1);
       if (g.winner) toast(`${factionDef(g.winner).name} won the game!`);
+      else if (g.over) toast(`The game is over: ${g.over.reason}.`);
       else if (!g.factions[who].research.current) toast('Pick a research project.');
     };
-    if (!this.hotseat || g.winner) { show(); return; }
+    if (!this.hotseat || g.winner || g.over) { show(); return; }
     // Hot seat: hide the board until the right player has the device.
     this.ui?.destroy();
     this.ui = null;

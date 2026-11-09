@@ -23,6 +23,7 @@ import { openDiplomacy } from './screens/diplomacy';
 import { openReport } from './screens/report';
 import { openResearch } from './screens/research';
 import { injectStyles } from './styles';
+import { isGameOver } from '../engine/victory';
 import { unreadCount, type Messaging } from './messaging';
 import { openMessages } from './screens/messages';
 import { tokenImage } from './tokens';
@@ -104,7 +105,7 @@ export class GameUI {
   }
 
   get myTurn(): boolean {
-    return this.host.canAct(this) && activeFaction(this.game) === this.viewer && !this.game.winner;
+    return this.host.canAct(this) && activeFaction(this.game) === this.viewer && !isGameOver(this.game);
   }
 
   /** Applies an order for the viewer, refreshing the UI. */
@@ -256,7 +257,7 @@ export class GameUI {
       })() : null,
       button('Next fleet', () => this.nextIdle(), { title: 'Shortcut: N' }),
       h('span', { class: 'spacer' }),
-      g.winner ? h('b', { class: 'good' }, `${factionDef(g.winner).name} won`) : null,
+      g.winner ? h('b', { class: 'good' }, `${factionDef(g.winner).name} won`) : g.over ? h('b', { class: 'bad' }, 'Game over: no winner') : null,
       waiting ? h('span', { class: 'dim' }, waiting) : null,
       button('Menu', () => this.host.openMenu(this)),
       button('Empire', () => this.openEmpire(), { cls: 'mobile-only' }),
