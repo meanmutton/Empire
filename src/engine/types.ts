@@ -151,6 +151,8 @@ export interface Relation {
   embassyA: boolean;
   embassyB: boolean;
   agreements: string[];
+  /** Who declared the current war, if at war. */
+  aggressor: FactionId | null;
   /** Opinion of a toward b and b toward a, −100..100. */
   opinionAB: number;
   opinionBA: number;

@@ -170,7 +170,7 @@ major (§9.5). Each has 1–2 special abilities and a small roster (2–4 classe
 
 | Type | Passable | Notes |
 |------|----------|-------|
-| Empty space | yes | Cheap to claim, no resources by itself (each owned hex gives +0.5 energy). |
+| Empty space | yes | Cheap to claim, no resources by itself (each owned hex gives +0.3 energy). |
 | Major home system | yes | Starts at development level 4; produces all resources; strong planetary defense. |
 | Minor home system | yes | Starts at development level 3. |
 | Developed system | yes | Pre-existing independent colony (level 1–2) with a neutral garrison; can be annexed or conquered. |
@@ -220,11 +220,18 @@ level** of 0–5:
 | Level | Name | Unlocks |
 |-------|------|---------|
 | 0 | Unclaimed / Survey | — |
-| 1 | Outpost | 1 improvement slot, claims the hex |
-| 2 | Colony | population can grow; 2 slots |
-| 3 | Settlement | shipyard (up to Destroyer); 3 slots |
-| 4 | Industrial World | heavy shipyard (all classes); 4 slots |
-| 5 | Core World | 5 slots; +25% all yields |
+| 1 | Outpost | 2 improvement slots, claims the hex |
+| 2 | Colony | population can grow; spies and diplomats; 3 slots |
+| 3 | Settlement | shipyard (up to Destroyer); 4 slots |
+| 4 | Industrial World | heavy shipyard (all classes); 5 slots |
+| 5 | Core World | highest yields (×2.5 base) |
+
+Slots are development level + 1, capped by the system's size (1–5). Gas giants and similar uninhabitable
+worlds can be developed only to level 2.
+
+Builds are paid for up front when queued; each system then puts production points into its own queue
+every turn (more for higher development and population). Unfinished builds can be rushed with energy
+(3 energy per remaining point) or cancelled for a 50% refund.
 
 **Improvements** (each takes one slot): Mine (+Metals), Power Plant (+Energy), Research Lab (+Science),
 Habitat (+population capacity), Refinery (+Exotics, needs an exotic source), Shipyard / Heavy Shipyard,
@@ -242,7 +249,7 @@ Academy (new units start veteran).
 
 ### 5.4 Income each turn
 `yield = base(system type) × development multiplier × improvement bonuses × faction modifiers × treaties`,
-plus 0.5 energy per owned empty hex. Upkeep: each ship costs energy per turn by class; starbases and agents cost
+plus 0.3 energy per owned empty hex. Upkeep: each ship costs energy per turn by class; starbases and agents cost
 energy too. Population grows 5% per turn toward capacity (faction-modified).
 
 ## 6. Units

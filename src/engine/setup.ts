@@ -103,7 +103,7 @@ export function createGame(opts: NewGameOptions): GameState {
     for (let j = i + 1; j < all.length; j++) {
       const [a, b] = [all[i], all[j]].sort();
       state.relations[relationKey(a, b)] = {
-        a, b, contact: false, status: 'neutral', since: 1, embassyA: false, embassyB: false, agreements: [],
+        a, b, contact: false, status: 'neutral', since: 1, embassyA: false, embassyB: false, agreements: [], aggressor: null,
         opinionAB: baseOpinion(a, b), opinionBA: baseOpinion(b, a),
       };
     }
