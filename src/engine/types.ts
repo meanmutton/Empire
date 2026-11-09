@@ -50,7 +50,7 @@ export interface StarSystem {
 }
 
 export interface BuildOrder {
-  kind: 'ship' | 'army' | 'improvement' | 'starbase' | 'spy' | 'diplomat' | 'develop';
+  kind: 'ship' | 'army' | 'improvement' | 'starbase' | 'spy' | 'diplomat' | 'develop' | 'wonder';
   /** Ship design id, improvement id, etc. */
   item: string;
   /** Production points still needed. */

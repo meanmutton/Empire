@@ -43,6 +43,9 @@ export const BALANCE = {
   treatyBreakPenalty: 30,
   diplomatCaptureChance: 0.75,
 
+  ascensionGate: { metals: 900, energy: 700, exotics: 250, points: 220 },
+  allianceVictoryTurns: 10,
+
   startingStock: { energy: 100, metals: 120, exotics: 5 },
   minorStartingStock: { energy: 60, metals: 60, exotics: 0 },
 } as const;
