@@ -1,5 +1,7 @@
 import { DESIGNS } from '../src/data/designs';
-import { battleHexes, repairFleets, resolveBattleAt, resolveCombat, retreatFleet } from '../src/engine/combat';
+import { battleHexes, repairFleets, resolveBattleAt, resolveCombat } from '../src/engine/combat';
+import { applyAction } from '../src/engine/actions';
+import type { DoctrineId } from '../src/data/doctrines';
 import { invade, loadArmy } from '../src/engine/ground';
 import { ring } from '../src/engine/hex';
 import { Rng, seedRng } from '../src/engine/rng';
@@ -14,53 +16,70 @@ function countShips(g: GameState, owner: string, hex: number): number {
   return Object.values(g.fleets).filter((f) => f.owner === owner && f.hex === hex).reduce((a, f) => a + f.ships.length, 0);
 }
 
-/** Two identical forces of n ships each; returns average fraction lost per side over many trials. */
-function equalBattle(designId: string, groups: number, trials: number): { a: number; b: number } {
-  let la = 0, lb = 0;
+/** Spawns n ships of a design for a faction at hex, in groups of 6, with a doctrine. */
+function force(g: GameState, owner: string, designId: string, hex: number, n: number, doctrine: DoctrineId = 'engage'): void {
+  while (n > 0) {
+    const k = Math.min(6, n);
+    g.fleets[fleetOf(g, owner, DESIGNS[designId], hex, k)].doctrine = doctrine;
+    n -= k;
+  }
+}
+
+/** Many battles of a ships vs b ships; returns how often each side came out ahead, and average losses. */
+function trial(a: number, b: number, opts: { trials?: number; designId?: string; da?: DoctrineId; db?: DoctrineId; rounds?: number; tag?: string } = {}) {
+  const trials = opts.trials ?? 200, id = opts.designId ?? 'lattice:tensor';
+  let aWins = 0, bWins = 0, aLost = 0, bLost = 0;
   for (let t = 0; t < trials; t++) {
     const g = newGame('combat');
-    g.rng = seedRng(`trial-${t}`);
+    g.rng = seedRng(`${opts.tag ?? 't'}-${a}-${b}-${t}`);
+    if (opts.rounds) g.config.combatRounds = opts.rounds;
     const hex = emptyHex(g);
     clear(g, hex);
     setStatus(g, 'concord', 'krasnyr', 'war');
-    const d = DESIGNS[designId];
-    for (let k = 0; k < groups; k++) { fleetOf(g, 'concord', d, hex, 6); fleetOf(g, 'krasnyr', d, hex, 6); }
-    const n = groups * 6;
+    force(g, 'concord', id, hex, a, opts.da);
+    force(g, 'krasnyr', id, hex, b, opts.db);
     resolveBattleAt(g, hex, 'concord');
-    la += (n - countShips(g, 'concord', hex)) / n;
-    lb += (n - countShips(g, 'krasnyr', hex)) / n;
+    const w = g.battleLog!.at(-1)!.winner;
+    if (w === 'concord') aWins++;
+    if (w === 'krasnyr') bWins++;
+    const lost = (f: string) => g.battleLog!.at(-1)!.sides.find((x) => x.faction === f)!.ships.reduce((n, r) => n + r.destroyed + r.captured, 0);
+    aLost += lost('concord') / a;
+    bLost += lost('krasnyr') / b;
   }
-  return { a: la / trials, b: lb / trials };
+  return { aWins: aWins / trials, bWins: bWins / trials, aLost: aLost / trials, bLost: bLost / trials };
 }
 
-describe('combat lethality', () => {
+describe('combat lethality and luck', () => {
   for (const id of ['lattice:tensor', 'lattice:matrix', 'lattice:axiom', 'lattice:proof', 'lattice:vector']) {
-    it(`equal forces of ${id} each lose about half per round`, () => {
-      const r = equalBattle(id, 3, 30);
-      expect(r.a).toBeGreaterThan(0.4);
-      expect(r.a).toBeLessThan(0.6);
-      expect(r.b).toBeGreaterThan(0.4);
-      expect(r.b).toBeLessThan(0.6);
+    it(`equal forces of ${id} trade evenly and bloodily`, () => {
+      const r = trial(12, 12, { designId: id, trials: 60, tag: id });
+      expect(r.aWins).toBeGreaterThan(0.3);
+      expect(r.bWins).toBeGreaterThan(0.3);
+      for (const lost of [r.aLost, r.bLost]) { expect(lost).toBeGreaterThan(0.2); expect(lost).toBeLessThan(0.65); }
     });
   }
 
-  it('a force twice as big wins decisively', () => {
-    let bigLoss = 0, smallLoss = 0;
-    for (let t = 0; t < 30; t++) {
-      const g = newGame('combat');
-      g.rng = seedRng(`big-${t}`);
-      const hex = emptyHex(g);
-      clear(g, hex);
-      setStatus(g, 'concord', 'krasnyr', 'war');
-      const d = DESIGNS['lattice:tensor'];
-      for (let k = 0; k < 4; k++) fleetOf(g, 'concord', d, hex, 6);
-      for (let k = 0; k < 2; k++) fleetOf(g, 'krasnyr', d, hex, 6);
-      resolveBattleAt(g, hex, 'concord');
-      bigLoss += (24 - countShips(g, 'concord', hex)) / 24;
-      smallLoss += (12 - countShips(g, 'krasnyr', hex)) / 12;
-    }
-    expect(bigLoss / 30).toBeLessThan(0.35);
-    expect(smallLoss / 30).toBeGreaterThan(0.75);
+  it('underdogs win sometimes: about a quarter at 1.5:1, about one in eight at 2:1, almost never at 3:1', () => {
+    const r15 = trial(9, 6, { trials: 400, tag: 'u15' });
+    const r2 = trial(12, 6, { trials: 400, tag: 'u2' });
+    const r3 = trial(18, 6, { trials: 400, tag: 'u3' });
+    expect(r15.bWins).toBeGreaterThan(0.2);
+    expect(r15.bWins).toBeLessThan(0.34);
+    expect(r2.bWins).toBeGreaterThan(0.08);
+    expect(r2.bWins).toBeLessThan(0.18);
+    expect(r3.bWins).toBeLessThan(0.05);
+  });
+
+  it('Full Attack is bloodier than Cautious for both sides', () => {
+    const full = trial(12, 12, { da: 'fullAttack', db: 'fullAttack', trials: 80, tag: 'fa' });
+    const careful = trial(12, 12, { da: 'cautious', db: 'cautious', trials: 80, tag: 'ca' });
+    expect(full.aLost + full.bLost).toBeGreaterThan((careful.aLost + careful.bLost) * 1.5);
+  });
+
+  it('more combat rounds make fights to the end bloodier', () => {
+    const short = trial(12, 12, { da: 'fullAttack', db: 'fullAttack', rounds: 3, trials: 80, tag: 'r3' });
+    const long = trial(12, 12, { da: 'fullAttack', db: 'fullAttack', rounds: 10, trials: 80, tag: 'r10' });
+    expect(long.aLost + long.bLost).toBeGreaterThan(short.aLost + short.bLost + 0.2);
   });
 
   it('only fights at war', () => {
@@ -158,16 +177,43 @@ describe('planets, invasion, retreat, repair', () => {
     expect(invade(g, fid).ok).toBe(false);
   });
 
-  it('retreats, except the Ryn\'kai', () => {
+  it('fleets on Retreat break away; the Ryn\'kai refuse the order', () => {
     const g = newGame('ret');
     const hex = emptyHex(g);
     clear(g, hex);
-    setStatus(g, 'concord', 'rynkai', 'war');
-    const c = fleetOf(g, 'concord', DESIGNS['lattice:tensor'], hex, 2);
-    const r = fleetOf(g, 'rynkai', DESIGNS['lattice:tensor'], hex, 2);
-    expect(retreatFleet(g, r).ok).toBe(false);
-    expect(retreatFleet(g, c).ok).toBe(true);
+    setStatus(g, 'concord', 'krasnyr', 'war');
+    const c = fleetOf(g, 'concord', DESIGNS['lattice:tensor'], hex, 3);
+    fleetOf(g, 'krasnyr', DESIGNS['lattice:tensor'], hex, 6);
+    g.fleets[c].doctrine = 'retreat';
+    resolveBattleAt(g, hex, 'concord');
+    const rec = g.battleLog!.at(-1)!;
     if (g.fleets[c]) expect(g.fleets[c].hex).not.toBe(hex);
+    expect(rec.sides.find((s) => s.faction === 'concord')!.withdrew).toBe(1);
+    expect(rec.fought).toBe(1);
+    const ryn = Object.values(g.fleets).find((f) => f.owner === 'rynkai')!;
+    g.active = g.turnOrder.indexOf('rynkai');
+    expect(applyAction(g, 'rynkai', { type: 'doctrine', fleet: ryn.id, doctrine: 'retreat' }).ok).toBe(false);
+    expect(applyAction(g, 'rynkai', { type: 'doctrine', fleet: ryn.id, doctrine: 'cautious' }).ok).toBe(true);
+  });
+
+  it('Engage withdraws after heavy losses, Full Attack never does', () => {
+    let engageLeft = 0, fullLeft = 0;
+    for (let t = 0; t < 30; t++) {
+      for (const doctrine of ['engage', 'fullAttack'] as const) {
+        const g = newGame('wd');
+        g.rng = seedRng(`wd-${t}`);
+        const hex = emptyHex(g);
+        clear(g, hex);
+        setStatus(g, 'concord', 'krasnyr', 'war');
+        force(g, 'concord', 'lattice:tensor', hex, 6, doctrine);
+        force(g, 'krasnyr', 'lattice:tensor', hex, 12, 'fullAttack');
+        resolveBattleAt(g, hex, 'concord');
+        const left = g.battleLog!.at(-1)!.sides.find((s) => s.faction === 'concord')!.withdrew ?? 0;
+        if (doctrine === 'engage') engageLeft += left; else fullLeft += left;
+      }
+    }
+    expect(engageLeft).toBeGreaterThan(5);
+    expect(fullLeft).toBe(0);
   });
 
   it('repairs in friendly territory and faster at docks', () => {
@@ -180,5 +226,74 @@ describe('planets, invasion, retreat, repair', () => {
     repairFleets(g, 'concord');
     expect(s.hull).toBeGreaterThan(10);
     void new Rng(g.rng);
+  });
+});
+
+describe('the fog of battle', () => {
+  it('has critical hits, damaged and crippled survivors, and rare events (very rarely big ones)', () => {
+    let crits = 0, crippled = 0, minor = 0, major = 0, battles = 0, rounds = 0;
+    for (let t = 0; t < 400; t++) {
+      const g = newGame('fog');
+      g.rng = seedRng(`fog-${t}`);
+      const hex = emptyHex(g);
+      clear(g, hex);
+      setStatus(g, 'concord', 'krasnyr', 'war');
+      force(g, 'concord', 'lattice:proof', hex, 6, 'fullAttack');
+      force(g, 'krasnyr', 'lattice:proof', hex, 6, 'fullAttack');
+      resolveBattleAt(g, hex, 'concord');
+      const b = g.battleLog!.at(-1)!;
+      battles++;
+      rounds += b.fought!;
+      for (const s of b.sides) { crits += s.crits ?? 0; crippled += s.ships.reduce((a, r) => a + (r.crippled ?? 0), 0); }
+      for (const r of b.rounds!) for (const l of r.lines) {
+        if (l.startsWith('★')) major++;
+        else if (/Sensor ghosts|Inspired gunnery|wreckage|jammed|Damage-control|launch late/.test(l)) minor++;
+      }
+    }
+    expect(crits).toBeGreaterThan(battles);
+    expect(crippled).toBeGreaterThan(battles * 0.3);
+    expect(minor / rounds).toBeGreaterThan(0.02);
+    expect(minor / rounds).toBeLessThan(0.1);
+    expect(major / battles).toBeLessThan(0.03);
+  });
+
+  it('Hit and Run pulls out after two rounds', () => {
+    let early = 0;
+    for (let t = 0; t < 30; t++) {
+      const g = newGame('hr');
+      g.rng = seedRng(`hr-${t}`);
+      const hex = emptyHex(g);
+      clear(g, hex);
+      setStatus(g, 'concord', 'krasnyr', 'war');
+      force(g, 'concord', 'lattice:tensor', hex, 6, 'hitAndRun');
+      force(g, 'krasnyr', 'lattice:tensor', hex, 6, 'fullAttack');
+      resolveBattleAt(g, hex, 'concord');
+      const b = g.battleLog!.at(-1)!;
+      // Two full rounds, then a round pulling out under fire; only ships with wrecked engines stay behind.
+      if (b.fought! <= 3) early++;
+    }
+    expect(early).toBeGreaterThan(25);
+  });
+
+  it('Hold the Line stands its ground over its own system', () => {
+    let held = 0, engageLeft = 0;
+    for (let t = 0; t < 30; t++) {
+      for (const doctrine of ['holdLine', 'engage'] as const) {
+        const g = newGame('hold');
+        g.rng = seedRng(`hold-${t}`);
+        setStatus(g, 'concord', 'krasnyr', 'war');
+        const home = g.factions.concord.home;
+        for (const f of Object.values(g.fleets)) if (f.hex === home) f.hex = 0;
+        g.map.hexes[home].system!.defense = 3;
+        force(g, 'concord', 'lattice:tensor', home, 6, doctrine);
+        force(g, 'krasnyr', 'lattice:tensor', home, 9, 'fullAttack');
+        resolveBattleAt(g, home, 'krasnyr');
+        const left = g.battleLog!.at(-1)!.sides.find((s) => s.faction === 'concord')!.withdrew ?? 0;
+        if (doctrine === 'holdLine' && left === 0) held++;
+        if (doctrine === 'engage' && left > 0) engageLeft++;
+      }
+    }
+    expect(held).toBe(30);
+    expect(engageLeft).toBeGreaterThan(10);
   });
 });

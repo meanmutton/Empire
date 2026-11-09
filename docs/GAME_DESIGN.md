@@ -259,7 +259,7 @@ Academy (new units start veteran).
 - Taking an **enemy-owned** hex requires being at war with its owner.
 - **Settled planets** (any development level, including undefended outposts and independent colonies) are
   never taken by presence: fleets knock their planetary defense down to 0 in combat, then armies **invade**
-  (§7.3).
+  (§7.5).
 - An **enemy starbase** in a hex blocks any claim there until it is destroyed in combat.
 - An owned hex not connected to your home by a chain of owned hexes is **disconnected**: −50% yields
   *(tunable)*.
@@ -363,41 +363,113 @@ A ship design = class + role + faction style. The role sets how the class's slot
 
 ## 7. Combat
 
-Combat is **en masse and simultaneous**. There is **one combat round per player turn**: at the end of a
-faction's turn, every hex where its forces share a hex with an enemy fights one round.
+Combat is **en masse and simultaneous**, and it runs **without human input**. At the end of a faction's
+turn, every hex where its forces share a hex with an enemy fights a **battle** of several **combat rounds**
+(separate from campaign rounds, the factions' turns). The host sets how many: **3 to 10, default 5**. More
+rounds make battles bloodier, because fleets that fight to the end keep fighting. Players steer battles
+through each fleet's **battle orders** (§7.2).
 
 ### 7.1 Resolution
-1. Every participant in a hex (all ships, fighters, starbases and planetary defenses) is split into the two
-   sides: the active faction and its allies vs. their enemies. With three or more mutually hostile parties,
-   every party attacks every hostile party in proportion to their strength.
-2. Each side computes its **attack pool**: energy and missile strength, plus fighters, modified by faction,
-   experience, terrain, tech and ability bonuses, then multiplied by a random factor in [0.8, 1.2].
-3. Missiles pass through the enemy's point defense first.
-4. Damage is spread over enemy ships, weighted toward larger targets, with Escorts soaking up a share for
-   their group. Each ship's shields absorb energy damage once per round; the remainder hits the hull.
-5. **All damage is applied simultaneously.** Ships at 0 hull are destroyed.
-6. **Lethality** (Lanchester style): a party's *strength* is its effective attack (after enemy shields and
-   point defense) × its durability (hull + 2 × shields). The fraction of a party destroyed in a round is
-   `0.5 × (enemy strength ÷ own strength)^0.75`, capped at 100%, ×[0.8, 1.2]. So two equal forces each lose
-   about **half** per round, and a force twice as strong loses ~30% while destroying ~85%. The test suite
-   checks 40–60% for equal forces of every class.
-   Damage is focus-fired: targets are picked one at a time (bigger ships ×size, escorts ×2.5) and destroyed,
-   so losses show up as destroyed ships, not light damage spread across everyone.
-7. Damaged ships remain damaged and repair in friendly territory (10%/turn), at a shipyard or starbase (30%/turn),
-   or by faction abilities.
+Every ship, starbase and planetary defense in the hex fights for its faction. With three or more mutually
+hostile parties, every party fires at every hostile party. Each combat round:
+1. **Range.** Battles open at long range. From the second round, the side that wins the maneuver (faster
+   ships, veteran crews, and a die roll) moves the range one band toward what its orders want: **long**,
+   **medium** or **close quarters**. Beams do 55% / 90% / 125% of their damage at long / medium / close;
+   missiles 110% / 95% / 65%; fighters 110% / 100% / 85%. Planets and starbases ignore range.
+2. **Events** (§7.3): about 5% of rounds bring a minor event, and about 0.3% a major one.
+3. **Fire.** Every unit fires a number of shots (1 for small ships, up to 5 for a dreadnaught, 4 for
+   planets and starbases, 2 more for carriers' fighters). Each shot:
+   - picks a target: 60% of a side's shots go to its current focus target, the rest at random, with bigger
+     ships ×size and escorts ×2.5 more likely to be picked;
+   - may **miss** against evasive targets (class evasion, ×1.2 at long range and ×0.8 at close);
+   - does **50–150%** of its expected damage;
+   - lands a **critical hit** 5% of the time (+1% per experience level): 40% double damage, 20% weapons
+     knocked out (half fire for the rest of the battle), 15% shields collapse (no shields, +25% damage
+     taken), 15% engines crippled (can't withdraw with its fleet: it is left behind), 10% bridge hit (its
+     group fires 20% less).
+   Fire is reduced by enemy shields (beams) and point defense (missiles and fighters), and changed by
+   faction abilities, terrain, experience (+5% per level), damage (below), and each side's **fortunes of
+   war**: a factor for the whole battle (random, from about ×0.3 to ×3.3) and a smaller one each round.
+4. **Damage lands at once.** Shields soak damage first (2 points per shield point, halved in nebulae, none
+   in ion storms), then hull. Ships under **half hull are damaged** (fire at 75%), under **a quarter
+   crippled** (fire at 40%, and their fleet moves 1 hex slower on the map until repaired). At 0 they are
+   destroyed. Boarding factions capture 35% of the ships they destroy at close quarters, 20% at medium.
+5. **Withdrawals** (§7.2): fleets that spent the round pulling out leave the hex; fleets that reached the
+   limit in their orders start pulling out.
 
-### 7.2 Retreat and pursuit
-- A battle group may be ordered to retreat at the start of its owner's turn (moves out of the hex; each enemy
-  gets a free half-strength volley first unless the retreater is faster).
-- Ryn'kai never retreat; Voidborn sometimes retreat automatically.
+The battle ends when one side is gone or has withdrawn, or after the last combat round. If both sides
+remain, they fight again at the end of the next faction's turn.
 
-### 7.3 Ground and planetary combat
+**Lethality** is set per battle so that, at nominal fire, the armed forces lose 22% of their durability per
+round, whatever the designs. Numbers, tactics, doctrine and luck decide battles, not the raw size of
+weapon numbers. Calibration (tested in `test/combat.test.ts`, at the default 5 rounds):
+- two equal fleets on Engage each lose about 35–40% of their ships; on Full Attack about 70%;
+- the **underdog comes out ahead** about **25–30%** of the time at 1.5 : 1, **10–15%** at 2 : 1, and
+  almost never (1–2%) at 3 : 1.
+
+A side **comes out ahead** when its enemies lost more build value (ships destroyed or captured, hull
+damage, starbase and planetary defense) than it did. That is a battle win for the Glorious Campaign.
+
+Damaged ships repair in friendly territory (10%/turn), at a shipyard or starbase (30%/turn), or by faction
+abilities.
+
+### 7.2 Battle orders (doctrines)
+Each fleet has standing orders, chosen from a list. They set when it withdraws, how much it trades defense
+for offense, which range it fights at and what it shoots.
+
+| Orders | Fire | Damage taken | Withdraws | Range |
+|--------|------|--------------|-----------|-------|
+| **Full Attack** | ×1.25 | ×1.25 | never | close |
+| **Engage** (default for warships) | ×1 | ×1 | at 50% losses | best for its weapons |
+| **Cautious** | ×0.8 | ×0.75 | at 25% losses, or after round 1 if the enemy is 1.5× stronger | long |
+| **Hold the Line** | ×0.9 | ×0.85 | never while guarding one of its systems or starbases; elsewhere at 50% | medium |
+| **Hit and Run** | ×1.1 | ×1 | after 2 rounds, or at 20% losses | long; targets transports, cargo and support ships first |
+| **Retreat** (default for unarmed ships) | ×0.4 | ×0.9 | at once | long |
+
+- Hold the Line also makes its escorts draw twice the fire. Hold the Line and Retreat don't start fights
+  with independent worlds; the others do.
+- **Withdrawing** takes a combat round: the fleet fires at 30% while pulling out, and takes pursuit fire ×0.5
+  if its slowest ship is faster than the fastest pursuer, ×0.8 at equal speed, ×1.1 if slower (×0.6 when
+  only planets and starbases are shooting). Then it moves to the best free neighboring hex (friendly space
+  toward home first). A fleet with no free hex is cornered and fights on.
+- The **Ryn'kai never withdraw**: they can't take Retreat orders, and their fleets ignore withdrawal limits,
+  but Full Attack and Cautious still differ in fire, damage taken and range.
+- **Voidborn** (Elusive) fleets that lose 30% sometimes vanish at once, with no pursuit.
+- Fleets can also simply move out of a hex with enemies on their own turn.
+
+### 7.3 Battle events
+Rare, and mostly small; a very few swing a whole battle.
+- **Minor** (about 1 round in 20): sensor ghosts (−15% fire this round), inspired gunnery (+15%), drifting
+  wreckage (everyone −10%), jammed communications (no fleet of that side can start withdrawing), damage
+  control (a damaged ship repairs 15%), fighters launch late (carriers' fighters miss the round).
+- **Major** (about 1 round in 300, marked ★ in the report): a reactor breach destroys a side's largest ship
+  and damages the others; a brilliant commander (+40% fire for the rest of the battle); the fleet commander
+  killed (−30% fire, and that side's fleets fall back unless on Full Attack); a crippled ship rams the
+  enemy's largest ship (both lost); the star flares (every ship takes 20% damage; only at star systems);
+  crippled enemy ships surrender (captured).
+
+### 7.4 Battle forecast
+Selecting a hex where your forces meet enemies, or tapping an enemy hex once with a fleet selected, shows a
+forecast: **Overwhelming victory, Likely victory, Even fight, Likely loss or Hopeless cause**. It compares
+firepower × durability (as a force ratio: twice the ships reads 2.0) using only what you know:
+- your own and your allies' forces exactly;
+- only enemy fleets you can see (cloaked or nebula-hidden fleets are left out);
+- without a **scout** (your ship in the hex, or a scout, science or exploration ship within 2 hexes), only
+  their ship classes: typical designs at full hull with green crews;
+- without a **spy** at their capital (spy intelligence level 1 or better, §10.3), their technology is
+  assumed equal to yours;
+- their orders only with both; otherwise assumed Engage.
+With good intelligence the labels match outcomes (in simulation: overwhelming 97% won, likely 71%, even
+43%, likely loss 20%, hopeless 1%). The computer powers use the same forecast, from their own point of
+view, to pick battle orders.
+
+### 7.5 Ground and planetary combat
 - Systems have planetary defense (shields and guns) that join space battles in their hex.
 - Once a system's defense is 0, troop ships may land armies. Ground combat is the same simultaneous model,
   using army strength vs. garrison strength, with a +50% defender bonus.
 - Conquered systems keep 50% of their improvements (Lattice: 100%) and have unrest for 5 turns.
 
-### 7.4 Blockades
+### 7.6 Blockades
 - A settled system is **blockaded** while armed warships of a faction at war with its owner sit in its hex,
   and the owner has no armed ships or starbase there to contest them.
 - A blockaded system produces **half** its usual output, and its build queue can't finish **ships or
@@ -405,7 +477,7 @@ faction's turn, every hex where its forces share a hex with an enemy fights one 
 - The blockade lifts as soon as the blockaders leave or are destroyed, or the owner brings armed ships or a
   starbase into the hex (that becomes a battle instead).
 - Blockading is the natural first step of a siege: fleets blockade and grind down planetary defense, then
-  armies invade (§7.3).
+  armies invade (§7.5).
 - The Haldane Free Traders' systems (Smugglers) can't be blockaded.
 
 ## 8. Research

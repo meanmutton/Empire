@@ -48,7 +48,8 @@ Ordered roughly by value. Open a PR per item or small group.
 1. **Deploy the relay** (`docs/RELAY.md`) and build `dist/index.html` with `EMPIRE_RELAY` baked in. The game
    itself is one HTML file players open directly; only online play needs the relay. Needs the owner's AWS
    account.
-2. **Balance from real games**: territory spreads fast (~230 hexes per major by turn 80 in
+2. **Balance from real games** (combat lethality, luck and doctrine numbers are in `BALANCE.combat` and
+   `src/data/doctrines.ts`; `test/combat.test.ts` checks the calibration): territory spreads fast (~230 hexes per major by turn 80 in
    `test/ai.test.ts`); some AIs field 150–200 ships; tune claims, upkeep and research costs after playtests.
    Aggressive AIs all pick on the weakest neighbor at once (in one seed the Concord is reduced to a single
    system by turn 80); consider making AIs less eager to join a pile-on, or more eager to defend victims.
@@ -58,7 +59,10 @@ Ordered roughly by value. Open a PR per item or small group.
 6. **Free-text chat with computer leaders** (option 3 from the messaging discussion): an optional mode where a
    language model voices each computer power, with replies saved in the state and any effect still going
    through statements and proposals. Needs an API key on the relay.
-7. **Hidden information**: run the engine inside the Lambda and send each player only what they can see.
+7. **Hidden information and fair dice**: run the engine inside the Lambda and send each player only what they
+   can see. That also settles dice: today the browser that ends a turn resolves its battles, so a player
+   could look at the downloaded state (it holds the random seed), try different orders offline and keep the
+   luckiest. Battles are much swingier since combat rounds landed, so this matters more for competitive games.
 8. **Tutorial**: a guided first few turns.
 
 ## Parked

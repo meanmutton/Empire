@@ -1,4 +1,5 @@
 /** Title and new-game setup screen. */
+import { DEFAULT_COMBAT_ROUNDS, MAX_COMBAT_ROUNDS, MIN_COMBAT_ROUNDS } from '../../data/doctrines';
 import { ABILITIES } from '../../data/abilities';
 import { factionDef } from '../../data/factions';
 import { AVAILABILITY, DEFAULT_TURN_LIMIT, PRESETS, VICTORIES, type PresetId } from '../../data/victories';
@@ -39,6 +40,7 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
   let online = false;
   let timeoutHours = '24';
   let preset: PresetId = 'classic';
+  let combatRounds = DEFAULT_COMBAT_ROUNDS;
   const majors = () => PRESETS[preset].majors;
 
   const render = () => {
@@ -96,6 +98,11 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
       h('span', { class: 'k' }, 'Map size'), sizeSel,
       h('span', { class: 'k' }, 'Seed'), seedIn,
       h('span', { class: 'k' }, 'Turn limit'), limit,
+      h('span', { class: 'k' }, 'Combat rounds per battle'), h('select', {
+        title: 'How long each battle lasts. More rounds: bloodier battles, since fleets that fight to the end keep fighting.',
+        onchange: (e: Event) => { combatRounds = Number((e.target as HTMLSelectElement).value); },
+      }, ...Array.from({ length: MAX_COMBAT_ROUNDS - MIN_COMBAT_ROUNDS + 1 }, (_, i) => MIN_COMBAT_ROUNDS + i).map((n) =>
+        h('option', { value: String(n), selected: n === combatRounds }, `${n}${n === DEFAULT_COMBAT_ROUNDS ? ' (standard)' : n === MIN_COMBAT_ROUNDS ? ' (skirmishes)' : n === MAX_COMBAT_ROUNDS ? ' (brutal)' : ''}`))),
       online ? h('span', { class: 'k' }, 'Turn timeout (hours)') : null,
       online ? h('input', { value: timeoutHours, style: 'width:70px', title: 'After this long, another player may let the computer play a caretaker turn. 0 = never.', oninput: (e: Event) => { timeoutHours = (e.target as HTMLInputElement).value; } }) : null));
     left.append(h('h3', null, 'Game type'), h('div', { class: 'row wrap' }, ...(Object.keys(PRESETS) as PresetId[]).map((k) =>
@@ -109,7 +116,7 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
     left.append(h('div', { style: 'margin-top:16px' }, button(online ? 'Create online game' : 'Start game', () => {
       actions.start({
         seed: seed || randomSeed(), seats: seats.map((s, i) => ({ ...s, name: s.name.trim() || `Player ${i + 1}` })),
-        ...MAP_SIZES[size], turnLimit: turnLimit ? Math.max(10, Number(turnLimit)) : null, preset, online,
+        ...MAP_SIZES[size], turnLimit: turnLimit ? Math.max(10, Number(turnLimit)) : null, preset, online, combatRounds,
         timeoutHours: Math.max(0, Number(timeoutHours) || 0),
       });
     }, { cls: 'primary' })));

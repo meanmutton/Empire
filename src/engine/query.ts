@@ -1,4 +1,5 @@
 /** Read-only helpers over the game state. */
+import { BALANCE } from '../data/balance';
 import { design } from '../data/designs';
 import { CLASSES } from '../data/ships';
 import { techEffects } from './research';
@@ -76,7 +77,9 @@ export function fleetSpeed(state: GameState, fleetId: string): number {
     const d = design(state.ships[sid].design);
     if (d.cls === 'fighter') continue;
     const small = CLASSES[d.cls].size <= CLASSES.frigate.size ? te.smallShipSpeed : 0;
-    speed = Math.min(speed, d.stats.speed + te.speed + small);
+    // Crippled ships (under a quarter hull) limp along one hex slower.
+    const crippled = state.ships[sid].hull < d.stats.hull * BALANCE.combat.crippledAt ? 1 : 0;
+    speed = Math.min(speed, Math.max(1, d.stats.speed + te.speed + small - crippled));
   }
   return isFinite(speed) ? speed : 0;
 }

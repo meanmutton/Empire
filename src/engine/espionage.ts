@@ -56,7 +56,8 @@ export function runEspionage(state: GameState, faction: FactionId): void {
     if (a.owner !== faction || a.kind !== 'spy' || !a.mission || a.capturedBy) continue;
     const mission = a.mission as MissionId;
     const target = a.target!;
-    if (state.map.hexes[a.hex].owner !== target) { a.mission = null; continue; }
+    // Missions need the target's system (a spy can be left on an empty hex, e.g. after a fleet withdraws).
+    if (state.map.hexes[a.hex].owner !== target || !state.map.hexes[a.hex].system) { a.mission = null; continue; }
     a.progress++;
     if (a.progress < MISSIONS[mission].turns) continue;
     a.progress = 0;

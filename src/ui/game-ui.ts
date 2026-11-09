@@ -1,4 +1,7 @@
 /** The in-game client: map, top bar, context side panel and the screens opened from it. */
+import { DOCTRINE_IDS, DOCTRINES, type DoctrineId } from '../data/doctrines';
+import { isCrippled } from '../engine/combat';
+import { battleForecast, FORECAST_NAMES } from '../engine/forecast';
 import { BALANCE } from '../data/balance';
 import { design, DESIGNS_BY_FACTION } from '../data/designs';
 import { factionDef, hasAbility } from '../data/factions';
@@ -172,7 +175,8 @@ export class GameUI {
       if (path) {
         this.pendingDest = hex;
         this.view.overlay.path = [mover.hex, ...path];
-        this.hint.textContent = 'Tap the same hex again to move there';
+        const fc = battleForecast(this.game, this.viewer, hex, [mover.id]);
+        this.hint.textContent = fc ? `Battle forecast: ${FORECAST_NAMES[fc.label]} (${fc.intel} intelligence). Tap again to attack.` : 'Tap the same hex again to move there';
         this.view.invalidate();
         return;
       }
@@ -312,11 +316,30 @@ export class GameUI {
         h('div', { class: 'row' }, 'Hull', bar(base.hull / spec.hull, '#7cfc9a'), `${base.hull}/${spec.hull}`)));
     }
     const fleets = this.fleetsAt(hex);
+    const forecast = this.forecastCard(hex);
+    if (forecast) s.append(forecast);
     if (fleets.length) s.append(h('h3', null, 'Fleets'));
     for (const f of fleets) s.append(this.fleetCard(f));
     const agents = Object.values(g.agents).filter((a) => a.hex === hex && a.owner === this.viewer && !a.ship && !a.capturedBy);
     if (agents.length) s.append(h('h3', null, 'Agents'));
     for (const a of agents) s.append(this.agentCard(a.id));
+  }
+
+  /** The battle forecast for the viewer's forces in a hex where enemies are present. */
+  private forecastCard(hex: number): HTMLElement | null {
+    const g = this.game;
+    const hx = g.map.hexes[hex];
+    const present = Object.values(g.fleets).some((f) => f.hex === hex && f.owner === this.viewer)
+      || Object.values(g.starbases).some((b) => b.hex === hex && b.owner === this.viewer)
+      || (hx.owner === this.viewer && (hx.system?.defense ?? 0) > 0);
+    if (!present) return null;
+    const fc = battleForecast(g, this.viewer, hex);
+    if (!fc) return null;
+    const color = { overwhelming: '#7cfc9a', likely: '#b8f28a', even: '#ffd166', unlikely: '#ff9f5a', hopeless: '#ff6b6b' }[fc.label];
+    return h('div', { class: 'card' },
+      h('div', { class: 'row' }, h('b', null, 'Battle forecast'), h('span', { class: 'grow' }), h('b', { style: `color:${color}` }, FORECAST_NAMES[fc.label])),
+      h('div', { class: 'dim', style: 'font-size:12px' }, `Your forces here against what you can see, with ${fc.intel} intelligence.`),
+      ...fc.notes.map((n) => h('div', { class: 'dim', style: 'font-size:11px' }, `• ${n}`)));
   }
 
   private empirePanel(): HTMLElement {
@@ -460,7 +483,7 @@ export class GameUI {
         this.renderSide();
       } }, img, h('div', { class: 'grow' }, h('div', null, `${d.name} `, h('span', { class: 'dim' }, `${CLASSES[d.cls].name} ${ROLES[d.role].name}`)),
         h('div', { class: 'row' }, bar(s.hull / d.stats.hull, s.hull / d.stats.hull > 0.5 ? '#7cfc9a' : '#ff6b6b'),
-          h('span', { class: 'dim', style: 'font-size:11px' }, `${s.hull}/${d.stats.hull}${s.xp ? ` · ${['', 'regular', 'veteran', 'elite'][s.xp]}` : ''}${d.stats.hangar ? ` · ${s.fighters} fighters` : ''}${s.cargo.length ? ` · ${s.cargo.length} aboard` : ''}`))));
+          h('span', { class: 'dim', style: 'font-size:11px' }, `${s.hull}/${d.stats.hull}${isCrippled(s.hull, d.stats.hull) ? ' · crippled' : s.hull < d.stats.hull * BALANCE.combat.damagedAt ? ' · damaged' : ''}${s.xp ? ` · ${['', 'regular', 'veteran', 'elite'][s.xp]}` : ''}${d.stats.hangar ? ` · ${s.fighters} fighters` : ''}${s.cargo.length ? ` · ${s.cargo.length} aboard` : ''}`))));
       card.append(row);
     }
     if (!sel || !this.myTurn) return card;
@@ -479,8 +502,6 @@ export class GameUI {
     const hold = f.ships.find((s) => cargoFree(g, s) > 0);
     if (garrison.length && hold) A(`Load army (${garrison.length})`, { type: 'loadArmy', army: garrison[0].id, ship: hold });
     if (armiesAboard.length && hx.owner === this.viewer) A('Unload army', { type: 'unloadArmy', army: armiesAboard[0] });
-    const enemies = this.fleetsAt(f.hex).some((x) => x.owner !== this.viewer && relation(g, this.viewer, x.owner).status === 'war');
-    if (enemies) A('Retreat', { type: 'retreat', fleet: f.id });
     if (this.splitSet.size > 0 && this.splitSet.size < f.ships.length) {
       acts.append(button(`Split ${this.splitSet.size}`, () => {
         const ships = [...this.splitSet];
@@ -490,10 +511,14 @@ export class GameUI {
     for (const other of this.fleetsAt(f.hex).filter((x) => x.owner === this.viewer && x.id !== f.id)) {
       A(`Merge ${other.name}`, { type: 'merge', into: f.id, from: other.id });
     }
-    const stance = h('select', { onchange: (e: Event) => this.act({ type: 'stance', fleet: f.id, stance: (e.target as HTMLSelectElement).value as Fleet['stance'] }) },
-      ...(['aggressive', 'defensive', 'passive'] as const).map((s) => h('option', { value: s, selected: f.stance === s }, s)));
-    acts.append(stance);
     card.append(acts);
+    const rynkai = hasAbility(f.owner, 'wayOfTheBlade');
+    const doctrine = h('select', {
+      title: DOCTRINES[f.doctrine].text,
+      onchange: (e: Event) => this.act({ type: 'doctrine', fleet: f.id, doctrine: (e.target as HTMLSelectElement).value as DoctrineId }),
+    }, ...DOCTRINE_IDS.filter((d) => !(rynkai && DOCTRINES[d].withdrawAt === 0)).map((d) => h('option', { value: d, selected: f.doctrine === d }, DOCTRINES[d].name)));
+    card.append(h('div', { class: 'row', style: 'margin-top:6px' }, h('span', { class: 'dim' }, 'Battle orders'), doctrine),
+      h('div', { class: 'dim', style: 'font-size:11px' }, DOCTRINES[f.doctrine].text, rynkai ? " The Ryn'kai never withdraw, whatever the orders." : ''));
     // Agents aboard
     const agentsAboard = f.ships.flatMap((s) => g.ships[s].cargo).filter((c) => g.agents[c]);
     for (const a of agentsAboard) card.append(h('div', { class: 'row' }, `${g.agents[a].kind} aboard`, button('Disembark', () => this.act({ type: 'disembark', agent: a }), { cls: 'small' })));

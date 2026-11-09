@@ -6,7 +6,7 @@ import { hasAbility } from '../data/factions';
 import {
   boardShip, disembark, executeAgent, expelDiplomat, moveAgent, recallDiplomat, sendDiplomat,
 } from './agents';
-import { retreatFleet } from './combat';
+import { DOCTRINES, type DoctrineId } from '../data/doctrines';
 import { acceptProposal, cancelTreaty, declareWar, propose, rejectProposal } from './diplomacy';
 import { cancelBuild, queueBuild, rushBuild } from './economy';
 import { startMission, type MissionId } from './espionage';
@@ -29,8 +29,7 @@ export type Action =
   | { type: 'merge'; into: string; from: string }
   | { type: 'split'; fleet: string; ships: string[] }
   | { type: 'rename'; fleet: string; name: string }
-  | { type: 'stance'; fleet: string; stance: Fleet['stance'] }
-  | { type: 'retreat'; fleet: string }
+  | { type: 'doctrine'; fleet: string; doctrine: DoctrineId }
   | { type: 'colonize'; fleet: string }
   | { type: 'outpost'; fleet: string }
   | { type: 'starbase'; fleet: string }
@@ -92,12 +91,12 @@ export function applyAction(state: GameState, faction: FactionId, action: Action
       if (!ownFleet(action.fleet)) return no('Not your fleet.');
       state.fleets[action.fleet].name = action.name.slice(0, 40);
       return { ok: true };
-    case 'stance':
+    case 'doctrine':
       if (!ownFleet(action.fleet)) return no('Not your fleet.');
-      state.fleets[action.fleet].stance = action.stance;
+      if (!DOCTRINES[action.doctrine]) return no('Unknown doctrine.');
+      if (hasAbility(faction, 'wayOfTheBlade') && DOCTRINES[action.doctrine].withdrawAt === 0) return no("The Ryn'kai never retreat.");
+      state.fleets[action.fleet].doctrine = action.doctrine;
       return { ok: true };
-    case 'retreat':
-      return ownFleet(action.fleet) ? asResult(retreatFleet(state, action.fleet)) : no('Not your fleet.');
     case 'colonize':
       return ownFleet(action.fleet) ? colonize(state, action.fleet) : no('Not your fleet.');
     case 'outpost':

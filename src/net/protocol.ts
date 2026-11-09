@@ -17,6 +17,8 @@ export interface LobbyConfig {
   preset: 'classic' | 'peaceful' | 'totalWar';
   /** Hours a human may take before another player can let the computer play a caretaker turn. 0 = never. */
   timeoutHours: number;
+  /** Combat rounds per battle (3–10). Absent in lobbies created by older clients: the default, 5. */
+  combatRounds?: number;
 }
 
 export interface PublicSeat { faction: string; name: string; }
