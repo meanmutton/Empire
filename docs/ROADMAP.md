@@ -53,15 +53,13 @@ Ordered roughly by value. Open a PR per item or small group.
    Aggressive AIs all pick on the weakest neighbor at once (in one seed the Concord is reduced to a single
    system by turn 80); consider making AIs less eager to join a pile-on, or more eager to defend victims.
 3. **Offline notifications**: Web Push or email when it becomes your turn (the relay knows whose turn it is).
-4. **Combat presentation**: battle report dialog with before/after per side, simple animations, sound.
-5. **AI depth**: coordinated invasions with transports, starbase placement at chokepoints, smarter spy
-   targeting, alliance war coordination, using Mercenary Contracts / For Hire / Star Charts actively.
-6. **Unique techs per major** and ion storms that drift (both in the design doc as later work).
-7. **Free-text chat with computer leaders** (option 3 from the messaging discussion): an optional mode where a
+4. **AI depth, round two**: smarter use of starbase upgrades, Varrhen vassal diplomacy toward Hegemony, Krasnyr subversion campaigns toward World Revolution, alliance war coordination beyond rescue, and wars against non-neighbors.
+5. **Unique techs per major** and ion storms that drift (both in the design doc as later work).
+6. **Free-text chat with computer leaders** (option 3 from the messaging discussion): an optional mode where a
    language model voices each computer power, with replies saved in the state and any effect still going
    through statements and proposals. Needs an API key on the relay.
-8. **Hidden information**: run the engine inside the Lambda and send each player only what they can see.
-9. **Tutorial**: a guided first few turns.
+7. **Hidden information**: run the engine inside the Lambda and send each player only what they can see.
+8. **Tutorial**: a guided first few turns.
 
 ## Parked
 - **Desktop app (Tauri or Electron)**: the game ships as a single HTML file for now. A Tauri (~10 MB) or

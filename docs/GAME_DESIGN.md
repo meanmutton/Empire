@@ -592,6 +592,18 @@ The game also ends:
 
 A human who is eliminated can keep watching. A human who leaves is replaced by the computer.
 
+## 10.5 How computer powers play (summary)
+- **Campaigns**: at war, a computer power concentrates on one target system at a time (rescuing an ally's
+  system under attack comes first). Fleets gather at the nearest friendly hex, strike together once they
+  outmatch the defenses by 30%, and stay to siege. Transports collect enough armies for the garrison (with
+  the defender bonus) before landing.
+- **Balance of power**: it won't join a war against an empire already fighting two great powers, unless that
+  empire is near victory (known through spies) or running away with the game (score 40% above the average).
+- **Borders**: constructors with nothing to settle build starbases on the border facing the nearest rival
+  (one per six systems).
+- **Spies**: one watches the strongest rival's capital, one guards home (with three or more), and the rest
+  work the most valuable targets: enemy shipyards in wartime, techs they lack, unrest for the Krasnyr.
+
 ## 11. Information and fog of war
 - Each faction sees what its ships, starbases, territory and allies' vision reveal. Explored but unseen
   hexes show their last known state.
