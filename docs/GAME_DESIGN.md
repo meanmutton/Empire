@@ -170,7 +170,7 @@ major (§9.5). Each has 1–2 special abilities and a small roster (2–4 classe
 
 | Type | Passable | Notes |
 |------|----------|-------|
-| Empty space | yes | Cheap to claim, no resources by itself (each owned hex gives +0.3 energy). |
+| Empty space | yes | Cheap to claim, no resources by itself (each owned hex gives +0.1 energy). |
 | Major home system | yes | Starts at development level 4; produces all resources; strong planetary defense. |
 | Minor home system | yes | Starts at development level 3. |
 | Developed system | yes | Pre-existing independent colony (level 1–2) with a neutral garrison; can be annexed or conquered. |
@@ -249,7 +249,7 @@ Academy (new units start veteran).
 
 ### 5.4 Income each turn
 `yield = base(system type) × development multiplier × improvement bonuses × faction modifiers × treaties`,
-plus 0.3 energy per owned empty hex. Upkeep: each ship costs energy per turn by class; starbases and agents cost
+plus 0.1 energy per owned empty hex. Upkeep: each ship costs energy per turn by class; starbases and agents cost
 energy too. Population grows 5% per turn toward capacity (faction-modified).
 
 ## 6. Units

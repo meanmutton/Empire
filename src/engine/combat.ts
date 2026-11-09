@@ -10,7 +10,7 @@
  */
 import { BALANCE } from '../data/balance';
 import { design, DESIGNS } from '../data/designs';
-import { hasAbility } from '../data/factions';
+import { hasAbility as hasAbilityRaw } from '../data/factions';
 import { ROLES } from '../data/ships';
 import { log } from './events';
 import { neighbors } from './hex';
@@ -24,6 +24,10 @@ import type { FactionId, GameState } from './types';
 
 /** Pseudo-faction id for independent (unowned) defended systems. */
 export const INDEPENDENT = '@independent';
+
+function hasAbility(f: FactionId, a: Parameters<typeof hasAbilityRaw>[1]): boolean {
+  return f !== INDEPENDENT && hasAbilityRaw(f, a);
+}
 
 interface Unit {
   kind: 'ship' | 'starbase' | 'planet';
