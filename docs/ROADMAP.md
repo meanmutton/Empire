@@ -30,7 +30,7 @@ Status key: `[ ]` not started, `[~]` PR open, `[x]` merged.
   trade proposals, vassals, opinion; spies and missions.
 - [~] **10 Turn engine**: turn order, phases, orders → resolution, victory checks, event log.
 - [~] **11 Computer players**: AI for majors (personalities) and minors.
-- [ ] **12 Client: map rendering**: canvas hex map, pan/zoom, territory borders, system icons,
+- [~] **12 Client: map rendering**: canvas hex map, pan/zoom, territory borders, system icons,
   procedural faction ship tokens, minimap.
 - [ ] **13 Client: UI**: new game setup, system panel, fleet panel and battle groups, build queue,
   research, diplomacy inbox, turn report, combat report.
