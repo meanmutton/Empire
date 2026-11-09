@@ -1,38 +1,26 @@
 import { aiTurn } from './ai/ai';
 import { createGame } from './engine/setup';
-import { beginGame, runUntilHuman } from './engine/turn';
-import { activeFaction } from './engine/query';
+import { beginGame } from './engine/turn';
 import type { GameState } from './engine/types';
-import { button, h, modal, toast } from './ui/dom';
+import { toast } from './ui/dom';
 import { showGallery } from './ui/gallery';
-import { GameUI } from './ui/game-ui';
-import { openReport } from './ui/screens/report';
 import { showTitle } from './ui/screens/setup';
+import { LocalSession } from './ui/session-local';
+import { deleteSave, listSaves, loadGame } from './ui/storage';
 import { injectStyles } from './ui/styles';
 
 const app = document.getElementById('app')!;
 const params = new URLSearchParams(location.search);
+const debug = params.has('debug');
 injectStyles();
 
-function play(game: GameState): void {
-  const ui = new GameUI(app, {
-    canAct: () => true,
-    afterEndTurn: (u) => {
-      runUntilHuman(u.game, aiTurn);
-      u.setGame(u.game, activeFaction(u.game), false);
-      u.refresh();
-      openReport(u, u.game.turn - 1);
-      if (!u.game.factions[u.viewer].research.current) toast('Research complete: pick a new project.');
-    },
-    openMenu: (u) => {
-      const m = modal('Menu', h('div', { class: 'row wrap' },
-        button('Quit to title', () => { m.close(); title(); }),
-        button('Reveal map (debug)', () => { u.view.revealAll = !u.view.revealAll; u.refresh(); m.close(); })));
-    },
-  });
-  ui.setGame(game, activeFaction(game));
-  ui.refresh();
-  (window as unknown as { empire: unknown }).empire = { game, ui };
+function playLocal(game: GameState, saveId: string): void {
+  const session = new LocalSession(app, game, saveId, title, debug);
+  (window as unknown as { empire: unknown }).empire = { game, session };
+}
+
+function newSaveId(): string {
+  return `${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
 }
 
 function title(): void {
@@ -40,17 +28,22 @@ function title(): void {
     start: (choice) => {
       const game = createGame(choice);
       beginGame(game, aiTurn);
-      play(game);
+      playLocal(game, newSaveId());
     },
-    saves: () => [],
-    load: () => {},
-    deleteSave: () => {},
+    saves: () => listSaves().map((s) => ({ id: s.id, label: s.label })),
+    load: async (id) => {
+      const g = await loadGame(id);
+      if (g) playLocal(g, id);
+      else toast('That save could not be read.', 'error');
+    },
+    deleteSave,
   });
 }
 
 if (params.has('gallery')) showGallery(app);
 else if (params.has('quick')) {
-  const game = createGame({ seed: params.get('seed') ?? 'quick', seats: [{ faction: (params.get('faction') ?? 'concord'), name: 'You' }] });
+  const seats = (params.get('players') ?? 'concord').split(',').map((f, i) => ({ faction: f, name: `Player ${i + 1}` }));
+  const game = createGame({ seed: params.get('seed') ?? 'quick', seats });
   beginGame(game, aiTurn);
-  play(game);
+  playLocal(game, newSaveId());
 } else title();
