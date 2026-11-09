@@ -298,6 +298,8 @@ export interface GameState {
   seq: number;
   nextId: number;
   winner: FactionId | null;
+  /** Set when the game has ended, with or without a winner. */
+  over?: { reason: string; turn: number };
   /**
    * Hot seat chat between humans (online games keep chat on the relay instead). Written only by the UI;
    * game rules never read it.

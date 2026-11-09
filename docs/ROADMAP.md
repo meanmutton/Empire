@@ -45,25 +45,36 @@ Status key: `[ ]` not started, `[~]` PR open, `[x]` merged.
 
 ## Backlog (pick up here)
 Ordered roughly by value. Open a PR per item or small group.
-1. **Deploy the relay** (`docs/RELAY.md`) and host the built `dist/index.html` (GitHub Pages or S3), with
-   `EMPIRE_RELAY` baked in. Needs the owner's AWS account.
-2. **Balance from real games**: territory spreads fast (~230 hexes per major by turn 80 in
+1. **Deploy the relay** (`docs/RELAY.md`) and build `dist/index.html` with `EMPIRE_RELAY` baked in. The game
+   itself is one HTML file players open directly; only online play needs the relay. Needs the owner's AWS
+   account.
+2. **Victory conditions per faction**: agree on `docs/VICTORY_IDEAS.md` with the owner, then build the chosen
+   victories, a Victory screen with progress, and per-faction availability.
+3. **Balance from real games**: territory spreads fast (~230 hexes per major by turn 80 in
    `test/ai.test.ts`); some AIs field 150–200 ships; tune claims, upkeep and research costs after playtests.
    Aggressive AIs all pick on the weakest neighbor at once (in one seed the Concord is reduced to a single
    system by turn 80); consider making AIs less eager to join a pile-on, or more eager to defend victims.
-3. **Diplomacy UI**: the engine supports trading territory (hexes); the proposal builder doesn't offer it yet.
-4. **Manufacturing agreements**: currently −10% ship cost; the design also lets you build at partners'
+4. **Diplomacy UI**: the engine supports trading territory (hexes); the proposal builder doesn't offer it yet.
+5. **Manufacturing agreements**: currently −10% ship cost; the design also lets you build at partners'
    shipyards.
-5. **Offline notifications**: Web Push or email when it becomes your turn (the relay knows whose turn it is).
-6. **Combat presentation**: battle report dialog with before/after per side, simple animations, sound.
-7. **AI depth**: coordinated invasions with transports, starbase placement at chokepoints, smarter spy
+6. **Offline notifications**: Web Push or email when it becomes your turn (the relay knows whose turn it is).
+7. **Combat presentation**: battle report dialog with before/after per side, simple animations, sound.
+8. **AI depth**: coordinated invasions with transports, starbase placement at chokepoints, smarter spy
    targeting, alliance war coordination, using Mercenary Contracts / For Hire / Star Charts actively.
-8. **Unique techs per major** and ion storms that drift (both in the design doc as later work).
-9. **Free-text chat with computer leaders** (option 3 from the messaging discussion): an optional mode where a
+9. **Unique techs per major** and ion storms that drift (both in the design doc as later work).
+10. **Free-text chat with computer leaders** (option 3 from the messaging discussion): an optional mode where a
    language model voices each computer power, with replies saved in the state and any effect still going
    through statements and proposals. Needs an API key on the relay.
-10. **Hidden information**: run the engine inside the Lambda and send each player only what they can see.
-11. **Tutorial**: a guided first few turns.
+11. **Hidden information**: run the engine inside the Lambda and send each player only what they can see.
+12. **Tutorial**: a guided first few turns.
+
+## Before we call it done
+These come last, once the game is settled. The owner wants to collaborate on both.
+- **Faction lore and history**: backgrounds, histories and relationships for the 5 great powers and 30 minor
+  factions, written together with the owner. It feeds the faction guide and the computer powers' voices.
+- **Instruction manual with screenshots**: how to play, every screen explained with real screenshots, plus the
+  **faction guide** (lore, abilities, ships and victory paths for each faction). Built after the UI and
+  rules stop changing.
 
 ## Notes for the next session
 - Read `docs/GAME_DESIGN.md` for rules; keep it updated when rules change.

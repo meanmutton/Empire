@@ -168,7 +168,7 @@ export class OnlineSession {
     this.ui?.refresh();
     try {
       const packed = await packState(g);
-      this.version = await this.client.submit(lobby.code, this.entry.token, packed, this.version, activeFaction(g), g.turn, !!g.winner, forFaction);
+      this.version = await this.client.submit(lobby.code, this.entry.token, packed, this.version, activeFaction(g), g.turn, !!g.winner || !!g.over, forFaction);
       lobby.version = this.version;
       lobby.active = activeFaction(g);
       lobby.turn = g.turn;

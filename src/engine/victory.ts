@@ -23,18 +23,47 @@ function totalSystems(state: GameState): number {
   return state.map.hexes.filter((h) => h.system).length;
 }
 
-/** Checks every enabled victory condition; sets state.winner. `endOfRound` enables round-based checks. */
+/** Whether the game has ended (a winner, or an ending without one). */
+export function isGameOver(state: GameState): boolean {
+  return state.winner !== null || !!state.over;
+}
+
+/** The surviving great power with the highest score (ties broken by id), or null if none survive. */
+export function leader(state: GameState): FactionId | null {
+  const alive = Object.values(state.factions).filter((f) => f.kind === 'major' && f.alive);
+  if (alive.length === 0) return null;
+  return alive.map((f) => ({ id: f.id, s: score(state, f.id) })).sort((a, b) => b.s - a.s || a.id.localeCompare(b.id))[0].id;
+}
+
+/**
+ * Checks every enabled victory condition and ends the game when one is met. Returns the winner, or null
+ * (the game may still have ended without one: see isGameOver). `endOfRound` enables round-based checks.
+ *
+ * Endings without the usual victories:
+ * - No great power survives: the game ends with no winner.
+ * - Every human player has been eliminated: the game ends, won by the leading computer power.
+ * - The turn limit is reached: the highest score wins (no winner if no great power survives).
+ */
 export function checkVictory(state: GameState, endOfRound: boolean): FactionId | null {
-  if (state.winner) return state.winner;
+  if (isGameOver(state)) return state.winner;
   const v = state.config.victory;
   const majors = Object.values(state.factions).filter((f) => f.kind === 'major');
   const alive = majors.filter((f) => f.alive);
   const win = (id: FactionId, how: string): FactionId => {
     state.winner = id;
+    state.over = { reason: how, turn: state.turn };
     log(state, [], 'victory', `${factionDef(id).name} wins: ${how}!`);
     return id;
   };
+  const endWithoutWinner = (reason: string): null => {
+    state.over = { reason, turn: state.turn };
+    log(state, [], 'victory', `The game is over: ${reason}.`);
+    return null;
+  };
+  if (alive.length === 0) return endWithoutWinner('no great power survived, and no empire rules the galaxy');
   if (alive.length === 1) return win(alive[0].id, 'last empire standing');
+  const humans = Object.values(state.factions).filter((f) => f.controller === 'human');
+  if (humans.length > 0 && humans.every((f) => !f.alive)) return win(leader(state)!, 'every human player has been eliminated');
 
   for (const f of alive) {
     if (v.ascendance && f.flags.ascensionGate) return win(f.id, 'Technological Ascendance');
@@ -67,8 +96,8 @@ export function checkVictory(state: GameState, endOfRound: boolean): FactionId |
     }
   }
   if (state.config.turnLimit && state.turn >= state.config.turnLimit) {
-    const best = alive.map((f) => ({ id: f.id, s: score(state, f.id) })).sort((a, b) => b.s - a.s || a.id.localeCompare(b.id))[0];
-    return win(best.id, `highest score after ${state.config.turnLimit} turns`);
+    const best = leader(state);
+    return best ? win(best, `highest score after ${state.config.turnLimit} turns`) : endWithoutWinner(`turn ${state.config.turnLimit} reached with no great power left`);
   }
   return null;
 }

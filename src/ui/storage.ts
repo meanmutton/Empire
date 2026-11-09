@@ -31,7 +31,7 @@ export function listSaves(): SaveMeta[] {
 
 export function saveLabel(g: GameState): string {
   const players = g.config.seats.map((s) => `${s.name} (${factionDef(s.faction).short})`).join(', ');
-  return `${players} · turn ${g.turn}${g.winner ? ' · finished' : ''}`;
+  return `${players} · turn ${g.turn}${g.winner || g.over ? ' · finished' : ''}`;
 }
 
 export async function saveGame(id: string, g: GameState): Promise<boolean> {

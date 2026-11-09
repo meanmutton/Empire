@@ -17,6 +17,7 @@ import { setResearch } from './research';
 import { endTurn } from './turn';
 import type { BuildOrder, FactionId, Fleet, GameState, RelationStatus, Statement, TradeItem } from './types';
 import { makeStatement } from './dispatch';
+import { isGameOver } from './victory';
 import { RESOURCE_KINDS } from './types';
 
 export type Action =
@@ -60,7 +61,7 @@ export type ActionResult = { ok: true; text?: string; id?: string } | { ok: fals
 const no = (reason: string): ActionResult => ({ ok: false, reason });
 
 export function applyAction(state: GameState, faction: FactionId, action: Action): ActionResult {
-  if (state.winner) return no('The game is over.');
+  if (isGameOver(state)) return no('The game is over.');
   if (activeFaction(state) !== faction) return no('It is not your turn.');
   const ownFleet = (id: string) => state.fleets[id]?.owner === faction;
   const ownAgent = (id: string) => state.agents[id]?.owner === faction;

@@ -11,7 +11,7 @@ import { applyHazards, continuePaths, markClaims, resetMovement, resolveClaims, 
 import { activeFaction } from './query';
 import { advanceResearch } from './research';
 import type { FactionId, GameState } from './types';
-import { checkVictory } from './victory';
+import { checkVictory, isGameOver } from './victory';
 import { updateExplored, visibleHexes } from './visibility';
 
 /** Start-of-turn processing for the active faction. */
@@ -39,7 +39,7 @@ export function startTurn(state: GameState): void {
 
 /** End-of-turn processing for the active faction, then hands the turn to the next living faction. */
 export function endTurn(state: GameState): void {
-  if (state.winner) return;
+  if (isGameOver(state)) return;
   const f = activeFaction(state);
   resolveCombat(state, f);
   captureAgents(state, f);
@@ -49,7 +49,8 @@ export function endTurn(state: GameState): void {
   const vis = visibleHexes(state, f);
   updateContacts(state, f, vis);
   updateExplored(state, f);
-  if (checkVictory(state, false)) return;
+  checkVictory(state, false);
+  if (isGameOver(state)) return;
   advanceActive(state);
 }
 
@@ -59,7 +60,8 @@ function advanceActive(state: GameState): void {
     state.active += 1;
     if (state.active >= n) {
       state.active = 0;
-      if (checkVictory(state, true)) return;
+      checkVictory(state, true);
+      if (isGameOver(state)) return;
       state.turn += 1;
       pruneLog(state);
       pruneDispatches(state);
@@ -76,7 +78,7 @@ export type AiTurn = (state: GameState, faction: FactionId) => void;
  * so the uploaded state is waiting on the next human.
  */
 export function runUntilHuman(state: GameState, ai: AiTurn, maxTurns = 1000): void {
-  for (let i = 0; i < maxTurns && !state.winner; i++) {
+  for (let i = 0; i < maxTurns && !isGameOver(state); i++) {
     const f = state.factions[activeFaction(state)];
     if (f.controller === 'human' && f.alive) return;
     ai(state, f.id);
