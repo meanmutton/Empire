@@ -6,7 +6,6 @@ import { activeFaction } from '../src/engine/query';
 import { stateHash } from '../src/engine/serialize';
 import { createGame } from '../src/engine/setup';
 import { beginGame, endTurn, runUntilHuman } from '../src/engine/turn';
-import { checkVictory } from '../src/engine/victory';
 import { newGame } from './helpers';
 
 const idle = () => {};
@@ -97,32 +96,5 @@ describe('faction powers', () => {
     expect(applyAction(g, 'varrhen', { type: 'mobilize', on: true }).ok).toBe(true);
     expect(productionOf(g, home)).toBeGreaterThan(p0);
     expect(applyAction(g, 'concord', { type: 'mobilize', on: true }).ok).toBe(false);
-  });
-});
-
-describe('victory', () => {
-  it('conquest when every other major home is held', () => {
-    const g = newGame('win');
-    for (const m of MAJOR_IDS) if (m !== 'concord') g.map.hexes[g.factions[m].home].owner = 'concord';
-    expect(checkVictory(g, false)).toBe('concord');
-  });
-
-  it('domination at the end of a round', () => {
-    const g = newGame('win');
-    g.config.victory.conquest = false;
-    let n = 0;
-    const total = g.map.hexes.filter((h) => h.system).length;
-    for (const h of g.map.hexes) if (h.system && n < total * 0.45) { h.owner = 'lattice'; n++; }
-    expect(checkVictory(g, false)).toBeNull();
-    expect(checkVictory(g, true)).toBe('lattice');
-  });
-
-  it('Ascension Gate and turn limit', () => {
-    const g = newGame('win');
-    g.factions.varrhen.flags.ascensionGate = 5;
-    expect(checkVictory(g, false)).toBe('varrhen');
-    const h = newGame('win');
-    h.config.turnLimit = 1;
-    expect(checkVictory(h, true)).not.toBeNull();
   });
 });

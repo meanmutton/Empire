@@ -41,8 +41,6 @@ describe('game endings', () => {
   it('reaching the turn limit picks the highest score, never throwing', () => {
     const g = newGame('end');
     g.config.turnLimit = 1;
-    g.config.victory.domination = false;
-    g.config.victory.alliance = false;
     const w = checkVictory(g, true);
     expect(w).not.toBeNull();
     expect(MAJOR_IDS).toContain(w);

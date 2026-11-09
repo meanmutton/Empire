@@ -1,6 +1,7 @@
 /** Online asynchronous play through the relay: lobby, turn download/upload, pushes and caretaker turns. */
 import { aiTurn } from '../ai/ai';
-import { factionDef, MAJOR_IDS } from '../data/factions';
+import { factionDef } from '../data/factions';
+import { PRESETS } from '../data/victories';
 import { packState, unpackState } from '../net/codec';
 import type { Lobby, LobbyConfig } from '../net/protocol';
 import { RelayClient } from '../net/relay-client';
@@ -236,7 +237,7 @@ export class OnlineSession {
           s.faction === lobby.host ? h('span', { class: 'dim' }, '(host)') : null, s.faction === this.you ? h('span', { class: 'good' }, '(you)') : null)),
         h('h3', null, this.you ? 'Switch empire' : 'Pick your empire'),
         h('div', { class: 'dim' }, 'Empires nobody picks are played by the computer.')));
-    const free = MAJOR_IDS.filter((m) => !lobby.seats.some((s) => s.faction === m));
+    const free = PRESETS[lobby.config.preset ?? 'classic'].majors.filter((m) => !lobby.seats.some((s) => s.faction === m));
     const name = h('input', { value: this.entry.name, style: 'width:160px' });
     if (!(isHost)) screen.lastElementChild!.append(h('div', { class: 'row', style: 'margin:6px 0' }, 'Your name:', name));
     for (const f of free) {
@@ -266,7 +267,7 @@ export class OnlineSession {
     const c = lobby.config;
     const game = createGame({
       seed: c.seed, seats: lobby.seats.map((s) => ({ faction: s.faction, name: s.name })),
-      width: c.width, height: c.height, turnLimit: c.turnLimit, victory: c.victory,
+      width: c.width, height: c.height, turnLimit: c.turnLimit, preset: c.preset ?? 'classic',
     });
     beginGame(game, aiTurn);
     try {

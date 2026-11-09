@@ -3,6 +3,7 @@
  * serialized, hashed, uploaded to the relay and replayed. Locations are hex indices (row * width + col).
  */
 import type { RngState } from './rng';
+import type { PresetId } from '../data/victories';
 
 export const STATE_SCHEMA_VERSION = 1;
 
@@ -297,8 +298,10 @@ export interface GameConfig {
   seats: HumanSeat[];
   /** Minor factions in this game (chosen at setup). */
   minors: FactionId[];
-  victory: { conquest: boolean; domination: boolean; ascendance: boolean; alliance: boolean };
-  dominationShare: number;
+  /** Victory preset (§10); decides the great powers in the galaxy and which victories count. */
+  preset: PresetId;
+  /** Great powers in this galaxy. */
+  majors: FactionId[];
   turnLimit: number | null;
 }
 
@@ -337,6 +340,8 @@ export interface GameState {
   routes?: TradeRoute[];
   /** Ships being built to order at another faction's shipyard. */
   contracts?: Contract[];
+  /** Galactic Council results: the last election's vote shares and consecutive wins per candidate. */
+  council?: { turn: number; shares: Record<FactionId, number>; streak: Record<FactionId, number> };
   /** Galactic exchange prices (energy-equivalent value per unit). */
   market?: { prices: Record<StockpileKind, number> };
   /** Set when the game has ended, with or without a winner. */

@@ -27,6 +27,7 @@ import { isGameOver } from '../engine/victory';
 import { unreadCount, type Messaging } from './messaging';
 import { openMessages } from './screens/messages';
 import { openMarket } from './screens/market';
+import { openVictory } from './screens/victory';
 import { routeCapacity, routeIncome, routesOf } from '../engine/routes';
 import { tokenImage } from './tokens';
 
@@ -252,6 +253,7 @@ export class GameUI {
       h('span', { class: 'res', title: 'Science per turn' }, ICON.science, h('b', null, `+${num(inc.net.science)}`), h('span', { class: r.current ? 'dim' : 'bad' }, researchText)),
       button('Research', () => openResearch(this)),
       button(pending ? `Diplomacy (${pending})` : 'Diplomacy', () => openDiplomacy(this), { cls: pending ? 'primary' : '' }),
+      button('Victory', () => openVictory(this)),
       button('Market', () => openMarket(this)),
       button('Report', () => openReport(this)),
       this.host.messaging ? (() => {
@@ -503,7 +505,13 @@ export class GameUI {
     const a = g.agents[id];
     const sel = this.selAgent === id;
     const card = h('div', { class: `card ${sel ? 'sel' : ''}`, onclick: () => { if (!sel) this.select(a.hex, null, id); } });
-    const status = a.resident ? `Ambassador to ${factionDef(a.target!).short}` : a.mission ? `${MISSIONS[a.mission as MissionId].name} (${a.progress}/${MISSIONS[a.mission as MissionId].turns})` : a.path.length ? `Travelling, ${a.path.length} hexes to go` : 'Idle';
+    const capitalOf = Object.values(g.factions).find((f) => f.kind === 'major' && f.home === a.hex && f.alive);
+    const status = a.resident ? `Ambassador to ${factionDef(a.target!).short}`
+      : a.mission ? `${MISSIONS[a.mission as MissionId].name} (${a.progress}/${MISSIONS[a.mission as MissionId].turns})`
+      : a.path.length ? `Travelling, ${a.path.length} hexes to go`
+      : a.kind === 'spy' && capitalOf?.id === this.viewer ? 'Guarding home against enemy spies'
+      : a.kind === 'spy' && capitalOf ? `Watching the ${capitalOf.id === a.owner ? '' : factionDef(capitalOf.id).short} capital (see Victory)`
+      : 'Idle';
     card.append(h('div', { class: 'row' }, h('b', null, a.kind === 'diplomat' ? 'Diplomat' : 'Spy'), h('span', { class: 'grow' }), h('span', { class: 'dim' }, status)));
     if (!sel || !this.myTurn) return card;
     const acts = h('div', { class: 'row wrap', style: 'margin-top:6px' });

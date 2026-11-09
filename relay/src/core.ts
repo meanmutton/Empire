@@ -78,6 +78,7 @@ async function dispatch(ctx: Ctx, conn: string, msg: ClientMessage, fail: (m: st
   }
   if (msg.action === 'create') {
     if (!MAJORS.includes(msg.faction)) { await fail('Pick a major faction.'); return; }
+    if (msg.config?.preset === 'peaceful' && msg.faction === 'rynkai') { await fail('The Ryn\'kai are not in Peaceful games.'); return; }
     let code = '';
     for (let tries = 0; tries < 20; tries++) {
       const c = randomCode(() => randomBytes(1)[0] / 256);
@@ -117,6 +118,7 @@ async function dispatch(ctx: Ctx, conn: string, msg: ClientMessage, fail: (m: st
     case 'claim': {
       if (g.status !== 'lobby') { await fail('The game has already started.'); return; }
       if (!MAJORS.includes(msg.faction)) { await fail('Pick a major faction.'); return; }
+      if (g.config.preset === 'peaceful' && msg.faction === 'rynkai') { await fail('The Ryn\'kai are not in Peaceful games.'); return; }
       const taken = g.seats.find((s) => s.faction === msg.faction);
       if (taken && g.tokens[msg.faction] !== th) { await fail(`${taken.name} already took that empire.`); return; }
       if (me === g.host && msg.faction !== me) { await fail('The host keeps their empire.'); return; }

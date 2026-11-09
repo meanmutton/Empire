@@ -13,6 +13,8 @@ import { applyAction, type Action } from '../engine/actions';
 import { talkEnd, talkStart } from './talk';
 import { offersFor } from '../engine/mercenaries';
 import { routeCapacity, routesOf } from '../engine/routes';
+import { perceivedThreat } from '../engine/intel';
+import { availableVictories, score } from '../engine/victory';
 import { say } from './voice';
 import { hasEmbassy, opinionOf } from '../engine/agents';
 import { getBit } from '../engine/bitset';
@@ -172,7 +174,9 @@ function diplomacy(ctx: Ctx): void {
     if (treaty && (hasAbility(me, 'honorBound') || ctx.rng.next() > p.treachery * 0.5)) continue;
     const ratio = myStrength / Math.max(1, militaryStrength(state, o));
     const op = opinionOf(state, me, o);
-    const need = 2.2 - p.aggression * 1.2 + op / 100;
+    // A rival known (through spies) to be close to winning makes a much more tempting target.
+    const threat = perceivedThreat(state, me, o);
+    const need = 2.2 - p.aggression * 1.2 + op / 100 - (threat >= 0.7 ? 0.8 : 0);
     if (ratio > need && ratio > bestRatio) { bestRatio = ratio; target = o; }
   }
   const lattice = hasAbility(me, 'distributedCognition') ? ctx.rng.chance(0.5) : true;
@@ -341,6 +345,7 @@ function chooseImprovement(ctx: Ctx, hex: number): string | null {
   const p = PLANET_YIELDS[sys.planet];
   if (sys.development >= 3 && !has('shipyard') && ownedHexes(ctx.state, ctx.me).filter((h) => ctx.state.map.hexes[h].system?.improvements.includes('shipyard')).length < 3) order.push('shipyard');
   if (sys.development >= 4 && !has('heavyShipyard')) order.push('heavyShipyard');
+  if (sys.development === 5 && availableVictories(ctx.state, ctx.me).includes('singularity')) order.push('lab');
   if (p.metals >= p.energy && p.metals >= p.science) order.push('mine', 'powerPlant', 'lab');
   else if (p.science >= p.energy) order.push('lab', 'mine', 'powerPlant');
   else order.push('powerPlant', 'mine', 'lab');
@@ -361,8 +366,20 @@ function chooseImprovement(ctx: Ctx, hex: number): string | null {
 
 function agents(ctx: Ctx): void {
   const { state, me } = ctx;
+  // Spy roles: the first watches the strongest rival's capital (intelligence on its victory progress); with
+  // three or more, the last guards home against enemy watchers.
+  const spies = Object.values(state.agents).filter((a) => a.owner === me && a.kind === 'spy' && !a.capturedBy && !a.ship).sort((x, y) => x.id.localeCompare(y.id));
+  const rival = ctx.major ? Object.values(state.factions).filter((f) => f.kind === 'major' && f.alive && f.id !== me && relation(state, me, f.id).contact && relation(state, me, f.id).status !== 'alliance')
+    .sort((x, y) => score(state, y.id) - score(state, x.id))[0] : undefined;
+  const watcher = rival ? spies[0] : undefined;
+  const guard = spies.length >= 3 ? spies[spies.length - 1] : undefined;
+  if (watcher && !ctx.caretaker) {
+    if (watcher.hex !== rival!.home && !watcher.path.length) act(ctx, { type: 'moveAgent', agent: watcher.id, to: rival!.home });
+  }
+  if (guard && guard.hex !== ctx.home && !guard.path.length && !guard.mission) act(ctx, { type: 'moveAgent', agent: guard.id, to: ctx.home });
   for (const a of Object.values(state.agents)) {
     if (a.owner !== me || a.capturedBy || a.ship || a.resident) continue;
+    if (a === watcher || a === guard) continue;
     if (a.kind === 'diplomat') {
       if (a.path.length) continue;
       const targets = Object.keys(state.factions).filter((o) => o !== me && state.factions[o].alive && relation(state, me, o).contact

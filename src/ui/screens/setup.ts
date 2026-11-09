@@ -1,6 +1,7 @@
 /** Title and new-game setup screen. */
 import { ABILITIES } from '../../data/abilities';
-import { factionDef, MAJOR_IDS } from '../../data/factions';
+import { factionDef } from '../../data/factions';
+import { AVAILABILITY, DEFAULT_TURN_LIMIT, PRESETS, VICTORIES, type PresetId } from '../../data/victories';
 import { MAP_SIZES, type NewGameOptions } from '../../engine/setup';
 import { VERSION } from '../../version';
 import { button, clear, h } from '../dom';
@@ -34,10 +35,11 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
   const seats: { faction: string; name: string }[] = [{ faction: 'concord', name: 'Player 1' }];
   let size: keyof typeof MAP_SIZES = 'standard';
   let seed = randomSeed();
-  let turnLimit = '';
+  let turnLimit = String(DEFAULT_TURN_LIMIT);
   let online = false;
   let timeoutHours = '24';
-  const victory = { conquest: true, domination: true, ascendance: true, alliance: true };
+  let preset: PresetId = 'classic';
+  const majors = () => PRESETS[preset].majors;
 
   const render = () => {
     clear(screen);
@@ -74,14 +76,14 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
     seats.forEach((s, i) => {
       const taken = new Set(seats.filter((_, j) => j !== i).map((x) => x.faction));
       const sel = h('select', { onchange: (e: Event) => { s.faction = (e.target as HTMLSelectElement).value; render(); } },
-        ...MAJOR_IDS.filter((m) => !taken.has(m)).map((m) => h('option', { value: m, selected: m === s.faction }, factionDef(m).name)));
+        ...majors().filter((m) => !taken.has(m)).map((m) => h('option', { value: m, selected: m === s.faction }, factionDef(m).name)));
       const name = h('input', { value: s.name, style: 'width:120px', oninput: (e: Event) => { s.name = (e.target as HTMLInputElement).value; } });
       left.append(h('div', { class: 'row', style: 'margin:4px 0' }, name, sel,
         seats.length > 1 ? button('✕', () => { seats.splice(i, 1); render(); }, { cls: 'small ghost' }) : null));
     });
-    if (!online && seats.length < 5) {
+    if (!online && seats.length < majors().length) {
       left.append(button('+ Add player', () => {
-        const free = MAJOR_IDS.find((m) => !seats.some((x) => x.faction === m))!;
+        const free = majors().find((m) => !seats.some((x) => x.faction === m))!;
         seats.push({ faction: free, name: `Player ${seats.length + 1}` });
         render();
       }, { cls: 'small' }));
@@ -96,26 +98,36 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
       h('span', { class: 'k' }, 'Turn limit'), limit,
       online ? h('span', { class: 'k' }, 'Turn timeout (hours)') : null,
       online ? h('input', { value: timeoutHours, style: 'width:70px', title: 'After this long, another player may let the computer play a caretaker turn. 0 = never.', oninput: (e: Event) => { timeoutHours = (e.target as HTMLInputElement).value; } }) : null));
-    left.append(h('h3', null, 'Victory'), h('div', { class: 'row wrap' }, ...(Object.keys(victory) as (keyof typeof victory)[]).map((k) =>
-      h('label', { class: 'row' }, h('input', { type: 'checkbox', checked: victory[k], onchange: (e: Event) => { victory[k] = (e.target as HTMLInputElement).checked; } }), k))));
+    left.append(h('h3', null, 'Game type'), h('div', { class: 'row wrap' }, ...(Object.keys(PRESETS) as PresetId[]).map((k) =>
+      button(PRESETS[k].name, () => {
+        preset = k;
+        // Peaceful games leave the Ryn'kai out: move anyone who picked them.
+        for (const s of seats) if (!majors().includes(s.faction)) s.faction = majors().find((m) => !seats.some((x) => x.faction === m))!;
+        render();
+      }, { cls: `small ${preset === k ? 'on primary' : ''}` }))),
+      h('div', { class: 'dim', style: 'margin-top:4px' }, PRESETS[preset].text, ' Each great power can only win in the ways listed on its card.'));
     left.append(h('div', { style: 'margin-top:16px' }, button(online ? 'Create online game' : 'Start game', () => {
       actions.start({
         seed: seed || randomSeed(), seats: seats.map((s, i) => ({ ...s, name: s.name.trim() || `Player ${i + 1}` })),
-        ...MAP_SIZES[size], turnLimit: turnLimit ? Math.max(10, Number(turnLimit)) : null, victory, online,
+        ...MAP_SIZES[size], turnLimit: turnLimit ? Math.max(10, Number(turnLimit)) : null, preset, online,
         timeoutHours: Math.max(0, Number(timeoutHours) || 0),
       });
     }, { cls: 'primary' })));
 
     const right = h('div', null, h('h3', null, 'The great powers'));
-    for (const id of MAJOR_IDS) {
+    for (const id of majors()) {
       const d = factionDef(id);
       const picked = seats.find((s) => s.faction === id);
+      const paths = [...new Set([...AVAILABILITY[id], ...(PRESETS[preset].extra?.[id] ?? [])])].filter((v) => PRESETS[preset].victories.includes(v));
       right.append(h('div', { class: `faction-card ${picked ? 'taken' : ''}` },
         h('div', { class: 'row' }, h('b', { style: `color:${d.color};font-size:15px` }, d.name), h('span', { class: 'grow' }),
           picked ? h('span', { class: 'good' }, picked.name) : h('span', { class: 'dim' }, 'computer')),
         h('div', { class: 'dim' }, `${d.species} · ${d.government}${d.inspiration ? ` · inspired by ${d.inspiration}` : ''}`),
         h('div', null, d.text),
         ...d.abilities.map((a) => h('div', { style: 'margin-top:3px' }, h('b', null, ABILITIES[a].name), ': ', h('span', { class: 'dim' }, ABILITIES[a].text))),
+        h('div', { style: 'margin-top:4px' }, h('b', null, 'Ways to win: '),
+          ...paths.map((v, i) => h('span', { title: VICTORIES[v].text, style: VICTORIES[v].unique ? 'color:var(--accent)' : '' }, `${i ? ', ' : ''}${VICTORIES[v].name}${VICTORIES[v].unique ? ' ★' : ''}`))),
+        id === 'rynkai' ? h('div', { class: 'good', style: 'font-size:12px' }, 'Good for new players: a straightforward warrior empire.') : null,
         rosterStrip(id, 34)));
     }
     right.append(h('div', { class: 'dim' }, 'Ten of thirty minor factions join every game, always played by the computer.'));
