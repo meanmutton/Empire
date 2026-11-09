@@ -1,5 +1,5 @@
 /**
- * Blockades (§7.4). A settled system is blockaded while armed warships of a faction at war with its owner sit
+ * Blockades (§7.6). A settled system is blockaded while armed warships of a faction at war with its owner sit
  * in its hex and the owner has no armed ships or starbase there to contest them. A blockaded system produces
  * half as much and its shipyard can't finish ships or armies. Haldane systems (Smugglers) can't be blockaded.
  */

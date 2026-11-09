@@ -296,7 +296,7 @@ export class OnlineSession {
     const c = lobby.config;
     const game = createGame({
       seed: c.seed, seats: lobby.seats.map((s) => ({ faction: s.faction, name: s.name })),
-      width: c.width, height: c.height, turnLimit: c.turnLimit, preset: c.preset ?? 'classic',
+      width: c.width, height: c.height, turnLimit: c.turnLimit, preset: c.preset ?? 'classic', combatRounds: c.combatRounds,
     });
     beginGame(game, aiTurn);
     try {

@@ -44,7 +44,7 @@ describe('turn engine', () => {
   it('claims hexes across a full round', () => {
     const g = newGame('turns');
     beginGame(g, idle);
-    const scout = Object.values(g.fleets).find((f) => f.owner === 'concord' && f.stance === 'passive' && f.movesLeft >= 4)!;
+    const scout = Object.values(g.fleets).find((f) => f.owner === 'concord' && f.doctrine === 'retreat' && f.movesLeft >= 4)!;
     const target = ring(g.map, g.factions.concord.home, 4).find((h) => !g.map.hexes[h].owner && g.map.hexes[h].terrain === 'space')!;
     expect(applyAction(g, 'concord', { type: 'move', fleet: scout.id, to: target }).ok).toBe(true);
     expect(g.fleets[scout.id].hex).toBe(target);

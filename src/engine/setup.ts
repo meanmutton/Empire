@@ -1,4 +1,5 @@
 /** Creating a new game: choose minors, generate the map, set up factions, starting units and relations. */
+import { DEFAULT_COMBAT_ROUNDS, MAX_COMBAT_ROUNDS, MIN_COMBAT_ROUNDS } from '../data/doctrines';
 import { BALANCE } from '../data/balance';
 import { DESIGNS_BY_FACTION, type ShipDesign } from '../data/designs';
 import { colorDistance, factionDef, hasAbility, MAJOR_IDS, MIN_COLOR_DISTANCE, MINOR_IDS } from '../data/factions';
@@ -27,6 +28,8 @@ export interface NewGameOptions {
   preset?: PresetId;
   /** Default 200 rounds; null for no limit. */
   turnLimit?: number | null;
+  /** Combat rounds per battle (3–10, default 5). */
+  combatRounds?: number;
 }
 
 export const MAP_SIZES = {
@@ -57,6 +60,7 @@ export function createGame(opts: NewGameOptions): GameState {
     preset,
     majors,
     turnLimit: opts.turnLimit === undefined ? DEFAULT_TURN_LIMIT : opts.turnLimit,
+    combatRounds: Math.max(MIN_COMBAT_ROUNDS, Math.min(MAX_COMBAT_ROUNDS, Math.round(opts.combatRounds ?? DEFAULT_COMBAT_ROUNDS))),
   };
   const all = [...majors, ...minors];
   const gen = generateMap({ width: config.width, height: config.height, majors, minors }, rng);
@@ -172,7 +176,7 @@ export function spawnShip(state: GameState, faction: FactionId, d: ShipDesign, h
     fid = newId(state, 'f');
     state.fleets[fid] = {
       id: fid, owner: faction, name: '', hex, ships: [], movesLeft: d.stats.speed, path: [],
-      stance: d.stats.energy + d.stats.missile + d.stats.hangar > 0 && d.role !== 'scout' ? 'aggressive' : 'passive',
+      doctrine: d.stats.energy + d.stats.missile + d.stats.hangar > 0 && d.role !== 'scout' ? (hasAbility(faction, 'wayOfTheBlade') ? 'fullAttack' : 'engage') : (hasAbility(faction, 'wayOfTheBlade') ? 'cautious' : 'retreat'),
     };
   }
   const sid = newId(state, 's');

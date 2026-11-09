@@ -20,7 +20,7 @@ export function isExplored(state: GameState, faction: FactionId, hex: number): b
 
 interface Observer { hex: number; range: number; detects: boolean; }
 
-function observers(state: GameState, faction: FactionId): Observer[] {
+export function observers(state: GameState, faction: FactionId): Observer[] {
   const out: Observer[] = [];
   const sides = Object.keys(state.factions).filter((id) => friendly(state, faction, id));
   const side = new Set(sides);
@@ -57,11 +57,11 @@ export function visibleHexes(state: GameState, faction: FactionId): Set<number> 
 }
 
 /** Whether `faction` can see a particular fleet right now. */
-export function canSeeFleet(state: GameState, faction: FactionId, fleet: Fleet, visible?: Set<number>): boolean {
+export function canSeeFleet(state: GameState, faction: FactionId, fleet: Fleet, visible?: Set<number>, observed?: ReturnType<typeof observers>): boolean {
   if (friendly(state, faction, fleet.owner)) return true;
   const vis = visible ?? visibleHexes(state, faction);
   if (!vis.has(fleet.hex)) return false;
-  const obs = observers(state, faction);
+  const obs = observed ?? observers(state, faction);
   const sameHex = obs.some((o) => o.hex === fleet.hex);
   if (sameHex) return true;
   // Nebulae hide fleets from sensors outside the hex.

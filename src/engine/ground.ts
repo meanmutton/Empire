@@ -1,4 +1,4 @@
-/** Armies: loading, unloading and invading systems (§7.3). */
+/** Armies: loading, unloading and invading systems (§7.5). */
 import { design } from '../data/designs';
 import { hasAbility, modifiersOf } from '../data/factions';
 import { IMPROVEMENTS } from '../data/improvements';

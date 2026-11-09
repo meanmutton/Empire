@@ -3,6 +3,8 @@
  * claims territory and fights according to its personality (src/data/factions.ts). Every order goes through
  * applyAction, so the AI obeys exactly the same rules as humans.
  */
+import { DOCTRINES, type DoctrineId } from '../data/doctrines';
+import { battleForecast } from '../engine/forecast';
 import { BALANCE } from '../data/balance';
 import { design, DESIGNS_BY_FACTION, type ShipDesign } from '../data/designs';
 import { factionDef, hasAbility, type Personality } from '../data/factions';
@@ -665,6 +667,30 @@ function transport(ctx: Ctx, fl: Fleet): void {
   moveTo(ctx, fl, targets[0].i);
 }
 
+function setDoctrine(ctx: Ctx, fl: Fleet, d: DoctrineId): void {
+  if (fl.doctrine !== d) act(ctx, { type: 'doctrine', fleet: fl.id, doctrine: d });
+}
+
+/**
+ * Doctrine for a fight at `hex`, from the battle forecast (what this power can see). The Ryn'kai always
+ * attack in full; others press an advantage, guard their own systems, and avoid hopeless fights.
+ */
+function chooseDoctrine(ctx: Ctx, fl: Fleet, hex: number): DoctrineId {
+  const { state, me } = ctx;
+  if (hasAbility(me, 'wayOfTheBlade')) return 'fullAttack';
+  const h = state.map.hexes[hex];
+  const guarding = h.owner === me && ((h.system?.defense ?? 0) > 0 || Object.values(state.starbases).some((b) => b.hex === hex && b.owner === me));
+  const fc = battleForecast(state, me, hex, fl.hex === hex ? [] : [fl.id]);
+  if (!fc) return guarding ? 'holdLine' : 'engage';
+  switch (fc.label) {
+    case 'overwhelming': return ctx.p.aggression > 0.5 ? 'fullAttack' : 'engage';
+    case 'likely': return 'engage';
+    case 'even': return guarding ? 'holdLine' : 'engage';
+    case 'unlikely': return guarding ? 'holdLine' : 'cautious';
+    default: return guarding ? 'holdLine' : 'retreat';
+  }
+}
+
 function warFleet(ctx: Ctx, fl: Fleet): void {
   const { state, me } = ctx;
   const power = fleetPower(state, fl);
@@ -672,15 +698,23 @@ function warFleet(ctx: Ctx, fl: Fleet): void {
   // Stay and fight if enemies share the hex and we're not outmatched.
   const enemyHere = powerAt(state, fl.hex, hostile);
   if (enemyHere > 0) {
-    if (enemyHere > power * 2.5 && !hasAbility(me, 'wayOfTheBlade')) act(ctx, { type: 'retreat', fleet: fl.id });
+    const d = chooseDoctrine(ctx, fl, fl.hex);
+    setDoctrine(ctx, fl, d);
+    // Hopeless: slip away now rather than fight at the end of the turn.
+    if (d === 'retreat') {
+      const safe = [...ctx.owned].filter((h) => powerAt(state, h, hostile) === 0)
+        .sort((a, b) => hexDistance(state.map, fl.hex, a) - hexDistance(state.map, fl.hex, b))[0];
+      if (safe !== undefined) moveTo(ctx, fl, safe);
+    }
     return;
   }
+  if (fl.doctrine === 'retreat' || fl.doctrine === 'cautious') setDoctrine(ctx, fl, hasAbility(me, 'wayOfTheBlade') ? 'fullAttack' : 'engage');
   // Defend our territory.
   const invaders = Object.values(state.fleets).filter((x) => hostile(x.owner) && ctx.owned.has(x.hex));
   if (invaders.length) {
     invaders.sort((a, b) => hexDistance(state.map, fl.hex, a.hex) - hexDistance(state.map, fl.hex, b.hex));
     const t = invaders[0];
-    if (fleetPower(state, t) < power * 1.5 || t.hex === ctx.home) { moveTo(ctx, fl, t.hex); return; }
+    if (fleetPower(state, t) < power * 1.5 || t.hex === ctx.home) { setDoctrine(ctx, fl, chooseDoctrine(ctx, fl, t.hex)); moveTo(ctx, fl, t.hex); return; }
   }
   if (!ctx.major) {
     // Minors guard home and claim nearby.
@@ -694,7 +728,7 @@ function warFleet(ctx: Ctx, fl: Fleet): void {
     if (fl.hex === target) return;
     const staging = stagingHex(state, me, target);
     const enough = gatheredPower(state, me, staging, target) >= defenseAt(state, target, me) * 1.3;
-    if (enough || hexDistance(state.map, fl.hex, target) <= 1) { if (moveTo(ctx, fl, target)) return; }
+    if (enough || hexDistance(state.map, fl.hex, target) <= 1) { setDoctrine(ctx, fl, chooseDoctrine(ctx, fl, target)); if (moveTo(ctx, fl, target)) return; }
     else if (hexDistance(state.map, fl.hex, staging) > 1) { if (moveTo(ctx, fl, staging)) return; }
     else return;
   }
@@ -713,6 +747,7 @@ function warFleet(ctx: Ctx, fl: Fleet): void {
     });
     if (targets.length) {
       targets.sort((a, b) => a.d - b.d);
+      setDoctrine(ctx, fl, chooseDoctrine(ctx, fl, targets[0].hex));
       if (moveTo(ctx, fl, targets[0].hex)) return;
     }
   }
@@ -723,7 +758,7 @@ function warFleet(ctx: Ctx, fl: Fleet): void {
       indep.sort((a, b) => hexDistance(state.map, fl.hex, a.i) - hexDistance(state.map, fl.hex, b.i));
       const t = indep[0];
       if ((t.h.system!.defense + t.h.system!.garrison) * 10 < power) {
-        if (fl.stance !== 'aggressive') act(ctx, { type: 'stance', fleet: fl.id, stance: 'aggressive' });
+        if (!DOCTRINES[fl.doctrine].provokes) setDoctrine(ctx, fl, 'engage');
         if (moveTo(ctx, fl, t.i)) return;
       }
     }

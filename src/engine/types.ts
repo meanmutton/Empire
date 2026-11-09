@@ -3,6 +3,7 @@
  * serialized, hashed, uploaded to the relay and replayed. Locations are hex indices (row * width + col).
  */
 import type { RngState } from './rng';
+import type { DoctrineId, RangeBand } from '../data/doctrines';
 import type { PresetId } from '../data/victories';
 
 export const STATE_SCHEMA_VERSION = 1;
@@ -97,7 +98,8 @@ export interface Fleet {
   movesLeft: number;
   /** Queued destination path (excluding current hex). */
   path: number[];
-  stance: 'aggressive' | 'defensive' | 'passive';
+  /** Standing combat orders (§7.2). */
+  doctrine: DoctrineId;
 }
 
 export interface Army {
@@ -248,12 +250,27 @@ export interface BattleSide {
   /** Damage (in effective hit points) this side dealt and took. */
   dealt: number;
   taken: number;
-  ships: { design: string; before: number; destroyed: number; captured: number; damaged: number; hullBefore: number; hullAfter: number }[];
+  ships: { design: string; before: number; destroyed: number; captured: number; damaged: number; crippled?: number; hullBefore: number; hullAfter: number }[];
   fighters: { before: number; after: number };
   starbase?: { tier: number; hullBefore: number; hullAfter: number };
   planet?: { system: string; defenseBefore: number; defenseAfter: number };
   /** Why this side hit as hard as it did (bonuses, penalties, enemy shields and point defense). */
   notes: string[];
+  /** Fleets of this side that withdrew from the battle, and those that were cut off trying. */
+  withdrew?: number;
+  /** Build value this side lost (ships destroyed or damaged, starbase and planetary defense). */
+  valueLost?: number;
+  /** Critical hits this side scored. */
+  crits?: number;
+}
+
+/** One combat round inside a battle. */
+export interface BattleRoundLog {
+  n: number;
+  range: RangeBand;
+  /** What happened: events, notable critical hits, withdrawals. */
+  lines: string[];
+  sides: { faction: FactionId; dealt: number; taken: number; lost: number }[];
 }
 
 export interface BattleRecord {
@@ -265,6 +282,12 @@ export interface BattleRecord {
   terrain: Terrain;
   firstRound: boolean;
   sides: BattleSide[];
+  /** Combat rounds fought, and the most the game allows per battle. */
+  fought?: number;
+  maxRounds?: number;
+  rounds?: BattleRoundLog[];
+  /** The side that came out ahead (its enemies lost more value than it did), or null for a draw. */
+  winner?: FactionId | null;
 }
 
 export type Offer =
@@ -334,6 +357,8 @@ export interface GameConfig {
   /** Great powers in this galaxy. */
   majors: FactionId[];
   turnLimit: number | null;
+  /** Combat rounds per battle (3–10; default 5). More rounds make battles bloodier. */
+  combatRounds?: number;
 }
 
 export interface GameState {

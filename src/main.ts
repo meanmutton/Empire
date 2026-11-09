@@ -45,7 +45,7 @@ function title(): void {
         const host = choice.seats[0];
         online(OnlineSession.host(app, relay, host.name, host.faction, {
           seed: choice.seed, width: choice.width!, height: choice.height!, turnLimit: choice.turnLimit ?? null,
-          preset: choice.preset ?? 'classic', timeoutHours: choice.timeoutHours,
+          preset: choice.preset ?? 'classic', timeoutHours: choice.timeoutHours, combatRounds: choice.combatRounds,
         }, title));
         return;
       }

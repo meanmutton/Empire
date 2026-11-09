@@ -20,8 +20,11 @@ const SECTIONS: [string, string[]][] = [
   ]],
   ['Fleets and combat', [
     'Tap a fleet, then tap a destination twice to move. Up to six ships form a battle group and move at the speed of the slowest.',
-    'Moving into enemies stops your fleet. At the end of each turn there is one round of combat wherever enemies share a hex.',
-    'Combat is simultaneous and brutal: two equal forces each lose about half their ships per round. Shields stop beams, point defense stops missiles and fighters, and escorts draw fire.',
+    'Moving into enemies stops your fleet. At the end of each turn there is a battle wherever enemies share a hex: several combat rounds (the host picks 3–10), fought without you.',
+    'Give each fleet battle orders: Full Attack, Engage, Cautious, Hold the Line, Hit and Run or Retreat. They set when it withdraws, how much it trades defense for offense, and which range it fights at (beams like close quarters, missiles and fighters long range). The Ryn’kai never withdraw.',
+    'Battles are uncertain: every shot can miss or land a critical hit, each side has its fortunes of war, and rare events can swing a fight. A side with 1.5× the force still loses about a quarter of the time. Damaged ships fire less; crippled ones (under a quarter hull) also move a hex slower until repaired.',
+    'Select a hex where your forces meet enemies, or tap an enemy hex once with a fleet selected, to see the battle forecast, from Overwhelming victory to Hopeless cause. It only counts what you can see: scouts nearby reveal their real designs, and a spy at their capital reveals their technology.',
+    'Shields stop beams, point defense stops missiles and fighters, and escorts draw fire.',
     'Enemy warships sitting on one of your systems, with none of yours there to contest them, blockade it: half output, and its shipyard can’t finish ships or armies.',
     'Grind a system’s planetary defense to 0, then invade with armies carried by transports.',
   ]],

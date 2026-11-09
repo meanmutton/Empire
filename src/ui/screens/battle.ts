@@ -1,7 +1,7 @@
 /** Battle report: what each side brought, what it lost, and why the battle went the way it did. */
 import { design } from '../../data/designs';
 import { factionDef } from '../../data/factions';
-import { BALANCE } from '../../data/balance';
+import { DEFAULT_COMBAT_ROUNDS, RANGE_MODS } from '../../data/doctrines';
 import { TERRAIN_INFO } from '../../data/improvements';
 import { CLASSES, ROLES } from '../../data/ships';
 import type { BattleRecord, BattleSide } from '../../engine/types';
@@ -31,25 +31,44 @@ export function openBattle(ui: GameUI, id: string): void {
 
 function battleBody(ui: GameUI, b: BattleRecord): HTMLElement {
   const body = h('div');
-  body.append(h('div', { class: 'dim' }, `Turn ${b.turn} · ${TERRAIN_INFO[b.terrain].name}${b.firstRound ? ' · opening round' : ' · the fighting continues'}`,
+  const rounds = b.fought ? `${b.fought} of ${b.maxRounds} combat round${b.maxRounds === 1 ? '' : 's'}` : '';
+  body.append(h('div', { class: 'dim' }, `Turn ${b.turn} · ${TERRAIN_INFO[b.terrain].name}${b.firstRound ? ' · opening battle' : ' · the fighting continues'}${rounds ? ` · ${rounds}` : ''}`,
     ' · ', h('a', { href: '#', style: 'color:var(--accent)', onclick: (e: Event) => { e.preventDefault(); ui.view.centerOn(b.hex); ui.select(b.hex); } }, 'show on map')));
+  if (b.winner !== undefined) {
+    body.append(h('div', { style: 'margin-top:6px;font-size:15px' }, b.winner
+      ? h('span', null, sideName(b.winner), b.winner === ui.viewer ? h('span', { class: 'good' }, ' came out ahead.') : ' came out ahead.')
+      : h('span', { class: 'dim' }, 'A draw: neither side came out ahead.')));
+  }
   const grid = h('div', { style: 'display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:10px;margin-top:8px' });
   for (const s of b.sides) grid.append(sideCard(ui, s));
   body.append(grid);
 
-  // How it was decided.
+  if (b.rounds?.length) {
+    const log = h('div', { class: 'card' }, h('b', null, 'Round by round'));
+    for (const r of b.rounds) {
+      const line = r.sides.filter((s) => s.dealt > 0 || s.taken > 0)
+        .map((s) => `${s.faction === INDEPENDENT ? 'Independents' : factionDef(s.faction).short} dealt ${num(s.dealt)}${s.lost ? `, lost ${s.lost} ship${s.lost > 1 ? 's' : ''}` : ''}`).join(' · ');
+      log.append(h('div', { style: 'margin-top:6px' }, h('b', null, `Round ${r.n}`), h('span', { class: 'dim' }, ` · ${RANGE_MODS[r.range].name}`)),
+        h('div', { style: 'font-size:12px' }, line || 'No damage.'),
+        ...r.lines.map((l) => h('div', { class: l.startsWith('★') ? 'bad' : 'dim', style: `font-size:12px${l.startsWith('★') ? ';font-weight:bold' : ''}` }, l)));
+    }
+    body.append(log);
+  }
+
   const fighting = b.sides.filter((s) => s.attack > 0 || s.taken > 0);
   if (fighting.length >= 2) {
     const total = fighting.reduce((a, s) => a + strength(s), 0) || 1;
-    const why = h('div', { class: 'card' }, h('b', null, 'How it was decided'),
+    const why = h('div', { class: 'card' }, h('b', null, 'How battles work'),
       h('div', { class: 'dim', style: 'font-size:12px;margin:4px 0' },
-        `Combat is simultaneous. Each side's strength is its attack (after enemy shields, point defense and bonuses) times its durability (hull plus shields). `
-        + `A side loses about half its force each round against an equal enemy: losses are 50% × (enemy strength ÷ own strength)^0.75, give or take ${Math.round((BALANCE.combatRandomHigh - 1) * 100)}%, and bigger ships and escorts draw more fire.`));
+        `A battle lasts up to ${b.maxRounds ?? DEFAULT_COMBAT_ROUNDS} combat rounds. Each round the fleets maneuver for range (beams hit hardest at close quarters, missiles and fighters at long range), `
+        + 'then every ship fires: each shot can miss, does 50–150% of its usual damage, and sometimes lands a critical hit. Each side also has its fortunes of war for the battle. '
+        + 'Ships below half hull are damaged and fire less; below a quarter they are crippled. Fleets withdraw when their battle orders say so, taking fire as they go. '
+        + 'The side whose enemies lost more (by build value) comes out ahead. Starting strength, firepower × durability:'));
     for (const s of fighting) {
       const share = strength(s) / total;
       why.append(h('div', { class: 'row', style: 'margin-top:4px' }, h('span', { style: 'min-width:170px' }, sideName(s.faction)),
         h('div', { class: 'grow' }, bar(share, s.faction === INDEPENDENT ? '#999' : factionDef(s.faction).color)),
-        h('span', { class: 'dim', style: 'min-width:220px;text-align:right' }, `attack ${num(s.attack)} × durability ${num(s.durability)} = ${Math.round(share * 100)}% of the strength`)));
+        h('span', { class: 'dim', style: 'min-width:220px;text-align:right' }, `attack ${num(s.attack)} × durability ${num(s.durability)} = ${Math.round(share * 100)}%`)));
     }
     body.append(why);
   }
@@ -63,7 +82,9 @@ function sideCard(ui: GameUI, s: BattleSide): HTMLElement {
   const card = h('div', { class: `card ${mine ? 'sel' : ''}` },
     h('div', { class: 'row' }, sideName(s.faction), h('span', { class: 'grow' }),
       totalShips ? h('span', { class: lostShips ? 'bad' : 'good' }, `lost ${lostShips} of ${totalShips} ships`) : ''),
-    h('div', { class: 'dim', style: 'font-size:12px' }, `Dealt ${num(s.dealt)} damage, took ${num(s.taken)}.`));
+    h('div', { class: 'dim', style: 'font-size:12px' }, `Dealt ${num(s.dealt)} damage, took ${num(s.taken)}.`
+      + `${s.crits ? ` ${s.crits} critical hit${s.crits > 1 ? 's' : ''}.` : ''}${s.withdrew ? ` ${s.withdrew} fleet${s.withdrew > 1 ? 's' : ''} withdrew.` : ''}`
+      + `${s.valueLost !== undefined ? ` Lost ${num(s.valueLost)} in value.` : ''}`));
   for (const r of s.ships) {
     const d = design(r.design);
     const img = tokenImage(d.id, 56);
@@ -72,6 +93,7 @@ function sideCard(ui: GameUI, s: BattleSide): HTMLElement {
     const fate: string[] = [];
     if (r.destroyed) fate.push(`${r.destroyed} destroyed`);
     if (r.captured) fate.push(`${r.captured} captured`);
+    if (r.crippled) fate.push(`${r.crippled} crippled`);
     if (r.damaged) fate.push(`${r.damaged} damaged`);
     if (!fate.length) fate.push('unharmed');
     card.append(h('div', { class: 'ship-row' }, img,

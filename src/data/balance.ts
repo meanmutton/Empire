@@ -1,9 +1,27 @@
 /** Tunable numbers. Change freely during playtesting; tests check behavior, not exact values. */
 export const BALANCE = {
-  /** Fraction of the stronger side's raw firepower that becomes damage per round (§7.1). */
-  combatLethality: 0.32,
-  combatRandomLow: 0.8,
-  combatRandomHigh: 1.2,
+  /** Space combat (§7.1). */
+  combat: {
+    /** Share of the armed forces' durability destroyed per combat round at nominal fire. */
+    lethality: 0.22,
+    /** Spread of each side's fortune for a whole battle and for each combat round (log scale, bounded). */
+    battleFortune: 1.2,
+    roundFortune: 0.3,
+    /** Each shot does this range × its expected damage. */
+    shotLow: 0.5,
+    shotHigh: 1.5,
+    critChance: 0.05,
+    /** Share of a side's shots aimed at its current focus target (concentrated fire kills ships). */
+    focus: 0.6,
+    /** Chance per combat round of a minor event, and of a rare high-impact one. */
+    minorEvent: 0.05,
+    majorEvent: 0.003,
+    /** Hull fractions below which a ship is damaged or crippled, and their fire multipliers. */
+    damagedAt: 0.5,
+    crippledAt: 0.25,
+    damagedFire: 0.75,
+    crippledFire: 0.4,
+  },
   /** Planetary defense point → attack per round. */
   defenseAttackPerPoint: 1.2,
   maxShipsPerFleet: 6,

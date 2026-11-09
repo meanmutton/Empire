@@ -150,7 +150,7 @@ export function splitFleet(state: GameState, fleetId: string, shipIds: string[])
   const first = state.ships[shipIds[0]];
   state.fleets[id] = {
     id, owner: f.owner, name: design(first.design).name, hex: f.hex, ships: [...shipIds],
-    movesLeft: f.movesLeft, path: [], stance: f.stance,
+    movesLeft: f.movesLeft, path: [], doctrine: f.doctrine,
   };
   f.ships = f.ships.filter((s) => !shipIds.includes(s));
   for (const s of shipIds) state.ships[s].fleet = id;
