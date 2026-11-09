@@ -146,7 +146,7 @@ major (§9.5). Each has 1–2 special abilities and a small roster (2–4 classe
 | 16 | Taurine Herd Assembly | Pastoral defensive democracy | Defense | **Fortress Worlds** (planetary defenses +100%); **Stampede** (+20% attack in own territory) |
 | 17 | Echo Engineers | Isolationist genius-caste | Engines | **Advanced Engines** (+1 movement); **Prototype Lab** (trade techs 30% cheaper) |
 | 18 | Vesh Prophets | Missionary faith | Influence | **Conversion** (+5 unrest per turn, up to 60, in foreign systems within 3 hexes) |
-| 19 | Haldane Free Traders | Libertarian convoy culture | Trade | **Smugglers** (cargo ships draw 90% less fire and can't be boarded); **Free Port** (anyone may trade with them without a diplomat) |
+| 19 | Haldane Free Traders | Libertarian convoy culture | Trade | **Smugglers** (systems can't be blockaded; cargo ships draw 90% less fire and can't be boarded); **Free Port** (anyone may trade with them without a diplomat) |
 | 20 | Grendis Iron Legion | Mercenary army-state | Armies | **For Hire** (rent armies to majors); **Veterans** (armies start at elite rank) |
 | 21 | Pelagic Union | Aquatic federation | Population | **Ocean Worlds** (+50% population on habitable worlds); **Deep Shelters** (systems can't be bombarded below 1 population) |
 | 22 | Zenith Observatory | Scholar-astronomers | Sensors | **Long-Range Sensors** (sensor range +3); **Star Charts** (sell map knowledge to others) |
@@ -371,6 +371,17 @@ faction's turn, every hex where its forces share a hex with an enemy fights one 
 - Once a system's defense is 0, troop ships may land armies. Ground combat is the same simultaneous model,
   using army strength vs. garrison strength, with a +50% defender bonus.
 - Conquered systems keep 50% of their improvements (Lattice: 100%) and have unrest for 5 turns.
+
+### 7.4 Blockades
+- A settled system is **blockaded** while armed warships of a faction at war with its owner sit in its hex,
+  and the owner has no armed ships or starbase there to contest them.
+- A blockaded system produces **half** its usual output, and its build queue can't finish **ships or
+  armies** (or rush them). Improvements and development continue.
+- The blockade lifts as soon as the blockaders leave or are destroyed, or the owner brings armed ships or a
+  starbase into the hex (that becomes a battle instead).
+- Blockading is the natural first step of a siege: fleets blockade and grind down planetary defense, then
+  armies invade (§7.3).
+- The Haldane Free Traders' systems (Smugglers) can't be blockaded.
 
 ## 8. Research
 

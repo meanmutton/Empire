@@ -22,6 +22,7 @@ const SECTIONS: [string, string[]][] = [
     'Tap a fleet, then tap a destination twice to move. Up to six ships form a battle group and move at the speed of the slowest.',
     'Moving into enemies stops your fleet. At the end of each turn there is one round of combat wherever enemies share a hex.',
     'Combat is simultaneous and brutal: two equal forces each lose about half their ships per round. Shields stop beams, point defense stops missiles and fighters, and escorts draw fire.',
+    'Enemy warships sitting on one of your systems, with none of yours there to contest them, blockade it: half output, and its shipyard can’t finish ships or armies.',
     'Grind a system’s planetary defense to 0, then invade with armies carried by transports.',
   ]],
   ['Diplomacy and spies', [

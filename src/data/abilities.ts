@@ -56,7 +56,7 @@ export const ABILITIES = {
   advancedEngines: { name: 'Advanced Engines', text: '+1 movement for all ships.' },
   prototypeLab: { name: 'Prototype Lab', text: 'Technology trades with them cost 30% less.' },
   conversion: { name: 'Conversion', text: 'Missionaries raise unrest by 5 per turn (up to 60) in foreign systems within 3 hexes, and other factions think better of them.' },
-  smugglers: { name: 'Smugglers', text: 'Cargo ships slip through battles: they draw 90% less fire and cannot be boarded.' },
+  smugglers: { name: 'Smugglers', text: 'Their systems cannot be blockaded, and their cargo ships draw 90% less fire and cannot be boarded.' },
   freePort: { name: 'Free Port', text: 'Anyone in contact may trade with them without an embassy.' },
   forHire: { name: 'For Hire', text: 'Rents armies to major factions.' },
   veterans: { name: 'Veterans', text: 'Armies start at Elite rank.' },

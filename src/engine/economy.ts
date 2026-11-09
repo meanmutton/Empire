@@ -8,6 +8,7 @@ import { log } from './events';
 import { newId } from './ids';
 import { connectedHexes, ownedHexes } from './query';
 import { techEffects } from './research';
+import { blockadedHexes, blockadersAt } from './blockade';
 import { spawnShip } from './setup';
 import { RESOURCE_KINDS, type BuildOrder, type FactionId, type GameState, type Resources, type StarSystem } from './types';
 
@@ -65,7 +66,7 @@ function startedWar(state: GameState, faction: FactionId): boolean {
 }
 
 /** Yields of one system for its owner this turn (before faction-wide multipliers). */
-export function systemYield(state: GameState, hex: number, connected?: Set<number>): Resources {
+export function systemYield(state: GameState, hex: number, connected?: Set<number>, blockaded?: Set<number>): Resources {
   const out = zeroResources();
   const h = state.map.hexes[hex];
   const sys = h.system;
@@ -96,7 +97,9 @@ export function systemYield(state: GameState, hex: number, connected?: Set<numbe
   out.population = sys.population;
   const unrest = 1 - sys.unrest / 200;
   const disc = connected && !connected.has(hex) ? BALANCE.disconnectedPenalty : 1;
-  for (const k of RESOURCE_KINDS) if (k !== 'population') out[k] *= unrest * disc;
+  const isBlockaded = blockaded ? blockaded.has(hex) : blockadersAt(state, hex).length > 0;
+  const block = isBlockaded ? BALANCE.blockadePenalty : 1;
+  for (const k of RESOURCE_KINDS) if (k !== 'population') out[k] *= unrest * disc * block;
   return out;
 }
 
@@ -111,11 +114,12 @@ export function factionIncome(state: GameState, faction: FactionId): IncomeRepor
   const gross = zeroResources();
   const bySystem: Record<number, Resources> = {};
   const connected = connectedHexes(state, faction);
+  const blockaded = blockadedHexes(state, faction);
   const owned = ownedHexes(state, faction);
   let emptyHexes = 0;
   for (const hex of owned) {
     if (state.map.hexes[hex].system) {
-      const y = systemYield(state, hex, connected);
+      const y = systemYield(state, hex, connected, blockaded);
       bySystem[hex] = y;
       for (const k of RESOURCE_KINDS) gross[k] += y[k];
     } else {
@@ -144,6 +148,10 @@ export function upkeepOf(state: GameState, faction: FactionId): number {
 export function runEconomy(state: GameState, faction: FactionId): IncomeReport {
   const f = state.factions[faction];
   const report = factionIncome(state, faction);
+  for (const hex of blockadedHexes(state, faction)) {
+    const by = blockadersAt(state, hex);
+    log(state, [faction, ...by], 'blockade', `${state.map.hexes[hex].system!.name} is blockaded by ${by.join(', ')}: output halved, shipyard idle.`, hex);
+  }
   f.stock.energy = round1(f.stock.energy + report.net.energy);
   f.stock.metals = round1(f.stock.metals + report.net.metals);
   f.stock.exotics = round1(f.stock.exotics + report.net.exotics);
@@ -321,18 +329,23 @@ export function rushBuild(state: GameState, faction: FactionId, hex: number): bo
   const cost = rushCost(state, hex);
   const f = state.factions[faction];
   if (state.map.hexes[hex].owner !== faction || f.stock.energy < cost) return false;
+  const head = state.map.hexes[hex].system!.queue[0];
+  if ((head.kind === 'ship' || head.kind === 'army') && blockadersAt(state, hex).length) return false;
   f.stock.energy = round1(f.stock.energy - cost);
   state.map.hexes[hex].system!.queue[0].remaining = 0;
   return true;
 }
 
 function advanceBuilds(state: GameState, faction: FactionId): void {
+  const blockaded = blockadedHexes(state, faction);
   for (const hex of ownedHexes(state, faction)) {
     const sys = state.map.hexes[hex].system;
     if (!sys || sys.queue.length === 0) continue;
     let points = productionOf(state, hex);
     while (sys.queue.length > 0) {
       const head = sys.queue[0];
+      // A blockaded shipyard can't launch ships or ship out armies.
+      if (blockaded.has(hex) && (head.kind === 'ship' || head.kind === 'army')) break;
       if (head.remaining > points) {
         head.remaining = round1(head.remaining - points);
         break;

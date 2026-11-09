@@ -8,6 +8,7 @@ import { TECH_BY_ID } from '../data/techs';
 import { applyAction, type Action } from '../engine/actions';
 import { getBit } from '../engine/bitset';
 import { cargoFree } from '../engine/ground';
+import { blockadersAt } from '../engine/blockade';
 import { checkBuild, factionIncome, popCapOf, productionOf, rushCost, slotsOf, systemYield } from '../engine/economy';
 import { MISSIONS, type MissionId } from '../engine/espionage';
 import { planPath, reachableThisTurn } from '../engine/movement';
@@ -348,6 +349,8 @@ export class GameUI {
       h('span', { class: 'k' }, 'Defense'), h('span', null, `${num(sys.defense)} planetary, ${num(sys.garrison)} garrison`),
     );
     if (sys.unrest > 0) kv.append(h('span', { class: 'k' }, 'Unrest'), h('span', { class: 'bad' }, `${num(sys.unrest)}`));
+    const blockers = blockadersAt(g, hex);
+    if (blockers.length) kv.append(h('span', { class: 'k' }, 'Blockaded'), h('span', { class: 'bad' }, `by ${blockers.map((b) => factionDef(b).short).join(', ')}: output halved, shipyard idle`));
     if (hx.owner && sys.development > 0) {
       const y = systemYield(g, hex);
       kv.append(h('span', { class: 'k' }, 'Yields'), h('span', null, `${ICON.energy}${num(y.energy)} ${ICON.metals}${num(y.metals)} ${ICON.science}${num(y.science)} ${ICON.exotics}${num(y.exotics)}`));
