@@ -107,6 +107,9 @@ export interface Army {
   /** Hex of the system it is garrisoned at, or null when aboard a ship. */
   hex: number | null;
   ship: Id | null;
+  /** Hired from a mercenary faction: returns to it after `until`. */
+  rentedFrom?: FactionId;
+  until?: number;
 }
 
 export type AgentKind = 'spy' | 'diplomat';
@@ -232,6 +235,21 @@ export interface GameEvent {
   seq?: number;
 }
 
+export type Offer =
+  | { id: Id; seller: FactionId; kind: 'ship'; design: string; price: number }
+  | { id: Id; seller: FactionId; kind: 'army'; strength: number; xp: number; turns: number; price: number }
+  | { id: Id; seller: FactionId; kind: 'charts'; price: number };
+
+export interface Contract {
+  id: Id;
+  buyer: FactionId;
+  seller: FactionId;
+  /** The seller's shipyard where the ship is built and delivered. */
+  hex: number;
+  design: string;
+  remaining: number;
+}
+
 /** A diplomatic statement a human makes to a computer power (§9.8). */
 export type Statement =
   | { kind: 'withdraw' }
@@ -299,6 +317,10 @@ export interface GameState {
   seq: number;
   nextId: number;
   winner: FactionId | null;
+  /** Mercenary market offers, refreshed every round. */
+  offers?: Offer[];
+  /** Ships being built to order at another faction's shipyard. */
+  contracts?: Contract[];
   /** Galactic exchange prices (energy-equivalent value per unit). */
   market?: { prices: Record<StockpileKind, number> };
   /** Set when the game has ended, with or without a winner. */

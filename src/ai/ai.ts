@@ -11,6 +11,7 @@ import { CLASSES, ROLES } from '../data/ships';
 import { TECH_BY_ID, type TechField } from '../data/techs';
 import { applyAction, type Action } from '../engine/actions';
 import { talkEnd, talkStart } from './talk';
+import { offersFor } from '../engine/mercenaries';
 import { say } from './voice';
 import { hasEmbassy, opinionOf } from '../engine/agents';
 import { getBit } from '../engine/bitset';
@@ -302,6 +303,16 @@ function trade(ctx: Ctx): void {
   else if (s.energy < 40 && s.metals > 300) act(ctx, { type: 'exchange', sell: 'metals', buy: 'energy', amount: 120 });
   if (s.exotics < 15 && ctx.state.factions[ctx.me].research.known.includes('hull4') && s.energy > spare + 150) {
     act(ctx, { type: 'exchange', sell: 'energy', buy: 'exotics', amount: 150 });
+  }
+  if (!ctx.major) return;
+  // Mercenaries: ships and armies in wartime, star charts now and then.
+  const offers = offersFor(ctx.state, ctx.me).filter((x) => x.check.ok).map((x) => x.offer).sort((a, b) => a.price - b.price);
+  const armies = Object.values(ctx.state.armies).filter((a) => a.owner === ctx.me).length;
+  for (const o of offers) {
+    const energy = ctx.state.factions[ctx.me].stock.energy;
+    if (o.kind === 'ship' && ctx.enemies.length && energy - o.price > spare) act(ctx, { type: 'buyOffer', offer: o.id });
+    else if (o.kind === 'army' && ctx.enemies.length && armies < 3 && energy - o.price > 150) act(ctx, { type: 'buyOffer', offer: o.id });
+    else if (o.kind === 'charts' && energy - o.price > spare && ctx.state.turn % 15 === 0) act(ctx, { type: 'buyOffer', offer: o.id });
   }
 }
 

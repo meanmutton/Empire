@@ -130,7 +130,7 @@ major (§9.5). Each has 1–2 special abilities and a small roster (2–4 classe
 |---|------|----------|----------|-----------|
 | 1 | Myrr Choir | Psionic pacifist theocracy | Science | **Mind Shield** (immune to espionage); **Harmonic Calm** (attackers −20% damage in round 1) |
 | 2 | Quorr Salvage Fleets | Nomadic anarchist scavengers | Metals | **Salvagers** (gain metals equal to 25% of the cost of ships destroyed in their battles) |
-| 3 | Thessic Banking Houses | Mercantile plutocracy | Energy | **Trade Hub** (trade agreements +50% for both sides); **Mercenary Contracts** (sell ships to majors) |
+| 3 | Thessic Banking Houses | Mercantile plutocracy | Energy | **Trade Hub** (trade agreements +50% for both sides); **Mercenary Contracts** (sell warships on the mercenary market) |
 | 4 | Ghal'tar Pirate Clans | Raider clans | Raiding | **Raiders** (fleets in an enemy system steal 10% of its energy and metals each turn); **Ambush** (+30% attack in nebulae and asteroids) |
 | 5 | Ixxi Swarm | Insectoid hive mind | Numbers | **Swarm Tactics** (Fighters and Corvettes −30% cost); **Rapid Breeding** (+50% population growth) |
 | 6 | Celestine Order | Monastic knightly theocracy | Armies | **Zealots** (armies +50% strength); **Aegis of Faith** (shields +20%) |
@@ -147,14 +147,14 @@ major (§9.5). Each has 1–2 special abilities and a small roster (2–4 classe
 | 17 | Echo Engineers | Isolationist genius-caste | Engines | **Advanced Engines** (+1 movement); **Prototype Lab** (trade techs 30% cheaper) |
 | 18 | Vesh Prophets | Missionary faith | Influence | **Conversion** (+5 unrest per turn, up to 60, in foreign systems within 3 hexes) |
 | 19 | Haldane Free Traders | Libertarian convoy culture | Trade | **Smugglers** (systems can't be blockaded; cargo ships draw 90% less fire and can't be boarded); **Free Port** (anyone may trade with them without a diplomat) |
-| 20 | Grendis Iron Legion | Mercenary army-state | Armies | **For Hire** (rent armies to majors); **Veterans** (armies start at elite rank) |
+| 20 | Grendis Iron Legion | Mercenary army-state | Armies | **For Hire** (rent out veteran armies for 10 turns); **Veterans** (armies start at elite rank) |
 | 21 | Pelagic Union | Aquatic federation | Population | **Ocean Worlds** (+50% population on habitable worlds); **Deep Shelters** (systems can't be bombarded below 1 population) |
-| 22 | Zenith Observatory | Scholar-astronomers | Sensors | **Long-Range Sensors** (sensor range +3); **Star Charts** (sell map knowledge to others) |
+| 22 | Zenith Observatory | Scholar-astronomers | Sensors | **Long-Range Sensors** (sensor range +3); **Star Charts** (sell copies of their charts) |
 | 23 | Morrow Bloom | Biological horror fleet | Bio-weapons | **Spore Payload** (attacks reduce a system's population); **Living Hulls** (ships regenerate 20% hull per turn) |
 | 24 | Kethran Lattice-Minds | Silicon crystalline consensus | Durability | **Crystalline Hulls** (hull +40%); **Slow Thought** (−1 movement) |
 | 25 | Skarn Hunters | Apex predator packs | Aggression | **Hunter's Instinct** (+30% damage against already-damaged ships); **Tracking** (cloaked ships within 2 hexes revealed) |
 | 26 | Ilyrian Courts | Dynastic monarchy | Diplomacy | **Royal Marriage** (vassalage offers +50% likely accepted); **Court Intrigue** (+20% spy defense) |
-| 27 | Forgeborn Anvil | Industrial guild-state | Shipbuilding | **Master Shipwrights** (ships −20% cost; can build ships for allies) |
+| 27 | Forgeborn Anvil | Industrial guild-state | Shipbuilding | **Master Shipwrights** (ships −20% cost; build ships to order for anyone at peace with them) |
 | 28 | Tal Wanderers | Wormhole-faring archivists | Exploration | **Wormhole Navigation** (move through wormholes at no cost, reveal wormhole pairs) |
 | 29 | Hollow Sun Cult | Star-worshippers | Exotics | **Stellar Harnessing** (neutron stars and pulsars yield double exotics); **Solar Flare** (once per battle, 10% damage to all enemies) |
 | 30 | Unbound Mechanists | Machines freed from the Lattice | Resilience | **Self-Repair** (ships repair 15% per turn); **Grudge** (+25% attack against the Lattice) |
@@ -430,7 +430,7 @@ plus `Vassal`/`Overlord` for minors.
 | Trade Agreement | Each side gets energy equal to 10% of the other's energy income |
 | Research Agreement | Each side gets 10% of the other's science |
 | Economic Agreement | Each side gets +10% metals; resources can be gifted at 1:1 |
-| Manufacturing Agreement | Can build ships at the partner's shipyards; −10% ship cost |
+| Manufacturing Agreement | Ships cost 10% less, and each side can order ships built at the other's shipyard (§9.9) |
 | Technology Exchange | One-time swap of specific techs |
 | Open Borders | Ships may pass through each other's territory without incident |
 | Non-Aggression Pact | No war without a 3-turn notice; breaking it = −opinion with everyone |
@@ -493,6 +493,20 @@ start of its next turn. Each kind of statement can be made to a power once every
 Conversations live in the game state, so every player's game agrees on them. *(Later, an optional
 language-model mode could let you chat with computer leaders in free text, with any real effect still
 going through these rules.)*
+
+### 9.9 Mercenaries and shipyard contracts
+Opened from **Market**. Buyers need contact with the seller and must not be at war with it.
+- **Thessic Banking Houses** (Mercenary Contracts) offer two of their warships every round, for energy.
+  The ship waits at the Thessic home system for its new owner.
+- **Grendis Iron Legion** (For Hire) offer two veteran armies (strength 15, elite) every round. A hired army
+  reports to your home system and goes home after 10 turns. It can't be traded on.
+- **Zenith Observatory** (Star Charts) sell a copy of everything they have explored, at most once every 10
+  turns per buyer.
+- **Shipyard contracts**: the **Forgeborn Anvil** (Master Shipwrights) build any of your own designs to
+  order, 20% cheaper, for anyone at peace with them. Partners in a **Manufacturing Agreement** do the same
+  for each other, 10% cheaper. The builder keeps a 15% fee. The ship is built alongside the builder's own
+  queue at half its home yard's production, and is delivered there. If the two go to war, the builder
+  keeps the ship.
 
 ## 10. Victory
 

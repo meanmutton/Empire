@@ -8,6 +8,7 @@ import { runMinorAbilities } from './abilities';
 import { pruneLog } from './events';
 import { pruneDispatches } from './dispatch';
 import { relaxMarket } from './market';
+import { advanceContracts, expireRentals, refreshOffers } from './mercenaries';
 import { applyHazards, continuePaths, markClaims, resetMovement, resolveClaims, surveyWithFleets } from './movement';
 import { activeFaction } from './query';
 import { advanceResearch } from './research';
@@ -33,6 +34,8 @@ export function startTurn(state: GameState): void {
   advanceAgents(state, f);
   runEspionage(state, f);
   runMinorAbilities(state, f);
+  expireRentals(state, f);
+  advanceContracts(state, f);
   continuePaths(state, f);
   checkForcedVassalage(state, f);
   updateExplored(state, f);
@@ -67,6 +70,7 @@ function advanceActive(state: GameState): void {
       pruneLog(state);
       pruneDispatches(state);
       relaxMarket(state);
+      refreshOffers(state);
     }
     if (state.factions[activeFaction(state)].alive) break;
   }
