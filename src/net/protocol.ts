@@ -46,6 +46,10 @@ export type ClientMessage =
   /** Submits the state after a turn. `forFaction` is set when playing a caretaker turn for an overdue player. */
   | { action: 'submit'; req: number; code: string; token: string; upload: string; n: number; base: number; active: string; turn: number; finished: boolean; forFaction?: string }
   | { action: 'get'; req: number; code: string; token: string }
+  /** Sends a chat message to some players (factions) or to everyone (`to: ['all']`). */
+  | { action: 'message'; req: number; code: string; token: string; to: string[]; text: string; turn: number }
+  /** Fetches messages this player may read, newer than `since` (ms). */
+  | { action: 'messages'; req: number; code: string; token: string; since: number }
   | { action: 'ping'; req: number };
 
 export type ServerMessage =
@@ -55,7 +59,28 @@ export type ServerMessage =
   | { type: 'turn'; lobby: Lobby }
   | { type: 'ack'; req: number; version?: number }
   | { type: 'error'; req?: number; message: string }
-  | { type: 'pong'; req: number };
+  | { type: 'pong'; req: number }
+  | { type: 'message'; req?: number; message: ChatMessage }
+  | { type: 'messages'; req: number; messages: ChatMessage[] };
+
+/** A chat message between human players. `to` holds recipient factions, or ['all'] for everyone. */
+export interface ChatMessage {
+  id: string;
+  from: string;
+  to: string[];
+  text: string;
+  /** Milliseconds since 1970 (set by the relay, or by the device in hot seat games). */
+  at: number;
+  /** Game turn when sent. */
+  turn: number;
+}
+
+export const MAX_MESSAGE_LENGTH = 1000;
+
+/** Whether `faction` may read a message. */
+export function canRead(m: ChatMessage, faction: string): boolean {
+  return m.from === faction || m.to.includes('all') || m.to.includes(faction);
+}
 
 export function chunkText(text: string, size = CHUNK_SIZE): string[] {
   const out: string[] = [];

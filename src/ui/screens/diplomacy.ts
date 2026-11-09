@@ -70,6 +70,9 @@ export function openDiplomacy(ui: GameUI): void {
       }
       const op = opinionOf(g, o, me);
       const actions = h('td', { class: 'row wrap' });
+      if (g.factions[o].controller === 'human' && g.config.seats.length > 1) {
+        actions.append(button('Message', () => ui.openMessages(o), { cls: 'small' }));
+      }
       if (ui.myTurn) {
         if (canPropose(g, me, o)) actions.append(button('Propose…', () => openProposal(ui, o, render), { cls: 'small' }));
         if (r.status !== 'war') actions.append(button('Declare war', () => { if (confirm(`Declare war on the ${factionDef(o).name}?`) && ui.act({ type: 'declareWar', target: o })) render(); }, { cls: 'small danger' }));

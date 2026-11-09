@@ -1,5 +1,5 @@
 /** Storage used by the relay: DynamoDB in AWS, memory for tests and the local dev server. */
-import type { Lobby } from '../../src/net/protocol';
+import type { ChatMessage, Lobby } from '../../src/net/protocol';
 
 /** Lobby plus private fields never sent to clients. */
 export interface GameRecord extends Lobby {
@@ -26,6 +26,9 @@ export interface Store {
   addConnection(conn: string, code: string, faction: string | null): Promise<void>;
   removeConnection(conn: string): Promise<void>;
   connections(code: string): Promise<{ conn: string; faction: string | null }[]>;
+  putMessage(code: string, m: ChatMessage): Promise<void>;
+  /** Messages newer than `since`, oldest first, at most `limit` (the newest ones). */
+  listMessages(code: string, since: number, limit: number): Promise<ChatMessage[]>;
 }
 
 export class MemoryStore implements Store {
@@ -33,6 +36,7 @@ export class MemoryStore implements Store {
   states = new Map<string, string>();
   chunks = new Map<string, string>();
   conns = new Map<string, { code: string; faction: string | null }>();
+  messages = new Map<string, ChatMessage[]>();
 
   async getGame(code: string) {
     const g = this.games.get(code);
@@ -60,6 +64,12 @@ export class MemoryStore implements Store {
   async deleteChunks(code: string, upload: string, n: number) { for (let i = 0; i < n; i++) this.chunks.delete(`${code}/${upload}/${i}`); }
   async addConnection(conn: string, code: string, faction: string | null) { this.conns.set(conn, { code, faction }); }
   async removeConnection(conn: string) { this.conns.delete(conn); }
+  async putMessage(code: string, m: ChatMessage) {
+    this.messages.set(code, [...(this.messages.get(code) ?? []), m]);
+  }
+  async listMessages(code: string, since: number, limit: number) {
+    return (this.messages.get(code) ?? []).filter((m) => m.at > since).slice(-limit);
+  }
   async connections(code: string) {
     return [...this.conns.entries()].filter(([, v]) => v.code === code).map(([conn, v]) => ({ conn, faction: v.faction }));
   }

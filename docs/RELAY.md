@@ -46,10 +46,15 @@ JSON text messages. Client → relay messages have an `action` and a `req` id; r
 | `start` | host | start the game with an uploaded state |
 | `submit` | active player (or caretaker) | the state after a turn, with the version it was based on |
 | `get` | seat holder | download the current state (arrives as `state` chunks) |
+| `message` | seat holder | chat to some players (`to: [factions]`) or everyone (`to: ['all']`), up to 1,000 characters; pushed to connected recipients |
+| `messages` | seat holder | fetch the messages this player may read, newer than a timestamp |
 | `ping` | anyone | keep-alive |
 
-Relay → client: `created`, `lobby`, `turn` (pushed to everyone connected), `state` (chunks), `ack`,
-`error`, `pong`.
+Relay → client: `created`, `lobby`, `turn` (pushed to everyone connected), `state` (chunks), `message`
+(pushed to its recipients), `messages`, `ack`, `error`, `pong`.
+
+Chat is stored in the same table (`GAME#code / MSG#time#id`, kept 90 days). The relay only returns a
+message to its sender and recipients.
 
 States are chunked because API Gateway WebSocket frames are capped at 32 KB and messages at 128 KB.
 

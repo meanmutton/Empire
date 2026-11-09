@@ -6,6 +6,7 @@ import { runUntilHuman } from '../engine/turn';
 import type { GameState } from '../engine/types';
 import { button, clear, h, modal, toast } from './dom';
 import { GameUI, type GameHost } from './game-ui';
+import { LocalMessaging } from './messaging';
 import { openHelp } from './screens/help';
 import { openReport } from './screens/report';
 import { downloadSave, saveGame } from './storage';
@@ -16,14 +17,18 @@ export class LocalSession {
 
   constructor(private root: HTMLElement, private game: GameState, private saveId: string, private onQuit: () => void, private debug = false) {
     this.hotseat = game.config.seats.length > 1;
+    this.messaging.subscribe(() => void this.save());
     this.startHumanTurn(true);
   }
+
+  private readonly messaging = new LocalMessaging(() => this.game);
 
   private host(): GameHost {
     return {
       canAct: () => true,
       afterEndTurn: () => this.afterEndTurn(),
       openMenu: (ui) => this.menu(ui),
+      messaging: this.messaging,
     };
   }
 

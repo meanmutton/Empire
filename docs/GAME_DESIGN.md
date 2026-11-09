@@ -443,6 +443,16 @@ Each faction holds an opinion (−100..+100) of every other, driven by shared en
 tension, broken treaties, espionage caught, ideology (similar governments like each other), and faction
 personality.
 
+### 9.7 Messages between players
+- Human players can **message** each other: privately with any human they have met in the game, in group
+  conversations, or on an **All players** channel.
+- Messages are talk only. Binding deals go through proposals (§9.4), which the engine enforces.
+- **Online**, chat lives on the relay, not in the game state. You can write at any time (not only on your
+  turn), recipients who are connected get it immediately, and the relay only hands a message to its
+  sender and recipients. **Hot seat** chat is saved with the game, and each player only sees their own
+  conversations.
+- Talking with computer powers is still being designed.
+
 ## 10. Victory
 
 Each game enables any of these (default: all):

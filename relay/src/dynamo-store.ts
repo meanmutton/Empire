@@ -9,6 +9,7 @@
  */
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { BatchWriteCommand, DeleteCommand, DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import type { ChatMessage } from '../../src/net/protocol';
 import type { GameRecord, Store } from './store';
 
 const PART = 350_000;
@@ -100,6 +101,22 @@ export class DynamoStore implements Store {
     const r = await this.db.send(new GetCommand({ TableName: this.table, Key: { pk: `CONN#${conn}`, sk: 'CONN' } }));
     if (r.Item?.code) await this.db.send(new DeleteCommand({ TableName: this.table, Key: { pk: `GAME#${r.Item.code}`, sk: `CONN#${conn}` } }));
     await this.db.send(new DeleteCommand({ TableName: this.table, Key: { pk: `CONN#${conn}`, sk: 'CONN' } }));
+  }
+
+  async putMessage(code: string, m: ChatMessage): Promise<void> {
+    await this.db.send(new PutCommand({
+      TableName: this.table,
+      Item: { pk: `GAME#${code}`, sk: `MSG#${String(m.at).padStart(15, '0')}#${m.id}`, message: m, ttl: this.ttl(90) },
+    }));
+  }
+
+  async listMessages(code: string, since: number, limit: number): Promise<ChatMessage[]> {
+    const r = await this.db.send(new QueryCommand({
+      TableName: this.table, KeyConditionExpression: 'pk = :p AND sk BETWEEN :a AND :b',
+      ExpressionAttributeValues: { ':p': `GAME#${code}`, ':a': `MSG#${String(since + 1).padStart(15, '0')}`, ':b': 'MSG#~' },
+      ScanIndexForward: false, Limit: limit,
+    }));
+    return (r.Items ?? []).map((i) => i.message as ChatMessage).reverse();
   }
 
   async connections(code: string): Promise<{ conn: string; faction: string | null }[]> {

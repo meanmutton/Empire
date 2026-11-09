@@ -4,6 +4,8 @@ import { factionDef, MAJOR_IDS } from '../data/factions';
 import { packState, unpackState } from '../net/codec';
 import type { Lobby, LobbyConfig } from '../net/protocol';
 import { RelayClient } from '../net/relay-client';
+import type { ChatMessage } from '../net/protocol';
+import type { Messaging } from './messaging';
 import { activeFaction } from '../engine/query';
 import { createGame } from '../engine/setup';
 import { beginGame, endTurn, runUntilHuman } from '../engine/turn';
@@ -50,13 +52,16 @@ export class OnlineSession {
   private ui: GameUI | null = null;
   private busy = false;
   private connected = false;
+  private chat: RelayMessaging;
 
   private constructor(private root: HTMLElement, url: string, private entry: OnlineEntry, private onQuit: () => void) {
     injectStyles();
     this.client = new RelayClient(url);
     this.client.onPush = (l) => void this.onLobby(l);
+    this.client.onMessage = (m) => this.chat.add([m], this.you);
     this.client.onStatus = (c) => { this.connected = c; if (!c) toast('Connection lost. Reconnecting…', 'error'); };
-    this.client.onReconnect = () => void this.client.hello(entry.code, entry.token).then((r) => this.onLobby(r.lobby, r.you)).catch(() => {});
+    this.client.onReconnect = () => void this.client.hello(entry.code, entry.token).then((r) => this.onLobby(r.lobby, r.you)).then(() => this.chat.refresh()).catch(() => {});
+    this.chat = new RelayMessaging(this.client, entry);
   }
 
   /** Hosts a new game. */
@@ -122,7 +127,9 @@ export class OnlineSession {
       return;
     }
     const first = !this.ui;
+    if (first) void this.chat.refresh();
     if (!this.ui) this.ui = new GameUI(this.root, {
+      messaging: this.chat,
       canAct: () => !this.busy && !!this.lobby && this.lobby.version === this.version && this.lobby.active === this.you,
       afterEndTurn: () => void this.afterEndTurn(),
       openMenu: (ui) => this.menu(ui),
@@ -275,6 +282,47 @@ export class OnlineSession {
       toast((e as Error).message, 'error');
       this.renderLobby();
     }
+  }
+}
+
+/** Chat kept on the relay: private per conversation, works whether or not it is your turn. */
+class RelayMessaging implements Messaging {
+  private items: ChatMessage[] = [];
+  private subs = new Set<() => void>();
+  constructor(private client: RelayClient, private entry: OnlineEntry) {}
+
+  list(viewer: string): ChatMessage[] {
+    void viewer; // the relay only sends messages this player may read
+    return this.items;
+  }
+
+  async refresh(): Promise<void> {
+    const since = this.items.length ? this.items[this.items.length - 1].at : 0;
+    try {
+      this.add(await this.client.fetchMessages(this.entry.code, this.entry.token, since), null);
+    } catch { /* offline; try again on reconnect */ }
+  }
+
+  add(ms: ChatMessage[], me: string | null): void {
+    const known = new Set(this.items.map((m) => m.id));
+    const fresh = ms.filter((m) => !known.has(m.id));
+    if (!fresh.length) return;
+    this.items = [...this.items, ...fresh].sort((a, b) => a.at - b.at);
+    const incoming = fresh.filter((m) => me && m.from !== me);
+    if (incoming.length) toast(`New message from ${factionDef(incoming[incoming.length - 1].from).short}.`);
+    for (const s of this.subs) s();
+  }
+
+  async send(from: string, to: string[], text: string, turn: number): Promise<boolean> {
+    void from;
+    const m = await this.client.sendMessage(this.entry.code, this.entry.token, to, text, turn);
+    this.add([m], null);
+    return true;
+  }
+
+  subscribe(cb: () => void): () => void {
+    this.subs.add(cb);
+    return () => this.subs.delete(cb);
   }
 }
 
