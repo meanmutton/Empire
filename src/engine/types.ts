@@ -1,0 +1,252 @@
+/**
+ * The complete game state. Everything here is plain JSON (no classes, maps or functions) so it can be
+ * serialized, hashed, uploaded to the relay and replayed. Locations are hex indices (row * width + col).
+ */
+import type { RngState } from './rng';
+
+export const STATE_SCHEMA_VERSION = 1;
+
+export type FactionId = string;
+export type Id = string;
+
+export const STOCKPILED = ['energy', 'metals', 'exotics'] as const;
+export type StockpileKind = (typeof STOCKPILED)[number];
+export const RESOURCE_KINDS = ['energy', 'metals', 'population', 'science', 'exotics'] as const;
+export type ResourceKind = (typeof RESOURCE_KINDS)[number];
+export type Resources = Record<ResourceKind, number>;
+export type Stockpile = Record<StockpileKind, number>;
+
+export type Terrain =
+  | 'space' | 'asteroids' | 'nebula' | 'neutronStar' | 'pulsar' | 'blackHole' | 'ionStorm' | 'wormhole';
+
+export type StarKind = 'yellow' | 'orange' | 'red' | 'blue' | 'white' | 'neutron' | 'pulsar';
+
+export type PlanetKind =
+  | 'terran' | 'ocean' | 'jungle' | 'desert' | 'arctic' | 'barren' | 'volcanic' | 'gasGiant' | 'asteroidBelt';
+
+export interface StarSystem {
+  name: string;
+  star: StarKind;
+  planet: PlanetKind;
+  /** Improvement slots available at full development (1–5). */
+  size: number;
+  /** 0 unclaimed .. 5 core world. */
+  development: number;
+  improvements: string[];
+  /** Population in millions-ish units; grows toward popCap. */
+  population: number;
+  /** Faction whose home this is, if any. */
+  homeOf: FactionId | null;
+  /** Planetary defense points (absorbs damage and shoots back in battles). */
+  defense: number;
+  /** Ground garrison strength. */
+  garrison: number;
+  /** 0–100; high unrest cuts output and can cause revolt or defection. */
+  unrest: number;
+  /** One-time survey reward still present. */
+  ruins: boolean;
+  /** Turns remaining on the build queue item at the head, etc. */
+  queue: BuildOrder[];
+}
+
+export interface BuildOrder {
+  kind: 'ship' | 'army' | 'improvement' | 'starbase' | 'spy' | 'diplomat' | 'develop';
+  /** Ship design id, improvement id, etc. */
+  item: string;
+  /** Production points still needed. */
+  remaining: number;
+}
+
+export interface Hex {
+  terrain: Terrain;
+  system: StarSystem | null;
+  owner: FactionId | null;
+  /** Faction that will claim this hex at the start of its next turn (§5.3). */
+  pendingClaim: FactionId | null;
+  /** Wormhole twin hex index. */
+  wormhole: number | null;
+}
+
+export interface MapState {
+  width: number;
+  height: number;
+  hexes: Hex[];
+}
+
+export interface Ship {
+  id: Id;
+  owner: FactionId;
+  design: string;
+  hull: number;
+  fleet: Id;
+  xp: number;
+  /** Fighters currently aboard (carriers). */
+  fighters: number;
+  /** Armies, agents or colonists aboard. */
+  cargo: Id[];
+}
+
+/** A battle group: up to 6 ships moving and fighting together. A lone ship is a fleet of one. */
+export interface Fleet {
+  id: Id;
+  owner: FactionId;
+  name: string;
+  hex: number;
+  ships: Id[];
+  movesLeft: number;
+  /** Queued destination path (excluding current hex). */
+  path: number[];
+  stance: 'aggressive' | 'defensive' | 'passive';
+}
+
+export interface Army {
+  id: Id;
+  owner: FactionId;
+  strength: number;
+  xp: number;
+  /** Hex of the system it is garrisoned at, or null when aboard a ship. */
+  hex: number | null;
+  ship: Id | null;
+}
+
+export type AgentKind = 'spy' | 'diplomat';
+
+export interface Agent {
+  id: Id;
+  owner: FactionId;
+  kind: AgentKind;
+  hex: number;
+  /** Ship carrying it, if any. */
+  ship: Id | null;
+  path: number[];
+  /** Diplomat: faction it is heading to / resident with. Spy: target faction. */
+  target: FactionId | null;
+  mission: string | null;
+  progress: number;
+  /** Diplomat: has founded an embassy and is resident. */
+  resident: boolean;
+  /** Captured by this faction (held prisoner). */
+  capturedBy: FactionId | null;
+}
+
+export interface Starbase {
+  id: Id;
+  owner: FactionId;
+  hex: number;
+  tier: number;
+  hull: number;
+}
+
+export type RelationStatus = 'war' | 'hostile' | 'neutral' | 'relations' | 'nap' | 'alliance';
+
+export interface Relation {
+  /** The two factions, sorted. */
+  a: FactionId;
+  b: FactionId;
+  contact: boolean;
+  status: RelationStatus;
+  /** Turn the status last changed. */
+  since: number;
+  /** a has an embassy with b, b has an embassy with a. */
+  embassyA: boolean;
+  embassyB: boolean;
+  agreements: string[];
+  /** Opinion of a toward b and b toward a, −100..100. */
+  opinionAB: number;
+  opinionBA: number;
+}
+
+export interface Research {
+  known: string[];
+  current: string | null;
+  progress: number;
+}
+
+export interface FactionState {
+  id: FactionId;
+  kind: 'major' | 'minor';
+  controller: 'human' | 'ai';
+  /** Display name of the human player, if any. */
+  player: string | null;
+  alive: boolean;
+  stock: Stockpile;
+  research: Research;
+  /** Hex index of the home system. */
+  home: number;
+  /** Major that holds this minor as a vassal. */
+  overlord: FactionId | null;
+  /** Bitset of explored hexes (hex string, 4 hexes per char). */
+  explored: string;
+  /** Faction-specific counters for abilities (cooldowns, mobilization, etc.). */
+  flags: Record<string, number>;
+}
+
+export interface Proposal {
+  id: Id;
+  from: FactionId;
+  to: FactionId;
+  turn: number;
+  give: TradeItem[];
+  receive: TradeItem[];
+}
+
+export type TradeItem =
+  | { kind: 'resource'; resource: StockpileKind; amount: number; perTurn?: number }
+  | { kind: 'tech'; tech: string }
+  | { kind: 'fleet'; fleet: Id }
+  | { kind: 'hex'; hex: number }
+  | { kind: 'agreement'; agreement: string }
+  | { kind: 'status'; status: RelationStatus }
+  | { kind: 'vassal' }
+  | { kind: 'returnAgent'; agent: Id }
+  | { kind: 'map' };
+
+export interface GameEvent {
+  turn: number;
+  /** Factions that should see this in their turn report; empty = everyone. */
+  to: FactionId[];
+  kind: string;
+  text: string;
+  hex?: number;
+}
+
+export interface HumanSeat {
+  faction: FactionId;
+  name: string;
+}
+
+export interface GameConfig {
+  width: number;
+  height: number;
+  seats: HumanSeat[];
+  /** Minor factions in this game (chosen at setup). */
+  minors: FactionId[];
+  victory: { conquest: boolean; domination: boolean; ascendance: boolean; alliance: boolean };
+  dominationShare: number;
+  turnLimit: number | null;
+}
+
+export interface GameState {
+  schema: number;
+  id: string;
+  seed: string;
+  rng: RngState;
+  config: GameConfig;
+  /** Round number, starting at 1. */
+  turn: number;
+  turnOrder: FactionId[];
+  /** Index into turnOrder of the faction whose turn it is. */
+  active: number;
+  map: MapState;
+  factions: Record<FactionId, FactionState>;
+  fleets: Record<Id, Fleet>;
+  ships: Record<Id, Ship>;
+  armies: Record<Id, Army>;
+  agents: Record<Id, Agent>;
+  starbases: Record<Id, Starbase>;
+  relations: Record<string, Relation>;
+  proposals: Record<Id, Proposal>;
+  log: GameEvent[];
+  nextId: number;
+  winner: FactionId | null;
+}
