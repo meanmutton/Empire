@@ -32,7 +32,7 @@ Status key: `[ ]` not started, `[~]` PR open, `[x]` merged.
 - [~] **11 Computer players**: AI for majors (personalities) and minors.
 - [~] **12 Client: map rendering**: canvas hex map, pan/zoom, territory borders, system icons,
   procedural faction ship tokens, minimap.
-- [ ] **13 Client: UI**: new game setup, system panel, fleet panel and battle groups, build queue,
+- [~] **13 Client: UI**: new game setup, system panel, fleet panel and battle groups, build queue,
   research, diplomacy inbox, turn report, combat report.
 - [ ] **14 Hotseat play**: play locally with several humans plus AI end to end.
 - [ ] **15 Relay backend**: AWS SAM template (API Gateway WebSocket + Lambda + DynamoDB + S3), local dev

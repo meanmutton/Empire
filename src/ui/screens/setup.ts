@@ -1,0 +1,130 @@
+/** Title and new-game setup screen. */
+import { ABILITIES } from '../../data/abilities';
+import { factionDef, MAJOR_IDS } from '../../data/factions';
+import { MAP_SIZES, type NewGameOptions } from '../../engine/setup';
+import { VERSION } from '../../version';
+import { button, clear, h } from '../dom';
+import { rosterStrip } from '../gallery';
+import { injectStyles } from '../styles';
+
+export interface SetupChoice extends NewGameOptions {
+  online: boolean;
+}
+
+export interface TitleActions {
+  start(choice: SetupChoice): void;
+  /** Saved local games to offer, newest first. */
+  saves(): { id: string; label: string }[];
+  load(id: string): void;
+  deleteSave(id: string): void;
+  /** Join an online game by code (phase 16). */
+  join?(code: string, name: string): void;
+  /** Online games this browser has joined. */
+  onlineGames?(): { code: string; label: string }[];
+  resumeOnline?(code: string): void;
+}
+
+export function showTitle(root: HTMLElement, actions: TitleActions): void {
+  injectStyles();
+  const screen = h('div', { class: 'screen' });
+  clear(root).append(screen);
+  const seats: { faction: string; name: string }[] = [{ faction: 'concord', name: 'Player 1' }];
+  let size: keyof typeof MAP_SIZES = 'standard';
+  let seed = randomSeed();
+  let turnLimit = '';
+  let online = false;
+  const victory = { conquest: true, domination: true, ascendance: true, alliance: true };
+
+  const render = () => {
+    clear(screen);
+    screen.append(h('div', { class: 'title' }, 'EMPIRE'), h('div', { class: 'subtitle' }, `A game of galactic conquest · v${VERSION}`));
+    const cols = h('div', { style: 'display:grid;grid-template-columns:minmax(280px, 420px) minmax(300px, 1fr);gap:20px;max-width:1200px;margin:0 auto' });
+    const left = h('div');
+    const saves = actions.saves();
+    const onlineGames = actions.onlineGames?.() ?? [];
+    if (saves.length || onlineGames.length) {
+      left.append(h('h3', null, 'Continue'));
+      for (const s of saves) left.append(h('div', { class: 'row' }, button(s.label, () => actions.load(s.id), { cls: 'list-btn grow' }),
+        button('✕', () => { if (confirm('Delete this saved game?')) { actions.deleteSave(s.id); render(); } }, { cls: 'small ghost' })));
+      for (const o of onlineGames) left.append(button(`Online ${o.code}: ${o.label}`, () => actions.resumeOnline?.(o.code), { cls: 'list-btn' }));
+    }
+    if (actions.join) {
+      left.append(h('h3', null, 'Join an online game'));
+      const code = h('input', { placeholder: 'Game code', maxlength: '6', style: 'width:110px;text-transform:uppercase' });
+      const name = h('input', { placeholder: 'Your name', value: localStorageGet('empire.name') ?? '' , style: 'width:140px' });
+      left.append(h('div', { class: 'row' }, code, name, button('Join', () => {
+        localStorageSet('empire.name', name.value);
+        actions.join!(code.value.trim().toUpperCase(), name.value.trim() || 'Player');
+      }, { cls: 'primary' })));
+    }
+    left.append(h('h3', null, 'New game'));
+    if (actions.join) {
+      left.append(h('div', { class: 'row' },
+        button('On this device', () => { online = false; render(); }, { cls: `small ${!online ? 'on primary' : ''}` }),
+        button('Online (async)', () => { online = true; seats.splice(1); render(); }, { cls: `small ${online ? 'on primary' : ''}` })));
+      left.append(h('div', { class: 'dim', style: 'margin:4px 0 8px' }, online
+        ? 'You host. Others join with the game code and pick a free empire. Turns are taken one after another; nobody has to be online at the same time.'
+        : 'Up to five players share this device and take turns (hot seat). The computer plays everyone else.'));
+    }
+    seats.forEach((s, i) => {
+      const taken = new Set(seats.filter((_, j) => j !== i).map((x) => x.faction));
+      const sel = h('select', { onchange: (e: Event) => { s.faction = (e.target as HTMLSelectElement).value; render(); } },
+        ...MAJOR_IDS.filter((m) => !taken.has(m)).map((m) => h('option', { value: m, selected: m === s.faction }, factionDef(m).name)));
+      const name = h('input', { value: s.name, style: 'width:120px', oninput: (e: Event) => { s.name = (e.target as HTMLInputElement).value; } });
+      left.append(h('div', { class: 'row', style: 'margin:4px 0' }, name, sel,
+        seats.length > 1 ? button('✕', () => { seats.splice(i, 1); render(); }, { cls: 'small ghost' }) : null));
+    });
+    if (!online && seats.length < 5) {
+      left.append(button('+ Add player', () => {
+        const free = MAJOR_IDS.find((m) => !seats.some((x) => x.faction === m))!;
+        seats.push({ faction: free, name: `Player ${seats.length + 1}` });
+        render();
+      }, { cls: 'small' }));
+    }
+    const sizeSel = h('select', { onchange: (e: Event) => { size = (e.target as HTMLSelectElement).value as typeof size; } },
+      ...Object.entries(MAP_SIZES).map(([k, v]) => h('option', { value: k, selected: k === size }, `${k[0].toUpperCase() + k.slice(1)} (${v.width}×${v.height})`)));
+    const seedIn = h('input', { value: seed, style: 'width:120px', oninput: (e: Event) => { seed = (e.target as HTMLInputElement).value; } });
+    const limit = h('input', { value: turnLimit, placeholder: 'none', style: 'width:70px', oninput: (e: Event) => { turnLimit = (e.target as HTMLInputElement).value; } });
+    left.append(h('h3', null, 'Galaxy'), h('div', { class: 'kv' },
+      h('span', { class: 'k' }, 'Map size'), sizeSel,
+      h('span', { class: 'k' }, 'Seed'), seedIn,
+      h('span', { class: 'k' }, 'Turn limit'), limit));
+    left.append(h('h3', null, 'Victory'), h('div', { class: 'row wrap' }, ...(Object.keys(victory) as (keyof typeof victory)[]).map((k) =>
+      h('label', { class: 'row' }, h('input', { type: 'checkbox', checked: victory[k], onchange: (e: Event) => { victory[k] = (e.target as HTMLInputElement).checked; } }), k))));
+    left.append(h('div', { style: 'margin-top:16px' }, button(online ? 'Create online game' : 'Start game', () => {
+      actions.start({
+        seed: seed || randomSeed(), seats: seats.map((s, i) => ({ ...s, name: s.name.trim() || `Player ${i + 1}` })),
+        ...MAP_SIZES[size], turnLimit: turnLimit ? Math.max(10, Number(turnLimit)) : null, victory, online,
+      });
+    }, { cls: 'primary' })));
+
+    const right = h('div', null, h('h3', null, 'The great powers'));
+    for (const id of MAJOR_IDS) {
+      const d = factionDef(id);
+      const picked = seats.find((s) => s.faction === id);
+      right.append(h('div', { class: `faction-card ${picked ? 'taken' : ''}` },
+        h('div', { class: 'row' }, h('b', { style: `color:${d.color};font-size:15px` }, d.name), h('span', { class: 'grow' }),
+          picked ? h('span', { class: 'good' }, picked.name) : h('span', { class: 'dim' }, 'computer')),
+        h('div', { class: 'dim' }, `${d.species} · ${d.government}${d.inspiration ? ` · inspired by ${d.inspiration}` : ''}`),
+        h('div', null, d.text),
+        ...d.abilities.map((a) => h('div', { style: 'margin-top:3px' }, h('b', null, ABILITIES[a].name), ': ', h('span', { class: 'dim' }, ABILITIES[a].text))),
+        rosterStrip(id, 34)));
+    }
+    right.append(h('div', { class: 'dim' }, 'Ten of thirty minor factions join every game, always played by the computer.'));
+    cols.append(left, right);
+    screen.append(cols);
+  };
+  render();
+}
+
+export function randomSeed(): string {
+  const words = ['Orion', 'Lyra', 'Draco', 'Vela', 'Carina', 'Cygnus', 'Hydra', 'Aquila', 'Lupus', 'Pavo', 'Corvus', 'Fornax'];
+  return `${words[Math.floor(Math.random() * words.length)]}-${Math.floor(Math.random() * 9000 + 1000)}`;
+}
+
+function localStorageGet(k: string): string | null {
+  try { return localStorage.getItem(k); } catch { return null; }
+}
+function localStorageSet(k: string, v: string): void {
+  try { localStorage.setItem(k, v); } catch { /* ignore */ }
+}
