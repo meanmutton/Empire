@@ -91,9 +91,19 @@ export class MapView {
     return 1.5 * HEX * this.state.map.height + HEX / 2;
   }
 
+  /** Pixels on the right covered by the side panel, so centering uses the visible part of the map. */
+  rightInset = 0;
+
+  /** Screen position (CSS pixels, relative to the canvas) of a hex center. */
+  hexScreen(hex: number): { x: number; y: number } {
+    const p = hexToPixel(this.state.map, hex, HEX);
+    return { x: (p.x - this.camX) * this.zoom, y: (p.y - this.camY) * this.zoom };
+  }
+
   centerOn(hex: number): void {
     const p = hexToPixel(this.state.map, hex, HEX);
-    const { w, h } = this.size();
+    const { w: fullW, h } = this.size();
+    const w = Math.max(200, fullW - this.rightInset);
     this.camX = p.x - w / 2 / this.zoom;
     this.camY = p.y - h / 2 / this.zoom;
     this.clampCamera();
