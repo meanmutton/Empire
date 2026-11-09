@@ -166,24 +166,38 @@ major (§9.5). Each has 1–2 special abilities and a small roster (2–4 classe
   axial coordinates in the engine. The size is configurable (small 36×22, standard 50×30, huge 64×40).
 - Generated fresh each game from a seed.
 
-### 4.2 Hex types
+### 4.2 Hexes: terrain and star systems
+Every hex has a **terrain**, and may also contain one **star system**. These are separate: a system can sit
+in open space, an asteroid field, a nebula, or beside a neutron star or pulsar.
 
-| Type | Passable | Notes |
-|------|----------|-------|
-| Empty space | yes | Cheap to claim, no resources by itself (each owned hex gives +0.1 energy). |
-| Major home system | yes | Starts at development level 4; produces all resources; strong planetary defense. |
-| Minor home system | yes | Starts at development level 3. |
-| Developed system | yes | Pre-existing independent colony (level 1–2) with a neutral garrison; can be annexed or conquered. |
-| Habitable system | yes | Terran, Ocean, Desert, Arctic, Jungle, or Barren worlds; can be colonized. |
-| Gas giant | yes | Energy and exotics; outposts only. |
-| Asteroid field | yes | Rich metals; −1 movement to exit; +20% evasion for Fighters/Corvettes. |
-| Nebula | yes | Hides fleets from sensors outside the hex; shields −50% inside; science from survey. |
-| Neutron star | yes | High exotics and energy; ships ending a turn here take 5% hull damage. |
-| Pulsar | yes | Exotics; disrupts sensors 1 hex around. |
-| Black hole | no | Impassable; adjacent hexes get +science for science vessels. |
-| Ion storm | yes | Movement costs 2; no shields; drifts 1 hex every few turns *(later phase)*. |
-| Ancient ruins | yes | One-time survey reward (tech, resources, or a derelict ship); then a normal system. |
-| Wormhole | yes | Paired; moving into one ends movement at its twin. |
+**Terrain** (`TERRAIN_INFO` in `src/data/improvements.ts`)
+
+| Terrain | Move cost | Notes |
+|---------|-----------|-------|
+| Open space | 1 | Each owned hex gives +0.1 energy. |
+| Asteroid field | 2 | Systems here are asteroid-belt mining colonies, rich in metals. |
+| Nebula | 2 | Hides fleets from sensors outside the hex; shields −50% inside; systems inside get +1 science. |
+| Neutron star | 1 | Ships ending a turn here take 5% hull damage; systems here have a neutron star (high energy and exotics). |
+| Pulsar | 1 | −1 sensor range for ships inside; systems here orbit a pulsar (exotics, science). |
+| Ion storm | 2 | No shields inside. *(Later: drifts 1 hex every few turns.)* |
+| Black hole | — | Impassable. |
+| Wormhole | 1 | Paired; jumping to the twin costs 1 movement (0 for the Tal or with Wormhole Stabilization). |
+
+**Star systems** have a star (yellow, orange, red dwarf, blue giant, white, neutron, pulsar), a **planet
+type**, a size (1–5 improvement slots) and a development level (§5.2).
+
+| Planet type | Population | Notes |
+|-------------|------------|-------|
+| Terran, Ocean, Jungle | high | Best colony worlds; colony ships found a level-2 colony. |
+| Desert, Arctic | medium | Habitable; colony ships found a level-2 colony. |
+| Barren, Volcanic | very low | Metals; outposts. |
+| Gas giant | none | Energy and exotics; can only be developed to level 2 (outposts and orbital stations). |
+| Asteroid belt | very low | The system type found in asteroid fields; double metals with Deep-Core Mining. |
+
+A system's state comes from who owns it and how developed it is: **unsettled** (development 0, anyone can
+found an outpost or colony), an **independent colony** (pre-existing, level 1–2, with its own planetary defense
+and garrison), a faction's **colony**, or a **home system** (majors start at level 4, minors at 3). A system
+may also hold **ancient ruins**, a one-time reward for the first survey ship or colony.
 
 ### 4.3 Generation rules
 1. **Majors** are placed first, spread as evenly as possible (best-of-N candidate placement maximizing the
@@ -239,11 +253,14 @@ Planetary Shield (+defense), Ground Garrison (+army defense), Trade Port (+energ
 Academy (new units start veteran).
 
 ### 5.3 Claiming hexes
-- A hex becomes yours at the **start of your next turn** if, at the end of your turn, your ship or battle
-  group was in it with no enemy forces there. This gives enemies one round to contest or recapture it.
-- Claiming an **enemy-owned** hex requires being at war with its owner. Claiming a hex that contains a
-  developed system with defenses also requires reducing its planetary defense to 0 (bombardment) or invading
-  it with armies.
+- **Only empty hexes are taken by presence**: open space and unsettled star systems (development 0). Such a
+  hex becomes yours at the **start of your next turn** if, at the end of your turn, your ship or battle group
+  was in it with no other non-allied forces there. This gives enemies one round to contest or recapture it.
+- Taking an **enemy-owned** hex requires being at war with its owner.
+- **Settled planets** (any development level, including undefended outposts and independent colonies) are
+  never taken by presence: fleets knock their planetary defense down to 0 in combat, then armies **invade**
+  (§7.3).
+- An **enemy starbase** in a hex blocks any claim there until it is destroyed in combat.
 - An owned hex not connected to your home by a chain of owned hexes is **disconnected**: −50% yields
   *(tunable)*.
 

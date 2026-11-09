@@ -191,16 +191,18 @@ export function continuePaths(state: GameState, faction: FactionId): void {
 // ---------------------------------------------------------------------------------------------------------
 // Territory claims (§5.3)
 
-/** Whether `faction` may claim a hex it is sitting in. */
+/**
+ * Whether `faction` may claim a hex it is sitting in. Only empty hexes are taken by presence: open space
+ * and unsettled star systems. Settled planets (any development) must be invaded with armies, and an enemy
+ * starbase must be destroyed first (it counts as a non-friendly force in the hex).
+ */
 export function canClaim(state: GameState, faction: FactionId, hex: number): boolean {
   const h = state.map.hexes[hex];
   if (h.owner === faction) return false;
   if (h.owner && !atWar(state, faction, h.owner)) return false;
   if (h.terrain === 'blackHole') return false;
   if (othersAt(state, faction, hex)) return false;
-  const sys = h.system;
-  if (sys && sys.development > 0 && (sys.defense > 0 || sys.garrison > 0)) return false;
-  if (sys?.homeOf && sys.homeOf !== faction && sys.garrison > 0) return false;
+  if (h.system && h.system.development > 0) return false;
   return true;
 }
 
