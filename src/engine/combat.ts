@@ -20,7 +20,7 @@ import { atWar } from './query';
 import { techEffects } from './research';
 import { Rng } from './rng';
 import { spawnShip } from './setup';
-import type { FactionId, GameState } from './types';
+import type { BattleRecord, BattleSide, FactionId, GameState } from './types';
 
 /** Pseudo-faction id for independent (unowned) defended systems. */
 export const INDEPENDENT = '@independent';
@@ -167,6 +167,8 @@ export function resolveBattleAt(state: GameState, hex: number, active: FactionId
 
   const enemiesOf = (p: Party) => parties.filter((q) => hostile(state, hex, p.faction, q.faction));
   const durability = (p: Party) => p.units.reduce((a, u) => a + effHP(u, env), 0);
+  const notes = new Map<FactionId, string[]>(parties.map((p) => [p.faction, []]));
+  const before = snapshot(state, hex, parties);
 
   // Effective attack of p against its enemies (after shields and point defense).
   const attackOf = (p: Party): number => {
@@ -184,7 +186,12 @@ export function resolveBattleAt(state: GameState, hex: number, active: FactionId
       const xpMult = 1 + 0.05 * Math.max(0, u.xp - 1);
       total += (u.energy * (1 - shieldFrac) + u.missile * (1 - pdFrac) * (1 - shieldFrac / 2) + u.fighters * 6 * (1 - pdFrac * 0.5)) * xpMult;
     }
-    return total * partyMultiplier(state, hex, p, enemies, firstRound, env);
+    const n = notes.get(p.faction)!;
+    if (shieldFrac >= 0.05) n.push(`Enemy shields absorbed ${Math.round(shieldFrac * 100)}% of its beam fire.`);
+    if (pdFrac >= 0.05 && myMissiles > 0) n.push(`Enemy point defense stopped ${Math.round(pdFrac * 100)}% of its missiles and fighters.`);
+    const { mult, reasons } = partyMultiplier(state, hex, p, enemies, firstRound, env);
+    n.push(...reasons);
+    return total * mult;
   };
 
   const A = new Map(parties.map((p) => [p.faction, attackOf(p)]));
@@ -209,7 +216,10 @@ export function resolveBattleAt(state: GameState, hex: number, active: FactionId
     const own = S(q.faction);
     let fraction = own > 0 ? 0.5 * Math.pow(enemyStrength / own, 0.75) : enemyStrength > 0 ? 1 : 0;
     fraction *= rng.float(BALANCE.combatRandomLow, BALANCE.combatRandomHigh);
-    if (firstRound && attackers.some((p) => hasAbility(p.faction, 'solarFlare'))) fraction += 0.1;
+    if (firstRound && attackers.some((p) => hasAbility(p.faction, 'solarFlare'))) {
+      fraction += 0.1;
+      notes.get(q.faction)!.push('Hit by a Solar Flare: +10% losses.');
+    }
     fraction = Math.min(1, fraction);
     const pool = Math.min(fraction * (D.get(q.faction) ?? 0), rawCap);
     incoming.set(q.faction, pool);
@@ -300,31 +310,105 @@ export function resolveBattleAt(state: GameState, hex: number, active: FactionId
       for (const e of foes) if (e !== INDEPENDENT && state.factions[e]?.kind === 'major') fl[`beat:${e}`] = 1;
     }
   }
-  log(state, involved, 'battle', `Battle at ${name}: ${summary}.`, hex, lost);
+  const record = recordBattle(state, hex, firstRound, parties, before, notes, A, D, dealt, incoming, env, (p) => enemiesOf(p).length > 0);
+  log(state, involved, 'battle', `Battle at ${name}: ${summary}.`, hex, lost, record.id);
   return report;
 }
 
-function partyMultiplier(state: GameState, hex: number, p: Party, enemies: Party[], firstRound: boolean, env: number): number {
-  if (p.faction === INDEPENDENT) return 1;
+interface Snapshot {
+  faction: FactionId;
+  ships: { id: string; design: string; hull: number; fighters: number }[];
+  starbase?: { id: string; tier: number; hull: number };
+  planet?: number;
+}
+
+function snapshot(state: GameState, hex: number, parties: Party[]): Snapshot[] {
+  return parties.map((p) => {
+    const snap: Snapshot = { faction: p.faction, ships: [] };
+    for (const u of p.units) {
+      if (u.kind === 'ship') {
+        const s = state.ships[u.id];
+        snap.ships.push({ id: u.id, design: s.design, hull: s.hull, fighters: s.fighters });
+      } else if (u.kind === 'starbase') {
+        snap.starbase = { id: u.id, tier: state.starbases[u.id].tier, hull: state.starbases[u.id].hull };
+      } else {
+        snap.planet = state.map.hexes[hex].system?.defense ?? 0;
+      }
+    }
+    return snap;
+  });
+}
+
+/** Builds and stores the detailed record shown in the battle report dialog. */
+function recordBattle(
+  state: GameState, hex: number, firstRound: boolean, parties: Party[], before: Snapshot[], notes: Map<FactionId, string[]>,
+  A: Map<FactionId, number>, D: Map<FactionId, number>, dealt: Map<FactionId, number>, taken: Map<FactionId, number>,
+  env: number, fights: (p: Party) => boolean,
+): BattleRecord {
+  const h = state.map.hexes[hex];
+  const sides: BattleSide[] = before.map((snap) => {
+    const byDesign = new Map<string, BattleSide['ships'][number]>();
+    let fBefore = 0, fAfter = 0;
+    for (const s of snap.ships) {
+      const row = byDesign.get(s.design) ?? { design: s.design, before: 0, destroyed: 0, captured: 0, damaged: 0, hullBefore: 0, hullAfter: 0 };
+      byDesign.set(s.design, row);
+      row.before++;
+      row.hullBefore += s.hull;
+      fBefore += s.fighters;
+      const now = state.ships[s.id];
+      if (!now) row.destroyed++;
+      else if (now.owner !== snap.faction) row.captured++;
+      else {
+        row.hullAfter += now.hull;
+        fAfter += now.fighters;
+        if (now.hull < s.hull) row.damaged++;
+      }
+    }
+    const side: BattleSide = {
+      faction: snap.faction, attack: Math.round(A.get(snap.faction) ?? 0), durability: Math.round(D.get(snap.faction) ?? 0),
+      dealt: Math.round(dealt.get(snap.faction) ?? 0), taken: Math.round(taken.get(snap.faction) ?? 0),
+      ships: [...byDesign.values()], fighters: { before: fBefore, after: fAfter }, notes: [...(notes.get(snap.faction) ?? [])],
+    };
+    if (snap.starbase) side.starbase = { tier: snap.starbase.tier, hullBefore: snap.starbase.hull, hullAfter: state.starbases[snap.starbase.id]?.hull ?? 0 };
+    if (snap.planet !== undefined) side.planet = { system: h.system?.name ?? '', defenseBefore: snap.planet, defenseAfter: h.system?.defense ?? 0 };
+    const party = parties.find((p) => p.faction === snap.faction)!;
+    if (!fights(party)) side.notes.push('Took no part in the fighting.');
+    if (snap.ships.some((s) => ROLES[design(s.design).role].escort)) side.notes.push('Its escorts drew enemy fire away from the other ships.');
+    return side;
+  });
+  const terrainNote = env === 0.5 ? 'Shields worked at half strength inside the nebula.' : env === 0 ? 'Shields failed inside the ion storm.' : '';
+  if (terrainNote) for (const s of sides) s.notes.push(terrainNote);
+  const record: BattleRecord = {
+    id: newId(state, 'w'), turn: state.turn, seq: state.seq, hex, place: h.system?.name ?? 'deep space', terrain: h.terrain, firstRound, sides,
+  };
+  state.battleLog ??= [];
+  state.battleLog.push(record);
+  return record;
+}
+
+function partyMultiplier(state: GameState, hex: number, p: Party, enemies: Party[], firstRound: boolean, env: number): { mult: number; reasons: string[] } {
+  if (p.faction === INDEPENDENT) return { mult: 1, reasons: [] };
   const f = p.faction;
   let m = 1;
-  if (state.factions[f].flags.unsupplied) m -= BALANCE.negativeEnergyCombatPenalty;
-  if (firstRound && hasAbility(f, 'wayOfTheBlade')) m += 0.25;
-  if (firstRound && enemies.some((e) => e.faction !== INDEPENDENT && hasAbility(e.faction, 'harmonicCalm'))) m -= 0.2;
+  const reasons: string[] = [];
+  const add = (d: number, why: string) => { m += d; reasons.push(`${why}: ${d > 0 ? '+' : ''}${Math.round(d * 100)}% attack.`); };
+  if (state.factions[f].flags.unsupplied) add(-BALANCE.negativeEnergyCombatPenalty, 'Out of energy (unsupplied)');
+  if (firstRound && hasAbility(f, 'wayOfTheBlade')) add(0.25, 'Way of the Blade, first round');
+  if (firstRound && enemies.some((e) => e.faction !== INDEPENDENT && hasAbility(e.faction, 'harmonicCalm'))) add(-0.2, 'Myrr Harmonic Calm, first round');
   const terrain = state.map.hexes[hex].terrain;
-  if (hasAbility(f, 'ambush') && (terrain === 'nebula' || terrain === 'asteroids')) m += 0.3;
-  if (hasAbility(f, 'stampede') && state.map.hexes[hex].owner === f) m += 0.2;
+  if (hasAbility(f, 'ambush') && (terrain === 'nebula' || terrain === 'asteroids')) add(0.3, 'Ambush from cover');
+  if (hasAbility(f, 'stampede') && state.map.hexes[hex].owner === f) add(0.2, 'Stampede on home ground');
   const owner = state.map.hexes[hex].owner;
-  if (owner && owner !== f && hasAbility(owner, 'bribery') && enemies.some((e) => e.faction === owner)) m -= 0.3;
-  if (hasAbility(f, 'grudge') && enemies.some((e) => e.faction === 'lattice')) m += 0.25;
-  if (enemies.some((e) => state.factions[f].flags[`grudge:${e.faction}`])) m += 0.1;
+  if (owner && owner !== f && hasAbility(owner, 'bribery') && enemies.some((e) => e.faction === owner)) add(-0.3, 'Crews bribed by the Ophidian Syndicate');
+  if (hasAbility(f, 'grudge') && enemies.some((e) => e.faction === 'lattice')) add(0.25, 'Grudge against the Lattice');
+  if (enemies.some((e) => state.factions[f].flags[`grudge:${e.faction}`])) add(0.1, 'Avenging a broken treaty');
   if (hasAbility(f, 'huntersInstinct')) {
     const eu = enemies.flatMap((e) => e.units);
     const hp = eu.reduce((a, u) => a + u.hull, 0), max = eu.reduce((a, u) => a + u.maxHull, 0);
-    if (max > 0 && hp / max < 0.9) m += 0.3;
+    if (max > 0 && hp / max < 0.9) add(0.3, "Hunter's Instinct against damaged prey");
   }
   void env;
-  return Math.max(0.1, m);
+  return { mult: Math.max(0.1, m), reasons };
 }
 
 /** Focus-fire damage onto a party's units. Returns destroyed units. */
