@@ -8,14 +8,24 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p relay --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "relay": "tsx relay/src/local-server.ts",
+    "relay:bundle": "esbuild relay/src/lambda.ts --bundle --platform=node --format=esm --target=es2022 --external:@aws-sdk/* --outfile=relay/.build/lambda.mjs"
   },
   "devDependencies": {
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.1164.0",
+    "@aws-sdk/client-dynamodb": "^3.1164.0",
+    "@aws-sdk/lib-dynamodb": "^3.1164.0",
+    "@types/node": "^22.20.5",
+    "@types/ws": "^8.18.1",
+    "esbuild": "^0.27.4",
+    "tsx": "^4.20.6",
     "typescript": "5.9.3",
     "vite": "8.3.7",
     "vite-plugin-singlefile": "2.3.4",
-    "vitest": "5.1.0"
+    "vitest": "5.1.0",
+    "ws": "^8.18.3"
   }
 }
