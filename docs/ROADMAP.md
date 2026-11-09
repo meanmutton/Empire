@@ -18,7 +18,7 @@ Status key: `[ ]` not started, `[~]` PR open, `[x]` merged.
   core state types, serialization.
 - [~] **03 Faction and unit data**: 5 majors, 30 minors, abilities, ship classes, roles, per-faction rosters,
   improvements, balance constants.
-- [ ] **04 Map generation**: hex types, major/minor placement with spacing, starting territories,
+- [~] **04 Map generation**: hex types, major/minor placement with spacing, starting territories,
   fairness pass, wormholes; tests on the spacing and adjacency rules.
 - [ ] **05 Economy**: income, upkeep, population growth, system development, improvements, build queues.
 - [ ] **06 Movement and territory**: fleets, battle groups (≤6), movement points, terrain costs, pathing,
