@@ -46,7 +46,7 @@ export const ABILITIES = {
   infiltrators: { name: 'Infiltrators', text: '+40% spy mission success.' },
   berserkers: { name: 'Berserkers', text: '+30% attack, −30% shields.' },
   boardingParties: { name: 'Boarding Parties', text: 'May capture crippled enemy ships.' },
-  blackMarket: { name: 'Black Market', text: 'Trades resources at 1:1 instead of 2:1.' },
+  blackMarket: { name: 'Black Market', text: 'Pays no fee on the galactic exchange (others pay 40%); anyone with a trade agreement with them pays only 20%.' },
   bribery: { name: 'Bribery', text: 'Enemy crews fighting in their territory are paid off: −30% damage.' },
   photonicWeapons: { name: 'Photonic Weapons', text: 'Energy weapons +25%.' },
   stellarFeeding: { name: 'Stellar Feeding', text: 'Double energy from stars.' },

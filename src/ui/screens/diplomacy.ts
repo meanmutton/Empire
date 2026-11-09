@@ -4,6 +4,8 @@ import { TECH_BY_ID } from '../../data/techs';
 import { hasEmbassy, opinionOf } from '../../engine/agents';
 import { AGREEMENTS, canPropose, proposalScore, type AgreementId } from '../../engine/diplomacy';
 import { relation } from '../../engine/query';
+import { getBit } from '../../engine/bitset';
+import { itemValue } from '../../engine/diplomacy';
 import type { FactionId, Proposal, TradeItem } from '../../engine/types';
 import { button, clear, h, modal } from '../dom';
 import { factionChip, ICON, num } from '../format';
@@ -20,6 +22,7 @@ export function describeItem(ui: GameUI, item: TradeItem): string {
     case 'tech': return `Tech: ${TECH_BY_ID[item.tech]?.name ?? item.tech}`;
     case 'fleet': return `Fleet: ${g.fleets[item.fleet]?.name ?? 'gone'} (${g.fleets[item.fleet]?.ships.length ?? 0} ships)`;
     case 'hex': return `Territory: ${g.map.hexes[item.hex].system?.name ?? `hex ${item.hex}`}`;
+    case 'army': return `Army (strength ${g.armies[item.army]?.strength ?? '?'})`;
     case 'agreement': return AGREEMENTS[item.agreement as AgreementId]?.name ?? item.agreement;
     case 'status': return item.status === 'relations' || item.status === 'neutral' ? 'Peace' : item.status === 'nap' ? 'Non-aggression pact' : 'Alliance';
     case 'vassal': return 'Become a vassal';
@@ -76,7 +79,10 @@ export function openDiplomacy(ui: GameUI): void {
         actions.append(button('Talk', () => ui.openMessages(`ai:${o}`), { cls: 'small' }));
       }
       if (ui.myTurn) {
-        if (canPropose(g, me, o)) actions.append(button('Propose…', () => openProposal(ui, o, render), { cls: 'small' }));
+        if (canPropose(g, me, o)) {
+          actions.append(button('Propose…', () => openProposal(ui, o, render), { cls: 'small' }));
+          actions.append(button('Swap resources', () => openSwap(ui, o, render), { cls: 'small' }));
+        }
         if (r.status !== 'war') actions.append(button('Declare war', () => { if (confirm(`Declare war on the ${factionDef(o).name}?`) && ui.act({ type: 'declareWar', target: o })) render(); }, { cls: 'small danger' }));
         if (r.status === 'nap' || r.status === 'alliance') actions.append(button('Cancel treaty', () => { if (ui.act({ type: 'cancelTreaty', target: o })) render(); }, { cls: 'small' }));
         const guest = guests.find((a) => a.owner === o);
@@ -155,6 +161,8 @@ function itemAdder(ui: GameUI, giver: FactionId, taker: FactionId, add: (i: Trad
     h('option', { value: 'agreement' }, 'Agreement'), h('option', { value: 'status' }, 'Treaty / peace'), h('option', { value: 'map' }, 'Star charts'),
     giver !== ui.viewer && g.factions[giver].kind === 'minor' ? h('option', { value: 'vassal' }, 'Vassalage') : null,
     giver === ui.viewer ? h('option', { value: 'fleet' }, 'A fleet') : null,
+    h('option', { value: 'hex' }, 'Territory (a system)'),
+    h('option', { value: 'army' }, 'An army'),
     h('option', { value: 'returnAgent' }, 'Return a prisoner'));
   const detail = h('span', { class: 'row' });
   const renderDetail = () => {
@@ -187,6 +195,21 @@ function itemAdder(ui: GameUI, giver: FactionId, taker: FactionId, add: (i: Trad
       const fleets = Object.values(g.fleets).filter((f) => f.owner === ui.viewer);
       const sel = h('select', null, ...fleets.map((f) => h('option', { value: f.id }, `${f.name} (${f.ships.length})`)));
       detail.append(sel, button('Add', () => sel.value && add({ kind: 'fleet', fleet: sel.value }), { cls: 'small' }));
+    } else if (k === 'hex') {
+      const explored = g.factions[ui.viewer].explored;
+      const systems = g.map.hexes.map((x, i) => ({ x, i })).filter(({ x, i }) => x.owner === giver && x.system && x.system.homeOf !== giver && getBit(explored, i));
+      if (!systems.length) detail.append(h('span', { class: 'dim' }, 'No tradeable systems you know of (home systems cannot be traded).'));
+      else {
+        const sel = h('select', null, ...systems.map(({ x, i }) => h('option', { value: String(i) }, `${x.system!.name} (level ${x.system!.development})`)));
+        detail.append(sel, button('Add', () => add({ kind: 'hex', hex: Number(sel.value) }), { cls: 'small' }));
+      }
+    } else if (k === 'army') {
+      const armies = Object.values(g.armies).filter((a) => a.owner === giver && a.hex !== null);
+      if (!armies.length) detail.append(h('span', { class: 'dim' }, 'No armies on the ground.'));
+      else {
+        const sel = h('select', null, ...armies.map((a) => h('option', { value: a.id }, `Strength ${a.strength}${a.xp ? `, ${['', 'regular', 'veteran', 'elite'][a.xp]}` : ''} at ${g.map.hexes[a.hex!].system?.name ?? 'a hex'}`)));
+        detail.append(sel, button('Add', () => add({ kind: 'army', army: sel.value }), { cls: 'small' }));
+      }
     } else if (k === 'returnAgent') {
       const prisoners = Object.values(g.agents).filter((a) => a.capturedBy === giver && a.owner === taker);
       if (!prisoners.length) detail.append(h('span', { class: 'dim' }, 'No prisoners.'));
@@ -197,4 +220,47 @@ function itemAdder(ui: GameUI, giver: FactionId, taker: FactionId, add: (i: Trad
   renderDetail();
   wrap.append(h('div', { class: 'row wrap' }, kind, detail));
   return wrap;
+}
+
+/** A one-on-one resource swap: one resource for another, sent as a proposal. */
+function openSwap(ui: GameUI, to: FactionId, done: () => void): void {
+  const g = ui.game;
+  const res = ['energy', 'metals', 'exotics'] as const;
+  const giveRes = h('select', null, ...res.map((r) => h('option', { value: r }, `${ICON[r]} ${r}`)));
+  const getRes = h('select', null, ...res.map((r, i) => h('option', { value: r, selected: i === 1 }, `${ICON[r]} ${r}`)));
+  const giveAmt = h('input', { type: 'number', value: '100', min: '1', style: 'width:80px' });
+  const getAmt = h('input', { type: 'number', value: '50', min: '1', style: 'width:80px' });
+  const hint = h('div', { class: 'dim' });
+  const items = () => ({
+    give: [{ kind: 'resource', resource: giveRes.value, amount: Math.max(1, Number(giveAmt.value)) }] as TradeItem[],
+    receive: [{ kind: 'resource', resource: getRes.value, amount: Math.max(1, Number(getAmt.value)) }] as TradeItem[],
+  });
+  const update = () => {
+    const { give, receive } = items();
+    const ai = g.factions[to].controller === 'ai';
+    if (giveRes.value === getRes.value) { hint.textContent = 'Pick two different resources.'; return; }
+    if (!ai) { hint.textContent = 'They will answer on their turn.'; return; }
+    const p: Proposal = { id: 'preview', from: ui.viewer, to, turn: g.turn, give, receive, answer: null };
+    hint.textContent = proposalScore(g, p) > 0 ? 'They will probably accept.' : 'They will probably refuse.';
+  };
+  const fair = () => {
+    const give = items().give[0];
+    const per = itemValue(g, to, ui.viewer, { kind: 'resource', resource: getRes.value as 'energy', amount: 1 });
+    getAmt.value = String(Math.max(1, Math.floor(itemValue(g, ui.viewer, to, give) / per)));
+    update();
+  };
+  for (const el of [giveRes, getRes, giveAmt, getAmt]) el.addEventListener('input', update);
+  const body = h('div', null,
+    h('div', { class: 'row wrap' }, 'You give', giveAmt, giveRes),
+    h('div', { class: 'row wrap', style: 'margin-top:6px' }, 'You get', getAmt, getRes, button('Fair amount', fair, { cls: 'small' })),
+    h('div', { style: 'margin:8px 0' }, hint),
+    h('div', { class: 'dim', style: 'font-size:12px' }, 'One-on-one swaps carry no fee, unlike the galactic exchange.'),
+    h('div', { class: 'row', style: 'margin-top:8px' }, h('span', { class: 'grow' }),
+      button('Send offer', () => {
+        if (giveRes.value === getRes.value) return;
+        const { give, receive } = items();
+        if (ui.act({ type: 'propose', to, give, receive })) { m.close(); done(); }
+      }, { cls: 'primary' })));
+  const m = modal(`Swap resources with the ${factionDef(to).name}`, body);
+  update();
 }

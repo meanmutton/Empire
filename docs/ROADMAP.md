@@ -54,19 +54,18 @@ Ordered roughly by value. Open a PR per item or small group.
    `test/ai.test.ts`); some AIs field 150–200 ships; tune claims, upkeep and research costs after playtests.
    Aggressive AIs all pick on the weakest neighbor at once (in one seed the Concord is reduced to a single
    system by turn 80); consider making AIs less eager to join a pile-on, or more eager to defend victims.
-4. **Diplomacy UI**: the engine supports trading territory (hexes); the proposal builder doesn't offer it yet.
-5. **Manufacturing agreements**: currently −10% ship cost; the design also lets you build at partners'
+4. **Manufacturing agreements**: currently −10% ship cost; the design also lets you build at partners'
    shipyards.
-6. **Offline notifications**: Web Push or email when it becomes your turn (the relay knows whose turn it is).
-7. **Combat presentation**: battle report dialog with before/after per side, simple animations, sound.
-8. **AI depth**: coordinated invasions with transports, starbase placement at chokepoints, smarter spy
+5. **Offline notifications**: Web Push or email when it becomes your turn (the relay knows whose turn it is).
+6. **Combat presentation**: battle report dialog with before/after per side, simple animations, sound.
+7. **AI depth**: coordinated invasions with transports, starbase placement at chokepoints, smarter spy
    targeting, alliance war coordination, using Mercenary Contracts / For Hire / Star Charts actively.
-9. **Unique techs per major** and ion storms that drift (both in the design doc as later work).
-10. **Free-text chat with computer leaders** (option 3 from the messaging discussion): an optional mode where a
+8. **Unique techs per major** and ion storms that drift (both in the design doc as later work).
+9. **Free-text chat with computer leaders** (option 3 from the messaging discussion): an optional mode where a
    language model voices each computer power, with replies saved in the state and any effect still going
    through statements and proposals. Needs an API key on the relay.
-11. **Hidden information**: run the engine inside the Lambda and send each player only what they can see.
-12. **Tutorial**: a guided first few turns.
+10. **Hidden information**: run the engine inside the Lambda and send each player only what they can see.
+11. **Tutorial**: a guided first few turns.
 
 ## Before we call it done
 These come last, once the game is settled. The owner wants to collaborate on both.

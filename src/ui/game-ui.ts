@@ -26,6 +26,7 @@ import { injectStyles } from './styles';
 import { isGameOver } from '../engine/victory';
 import { unreadCount, type Messaging } from './messaging';
 import { openMessages } from './screens/messages';
+import { openMarket } from './screens/market';
 import { tokenImage } from './tokens';
 
 export interface GameHost {
@@ -250,6 +251,7 @@ export class GameUI {
       h('span', { class: 'res', title: 'Science per turn' }, ICON.science, h('b', null, `+${num(inc.net.science)}`), h('span', { class: r.current ? 'dim' : 'bad' }, researchText)),
       button('Research', () => openResearch(this)),
       button(pending ? `Diplomacy (${pending})` : 'Diplomacy', () => openDiplomacy(this), { cls: pending ? 'primary' : '' }),
+      button('Market', () => openMarket(this)),
       button('Report', () => openReport(this)),
       this.host.messaging ? (() => {
         const unread = unreadCount(this.host.messaging, this.game, this.viewer);

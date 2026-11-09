@@ -148,6 +148,12 @@ function validItem(state: GameState, giver: FactionId, taker: FactionId, item: T
       if (h.system?.homeOf === giver) return { ok: false, reason: 'A home system cannot be traded.' };
       return { ok: true };
     }
+    case 'army': {
+      const a = state.armies[item.army];
+      if (!a || a.owner !== giver) return { ok: false, reason: 'No such army.' };
+      if (a.hex === null) return { ok: false, reason: 'Armies aboard ships cannot be traded; land them first.' };
+      return { ok: true };
+    }
     case 'agreement':
       if (!(item.agreement in AGREEMENTS)) return { ok: false, reason: 'Unknown agreement.' };
       if (r.status === 'war') return { ok: false, reason: 'Make peace first.' };
@@ -235,7 +241,17 @@ function transfer(state: GameState, giver: FactionId, taker: FactionId, item: Tr
       }
       break;
     }
+    case 'army': {
+      const a = state.armies[item.army];
+      a.owner = taker;
+      a.ship = null;
+      a.hex = t.home;
+      break;
+    }
     case 'hex':
+      // The giver's garrison goes home; a starbase there changes hands with the territory.
+      for (const a of Object.values(state.armies)) if (a.owner === giver && a.hex === item.hex) a.hex = g.home;
+      for (const b of Object.values(state.starbases)) if (b.owner === giver && b.hex === item.hex) b.owner = taker;
       state.map.hexes[item.hex].owner = taker;
       state.map.hexes[item.hex].pendingClaim = null;
       if (state.map.hexes[item.hex].system) state.map.hexes[item.hex].system!.queue = [];
@@ -300,6 +316,10 @@ export function itemValue(state: GameState, from: FactionId, to: FactionId, item
     case 'hex': {
       const sys = state.map.hexes[item.hex].system;
       return sys ? 80 + sys.development * 60 + sys.population * 10 : 15;
+    }
+    case 'army': {
+      const a = state.armies[item.army];
+      return a ? a.strength * 4 * (1 + 0.1 * a.xp) : 0;
     }
     case 'agreement': {
       const theirs = factionIncome(state, from).gross;

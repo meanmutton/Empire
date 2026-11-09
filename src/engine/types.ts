@@ -212,6 +212,7 @@ export type TradeItem =
   | { kind: 'tech'; tech: string }
   | { kind: 'fleet'; fleet: Id }
   | { kind: 'hex'; hex: number }
+  | { kind: 'army'; army: Id }
   | { kind: 'agreement'; agreement: string }
   | { kind: 'status'; status: RelationStatus }
   | { kind: 'vassal' }
@@ -298,6 +299,8 @@ export interface GameState {
   seq: number;
   nextId: number;
   winner: FactionId | null;
+  /** Galactic exchange prices (energy-equivalent value per unit). */
+  market?: { prices: Record<StockpileKind, number> };
   /** Set when the game has ended, with or without a winner. */
   over?: { reason: string; turn: number };
   /**
