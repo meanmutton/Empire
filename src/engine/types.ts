@@ -249,6 +249,10 @@ export interface GameState {
   relations: Record<string, Relation>;
   proposals: Record<Id, Proposal>;
   log: GameEvent[];
+  /** Hex index → combat sequence number of the last round fought there (to detect a battle's first round). */
+  battles: Record<number, number>;
+  /** Increments every faction turn; used for battle round tracking. */
+  seq: number;
   nextId: number;
   winner: FactionId | null;
 }

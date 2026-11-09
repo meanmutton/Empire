@@ -6,8 +6,16 @@ import type { GameState, RelationStatus } from '../src/engine/types';
 /** Minors used by tests, so ability tests can rely on them. */
 export const TEST_MINORS = ['nhar', 'myrr', 'quorr', 'ghaltar', 'ixxi', 'celestine', 'cryx', 'kethran', 'skarn', 'tal'];
 
+const cache = new Map<string, GameState>();
+
+/** A fresh game for tests. Generated once per seed, then cloned. */
 export function newGame(seed = 'test'): GameState {
-  return createGame({ seed, seats: [{ faction: 'concord', name: 'Tester' }], minors: TEST_MINORS });
+  let g = cache.get(seed);
+  if (!g) {
+    g = createGame({ seed, seats: [{ faction: 'concord', name: 'Tester' }], minors: TEST_MINORS });
+    cache.set(seed, g);
+  }
+  return structuredClone(g);
 }
 
 export function setStatus(g: GameState, a: string, b: string, status: RelationStatus): void {
