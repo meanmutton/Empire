@@ -289,6 +289,17 @@ export function resolveBattleAt(state: GameState, hex: number, active: FactionId
   const summary = report.parties.map((p) => `${p.faction} lost ${p.lost}/${p.units}${p.captured ? ` (${p.captured} captured)` : ''}`).join(', ');
   const lost: Record<string, number> = {};
   for (const p of report.parties) if (p.faction !== INDEPENDENT) lost[p.faction] = p.lost + p.captured;
+  // Battle wins (for the Glorious Campaign): a side that lost fewer ships than its enemies did.
+  for (const q of parties) {
+    if (q.faction === INDEPENDENT || state.factions[q.faction].kind !== 'major') continue;
+    const foes = enemiesOf(q).map((p) => p.faction);
+    const theirLosses = foes.reduce((a, e) => a + (report.parties.find((p) => p.faction === e)?.lost ?? 0) + (report.parties.find((p) => p.faction === e)?.captured ?? 0), 0);
+    if (theirLosses > (lost[q.faction] ?? 0)) {
+      const fl = state.factions[q.faction].flags;
+      fl.battleWins = (fl.battleWins ?? 0) + 1;
+      for (const e of foes) if (e !== INDEPENDENT && state.factions[e]?.kind === 'major') fl[`beat:${e}`] = 1;
+    }
+  }
   log(state, involved, 'battle', `Battle at ${name}: ${summary}.`, hex, lost);
   return report;
 }

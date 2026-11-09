@@ -6,6 +6,7 @@ import { emptyBits, setBits } from './bitset';
 import { hexesWithin } from './hex';
 import { newId, relationKey } from './ids';
 import { generateMap } from './mapgen';
+import { DEFAULT_TURN_LIMIT, PRESETS, type PresetId } from '../data/victories';
 import { refreshOffers } from './mercenaries';
 import { grantTech } from './research';
 import { TECHS } from '../data/techs';
@@ -22,8 +23,10 @@ export interface NewGameOptions {
   /** Force a particular set of minors (otherwise 10 random). */
   minors?: FactionId[];
   minorCount?: number;
+  /** Victory preset (default Classic). Peaceful games leave the Ryn'kai out. */
+  preset?: PresetId;
+  /** Default 200 rounds; null for no limit. */
   turnLimit?: number | null;
-  victory?: Partial<GameConfig['victory']>;
 }
 
 export const MAP_SIZES = {
@@ -33,27 +36,30 @@ export const MAP_SIZES = {
 } as const;
 
 export function createGame(opts: NewGameOptions): GameState {
-  if (opts.seats.length < 1 || opts.seats.length > 5) throw new Error('A game needs 1–5 human players.');
+  const preset = opts.preset ?? 'classic';
+  const majors = PRESETS[preset].majors;
+  if (opts.seats.length < 1 || opts.seats.length > majors.length) throw new Error(`A game needs 1–${majors.length} human players.`);
   const seen = new Set<string>();
   for (const s of opts.seats) {
     if (!MAJOR_IDS.includes(s.faction)) throw new Error(`${s.faction} is not a major faction.`);
+    if (!majors.includes(s.faction)) throw new Error(`The ${factionDef(s.faction).name} are not in ${PRESETS[preset].name} games.`);
     if (seen.has(s.faction)) throw new Error(`${s.faction} was picked twice.`);
     seen.add(s.faction);
   }
   const rngState = seedRng(opts.seed);
   const rng = new Rng(rngState);
-  const minors = opts.minors ?? pickMinors(rng, opts.minorCount ?? 10);
+  const minors = opts.minors ?? pickMinors(rng, opts.minorCount ?? 10, majors);
   const config: GameConfig = {
     width: opts.width ?? MAP_SIZES.standard.width,
     height: opts.height ?? MAP_SIZES.standard.height,
     seats: opts.seats,
     minors,
-    victory: { conquest: true, domination: true, ascendance: true, alliance: true, ...opts.victory },
-    dominationShare: 0.4,
-    turnLimit: opts.turnLimit ?? null,
+    preset,
+    majors,
+    turnLimit: opts.turnLimit === undefined ? DEFAULT_TURN_LIMIT : opts.turnLimit,
   };
-  const all = [...MAJOR_IDS, ...minors];
-  const gen = generateMap({ width: config.width, height: config.height, majors: MAJOR_IDS, minors }, rng);
+  const all = [...majors, ...minors];
+  const gen = generateMap({ width: config.width, height: config.height, majors, minors }, rng);
 
   const state: GameState = {
     schema: STATE_SCHEMA_VERSION,
@@ -130,9 +136,9 @@ export function createGame(opts: NewGameOptions): GameState {
 }
 
 /** Picks minors at random, skipping any whose color is too close to a faction already in the game. */
-function pickMinors(rng: Rng, count: number): FactionId[] {
+function pickMinors(rng: Rng, count: number, majors: FactionId[]): FactionId[] {
   const chosen: FactionId[] = [];
-  const colors = MAJOR_IDS.map((m) => factionDef(m).color);
+  const colors = majors.map((m) => factionDef(m).color);
   for (const threshold of [MIN_COLOR_DISTANCE, 30, 0]) {
     for (const m of rng.shuffle(MINOR_IDS)) {
       if (chosen.length >= count) break;

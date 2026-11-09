@@ -48,22 +48,26 @@ Ordered roughly by value. Open a PR per item or small group.
 1. **Deploy the relay** (`docs/RELAY.md`) and build `dist/index.html` with `EMPIRE_RELAY` baked in. The game
    itself is one HTML file players open directly; only online play needs the relay. Needs the owner's AWS
    account.
-2. **Victory conditions per faction**: agree on `docs/VICTORY_IDEAS.md` with the owner, then build the chosen
-   victories, a Victory screen with progress, and per-faction availability.
-3. **Balance from real games**: territory spreads fast (~230 hexes per major by turn 80 in
+2. **Balance from real games**: territory spreads fast (~230 hexes per major by turn 80 in
    `test/ai.test.ts`); some AIs field 150–200 ships; tune claims, upkeep and research costs after playtests.
    Aggressive AIs all pick on the weakest neighbor at once (in one seed the Concord is reduced to a single
    system by turn 80); consider making AIs less eager to join a pile-on, or more eager to defend victims.
-4. **Offline notifications**: Web Push or email when it becomes your turn (the relay knows whose turn it is).
-5. **Combat presentation**: battle report dialog with before/after per side, simple animations, sound.
-6. **AI depth**: coordinated invasions with transports, starbase placement at chokepoints, smarter spy
+3. **Offline notifications**: Web Push or email when it becomes your turn (the relay knows whose turn it is).
+4. **Combat presentation**: battle report dialog with before/after per side, simple animations, sound.
+5. **AI depth**: coordinated invasions with transports, starbase placement at chokepoints, smarter spy
    targeting, alliance war coordination, using Mercenary Contracts / For Hire / Star Charts actively.
-7. **Unique techs per major** and ion storms that drift (both in the design doc as later work).
-8. **Free-text chat with computer leaders** (option 3 from the messaging discussion): an optional mode where a
+6. **Unique techs per major** and ion storms that drift (both in the design doc as later work).
+7. **Free-text chat with computer leaders** (option 3 from the messaging discussion): an optional mode where a
    language model voices each computer power, with replies saved in the state and any effect still going
    through statements and proposals. Needs an API key on the relay.
-9. **Hidden information**: run the engine inside the Lambda and send each player only what they can see.
-10. **Tutorial**: a guided first few turns.
+8. **Hidden information**: run the engine inside the Lambda and send each player only what they can see.
+9. **Tutorial**: a guided first few turns.
+
+## Parked
+- **Desktop app (Tauri or Electron)**: the game ships as a single HTML file for now. A Tauri (~10 MB) or
+  Electron (~150 MB) wrapper could later give it its own window and installer. A Node SEA was considered and
+  rejected for the game (it would need a hidden local server), though it could package the relay for
+  self-hosted online play.
 
 ## Before we call it done
 These come last, once the game is settled. The owner wants to collaborate on both.

@@ -28,6 +28,9 @@ h3 { margin:12px 0 6px; font-size:12px; letter-spacing:.08em; text-transform:upp
 #topbar { position:absolute; left:0; right:0; top:0; height:46px; display:flex; align-items:center; gap:14px; padding:0 12px;
   background:linear-gradient(#0b1122f5, #0b1122d0); border-bottom:1px solid var(--line); z-index:5; overflow-x:auto; white-space:nowrap; }
 #topbar .res { display:flex; align-items:center; gap:4px; }
+#topbar .btn { padding:4px 8px; }
+#topbar { gap:10px; }
+#endturn { position:sticky; right:0; box-shadow:-12px 0 12px #0b1122; }
 #topbar .res b { font-weight:600; }
 #topbar .spacer { flex:1; }
 #side { position:absolute; right:0; top:46px; bottom:0; width:360px; background:var(--panel); border-left:1px solid var(--line);

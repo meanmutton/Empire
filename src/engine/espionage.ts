@@ -109,6 +109,7 @@ function succeed(state: GameState, rng: Rng, agentId: string, mission: MissionId
       sys.unrest = Math.min(100, sys.unrest + 25);
       if (sys.unrest >= 100 && sys.homeOf !== target) {
         conquerSystem(state, a.hex, me, true);
+        state.factions[me].flags.defections = (state.factions[me].flags.defections ?? 0) + 1;
         a.mission = null;
         log(state, [], 'defection', `${sys.name} defected from ${factionDef(target).name} to ${factionDef(me).name}!`, a.hex);
       }

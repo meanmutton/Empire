@@ -13,7 +13,8 @@ export interface LobbyConfig {
   width: number;
   height: number;
   turnLimit: number | null;
-  victory: { conquest: boolean; domination: boolean; ascendance: boolean; alliance: boolean };
+  /** Victory preset: 'classic', 'peaceful' (no Ryn'kai) or 'totalWar'. */
+  preset: 'classic' | 'peaceful' | 'totalWar';
   /** Hours a human may take before another player can let the computer play a caretaker turn. 0 = never. */
   timeoutHours: number;
 }

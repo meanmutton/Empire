@@ -525,21 +525,72 @@ Opened from **Market**. Buyers need contact with the seller and must not be at w
 
 ## 10. Victory
 
-Each game enables any of these (default: all):
-- **Conquest**: control every other major's home system (or have them as vassals or allies who concede).
-- **Domination**: at the end of any round, own ≥ 40% of all star systems *(tunable)*.
-- **Technological Ascendance**: research all techs in 4 fields and build the *Ascension Gate* wonder (huge exotics cost).
-- **Grand Alliance**: every surviving major is in one alliance led by you for 10 consecutive turns, and you
-  have the most systems in it.
-- **Turn limit** *(optional, e.g. 250)*: highest score wins (systems, population, tech, fleet, vassals).
+Each great power can only win in ways that fit its ideology, and each has exactly one victory of its own
+(★). Progress on every path is shown on the **Victory** screen.
 
+### 10.1 Victories
+
+| Victory | Condition |
+|---------|-----------|
+| **Conquest** | Hold the home system of every other great power. |
+| **Hegemony** ★ Varrhen | Hold the home systems of 2 other great powers and rule 4 minor factions as vassals. |
+| **Glorious Campaign** ★ Ryn'kai | Win battles (a battle where you lose fewer ships than your enemies), including at least one against every other great power. 45 wins on a standard map, scaled by map area (24 small, 77 huge). *(tunable)* |
+| **Economic Supremacy** | Produce 35% of the galaxy's income (energy + metals + exotics) for 10 turns in a row. |
+| **Ascendance** ★ Concord | Complete every tech in 4 fields and build the Ascension Gate. |
+| **Singularity** ★ Lattice | Complete every tech in 5 fields and run Research Labs on 3 Core Worlds for 10 turns in a row. |
+| **World Revolution** ★ Krasnyr | Have 6 systems defect to you through subversion, and rule 3 minor factions as vassals. |
+| **Grand Alliance** | Every surviving great power is allied with you for 10 turns, and you hold the most systems among them. |
+| **Galactic Council** | Win two council elections in a row with two-thirds of the vote. |
+| **Score** | Highest score when the turn limit (default **200 rounds**) is reached. |
+
+Games are expected to be decided around **rounds 95–110**. The 200-round limit is a maximum length, and Score
+decides only games that reach it.
+
+**Galactic Council**: every 20 turns, every living faction (minors included) casts its population as votes
+for the eligible great power it likes most, counting itself at +50 if it is a candidate. Vassals vote with
+their overlord. A candidate can only receive votes from factions it has an embassy with (plus itself and
+its vassals).
+
+### 10.2 Who can win how (Classic)
+
+| Victory | Concord | Ryn'kai | Varrhen | Krasnyr | Lattice |
+|---------|:-:|:-:|:-:|:-:|:-:|
+| Conquest | — | ✓ | ✓ | ✓ | ✓ |
+| Unique (★) | Ascendance | Glorious Campaign | Hegemony | World Revolution | Singularity |
+| Economic Supremacy | ✓ | — | ✓ | ✓ | ✓ |
+| Grand Alliance | ✓ | — | ✓ | ✓ | ✓ |
+| Galactic Council | ✓ | — | ✓ | ✓ | ✓ |
+| Score | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+The Ryn'kai are deliberately narrow and predictable (Conquest, Glorious Campaign, Score), which makes them
+a good empire for new players.
+
+**Game presets** (chosen by the host):
+- **Classic**: all five great powers, as in the table.
+- **Peaceful**: four great powers (no Ryn'kai), and no military victories (Conquest, Hegemony, Glorious
+  Campaign).
+- **Total War**: military victories only (Conquest, Hegemony, Glorious Campaign), and the Concord may win by
+  Conquest too. Score still decides a game that reaches the turn limit.
+
+### 10.3 Knowing how close your rivals are
+You always see your own progress. A rival's progress is secret unless your spies are at its home system:
+- Each spy there gives 1 point of intelligence, +0.5 each for Ministry of State Security (Krasnyr),
+  Infiltrators (Nhar) and the Espionage Networks tech.
+- The rival subtracts its own idle spies guarding its home (valued the same way), +1 for
+  Counter-Intelligence tech and +1 for Court Intrigue. The Myrr's Mind Shield blocks all of it.
+- **1 point**: which victories it can pursue. **2**: its progress on each, as a 20% range. **3+**: its exact
+  progress.
+
+Computer powers keep a spy watching their strongest rival's capital and a guard at home, and are far more
+willing to go to war with a rival they know is near victory.
+
+### 10.4 Other endings
 The game also ends:
-- with **no winner** if every great power has been eliminated (only minor factions are left);
+- with **no winner** if every great power has been eliminated;
 - won by the **leading computer power** (highest score) if every human player has been eliminated;
-- at the **turn limit**: the highest-scoring surviving great power wins, or nobody if none survive.
+- won by the **last great power standing**.
 
 A human who is eliminated can keep watching. A human who leaves is replaced by the computer.
-Faction-specific victory paths are being discussed in `docs/VICTORY_IDEAS.md`.
 
 ## 11. Information and fog of war
 - Each faction sees what its ships, starbases, territory and allies' vision reveal. Explored but unseen

@@ -2,7 +2,7 @@ import { handleMessage, type Ctx } from '../relay/src/core';
 import { MemoryStore } from '../relay/src/store';
 import { chunkText, PROTOCOL_VERSION, type ClientMessage, type LobbyConfig, type ServerMessage } from '../src/net/protocol';
 
-const config: LobbyConfig = { seed: 's', width: 50, height: 30, turnLimit: null, victory: { conquest: true, domination: true, ascendance: true, alliance: true }, timeoutHours: 24 };
+const config: LobbyConfig = { seed: 's', width: 50, height: 30, turnLimit: null, preset: 'classic', timeoutHours: 24 };
 
 function setup() {
   const store = new MemoryStore();
