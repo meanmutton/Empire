@@ -7,7 +7,7 @@
  */
 import { createHash, randomBytes } from 'node:crypto';
 import {
-  canRead, chunkText, isGameCode, MAX_MESSAGE_LENGTH, PROTOCOL_VERSION, randomCode,
+  canRead, chunkText, isEmail, isGameCode, maskEmail, MAX_MESSAGE_LENGTH, PROTOCOL_VERSION, randomCode,
   type ChatMessage, type ClientMessage, type Lobby, type ServerMessage,
 } from '../../src/net/protocol';
 import type { GameRecord, Store } from './store';
@@ -17,10 +17,14 @@ const MAX_UPLOAD_CHUNKS = 64;
 
 export type Send = (conn: string, msg: ServerMessage) => Promise<boolean>;
 
+/** Sends an email notice. Absent when the relay has no email service configured. */
+export type Mailer = (to: string, subject: string, text: string) => Promise<void>;
+
 export interface Ctx {
   store: Store;
   send: Send;
   now: () => number;
+  mail?: Mailer;
 }
 
 export function hashToken(token: string): string {
@@ -28,9 +32,32 @@ export function hashToken(token: string): string {
 }
 
 function publicLobby(g: GameRecord): Lobby {
-  const { tokens: _t, hostToken: _h, pending: _p, ...lobby } = g;
-  void _t; void _h; void _p;
+  const { tokens: _t, hostToken: _h, pending: _p, emails: _e, stateKey: _s, prevStateKey: _ps, ...lobby } = g;
+  void _t; void _h; void _p; void _e; void _s; void _ps;
   return lobby;
+}
+
+/**
+ * After a turn is submitted: email the player whose turn it now is, if they asked for notices and are not
+ * connected right now; when the game ends, email everyone who asked. Failures never block the turn.
+ */
+async function notifyTurn(ctx: Ctx, g: GameRecord): Promise<void> {
+  if (!ctx.mail || !g.emails) return;
+  const name = (f: string) => g.seats.find((s) => s.faction === f)?.name ?? f;
+  const jobs: Promise<void>[] = [];
+  if (g.status === 'finished') {
+    for (const [f, email] of Object.entries(g.emails)) {
+      jobs.push(ctx.mail(email, `Empire game ${g.code} is over`,
+        `Hello ${name(f)},\n\nYour Empire game ${g.code} has ended on turn ${g.turn}. Open Empire and continue game ${g.code} to see the result.\n\nYou are getting this because you asked for turn notices in this game.`));
+    }
+  } else if (g.active && g.emails[g.active]) {
+    const online = (await ctx.store.connections(g.code)).some((c) => c.faction === g.active);
+    if (!online) {
+      jobs.push(ctx.mail(g.emails[g.active], `Your turn in Empire (game ${g.code}, turn ${g.turn})`,
+        `Hello ${name(g.active)},\n\nIt is your turn in Empire game ${g.code} (turn ${g.turn}). Open Empire and continue game ${g.code} to play.\n\nTo stop these emails, open the game menu and turn off email notices.`));
+    }
+  }
+  await Promise.all(jobs.map((j) => j.catch(() => undefined)));
 }
 
 function seatOf(g: GameRecord, tokenHash: string): string | null {
@@ -109,7 +136,7 @@ async function dispatch(ctx: Ctx, conn: string, msg: ClientMessage, fail: (m: st
       await store.addConnection(conn, code, me);
       if (!me && g.status === 'lobby') {
         g.pending[th] = clean(msg.name);
-        await store.putGame(g);
+        await store.putGame(g, g.version);
       }
       if (!me && g.status !== 'lobby') { await fail('That game has already started.'); return; }
       await ctx.send(conn, { type: 'lobby', req: msg.req, lobby: publicLobby(g), you: me });
@@ -132,7 +159,8 @@ async function dispatch(ctx: Ctx, conn: string, msg: ClientMessage, fail: (m: st
       g.tokens[msg.faction] = th;
       delete g.pending[th];
       g.updatedAt = ctx.now();
-      await store.putGame(g);
+      // Conditional: if the host started the game meanwhile, this claim must not undo that.
+      if (!(await store.putGame(g, g.version))) { await fail('The game changed; try again.'); return; }
       await store.addConnection(conn, code, msg.faction);
       await ctx.send(conn, { type: 'lobby', req: msg.req, lobby: publicLobby(g), you: msg.faction });
       await broadcast(ctx, code, { type: 'lobby', lobby: publicLobby(g) }, conn);
@@ -143,14 +171,32 @@ async function dispatch(ctx: Ctx, conn: string, msg: ClientMessage, fail: (m: st
       if (me === g.host) { await fail('The host cannot leave.'); return; }
       g.seats = g.seats.filter((s) => s.faction !== me);
       delete g.tokens[me];
-      await store.putGame(g);
+      if (!(await store.putGame(g, g.version))) { await fail('The game changed; try again.'); return; }
       await ctx.send(conn, { type: 'ack', req: msg.req });
       await broadcast(ctx, code, { type: 'lobby', lobby: publicLobby(g) }, conn);
       return;
     }
     case 'hello': {
       await store.addConnection(conn, code, me);
-      await ctx.send(conn, { type: 'lobby', req: msg.req, lobby: publicLobby(g), you: me });
+      const email = me && g.emails?.[me] ? maskEmail(g.emails[me]) : null;
+      await ctx.send(conn, { type: 'lobby', req: msg.req, lobby: publicLobby(g), you: me, email });
+      return;
+    }
+    case 'notify': {
+      if (!me) { await fail('You are not in this game.'); return; }
+      const email = msg.email === null ? null : String(msg.email ?? '').trim();
+      if (email !== null && !isEmail(email)) { await fail('That does not look like an email address.'); return; }
+      // Conditional on the version, so this never overwrites a turn submitted at the same moment.
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const fresh = (await store.getGame(code))!;
+        fresh.emails ??= {};
+        if (email) fresh.emails[me] = email; else delete fresh.emails[me];
+        if (await store.putGame(fresh, fresh.version)) {
+          await ctx.send(conn, { type: 'lobby', req: msg.req, lobby: publicLobby(fresh), you: me, email: email ? maskEmail(email) : null });
+          return;
+        }
+      }
+      await fail('The game was busy; try again.');
       return;
     }
     case 'upload': {
@@ -175,6 +221,7 @@ async function dispatch(ctx: Ctx, conn: string, msg: ClientMessage, fail: (m: st
       await store.deleteChunks(code, msg.upload, msg.n);
       await ctx.send(conn, { type: 'ack', req: msg.req, version: g.version });
       await broadcast(ctx, code, { type: 'turn', lobby: publicLobby(g) });
+      await notifyTurn(ctx, g);
       return;
     }
     case 'submit': {
@@ -196,6 +243,7 @@ async function dispatch(ctx: Ctx, conn: string, msg: ClientMessage, fail: (m: st
       await store.deleteChunks(code, msg.upload, msg.n);
       await ctx.send(conn, { type: 'ack', req: msg.req, version: g.version });
       await broadcast(ctx, code, { type: 'turn', lobby: publicLobby(g) });
+      await notifyTurn(ctx, g);
       return;
     }
     case 'message': {

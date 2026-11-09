@@ -48,6 +48,7 @@ JSON text messages. Client → relay messages have an `action` and a `req` id; r
 | `get` | seat holder | download the current state (arrives as `state` chunks) |
 | `message` | seat holder | chat to some players (`to: [factions]`) or everyone (`to: ['all']`), up to 1,000 characters; pushed to connected recipients |
 | `messages` | seat holder | fetch the messages this player may read, newer than a timestamp |
+| `notify` | seat holder | set (or clear with `null`) the email for "your turn" notices; the reply shows it masked |
 | `ping` | anyone | keep-alive |
 
 Relay → client: `created`, `lobby`, `turn` (pushed to everyone connected), `state` (chunks), `message`
@@ -63,6 +64,23 @@ one, and the pointer moves with a conditional write on the version. If two valid
 same player on two devices, or a caretaker turn arriving just as the late player submits), exactly one
 wins. The loser's state is deleted, and it can never overwrite the winner's. The relay keeps the current
 and previous states, so a player who is mid-download still gets a complete state.
+
+## Turn notices by email (optional)
+Players can give an email address for a game (in the lobby, or from the in-game menu). The relay:
+- stores it privately on the player's seat, never sends it to other players, and shows it back to its owner
+  only masked (`b•••@example.com`);
+- emails a player when the turn passes to them **and they are not connected**, and emails everyone who asked
+  when the game ends;
+- deletes it when the player turns notices off, and with the game when it expires (90 days after its last
+  turn).
+
+Email is **off unless configured**. In AWS it goes through Amazon SES:
+1. In the SES console, verify a sender (an address, or better a domain you own).
+2. New SES accounts are in the **sandbox** and can only email verified addresses. To email your friends,
+   request **production access** in the SES console (a short form; usually approved within a day).
+3. Deploy with the sender: `sam deploy --parameter-overrides NotifyFrom=empire@yourdomain.com`.
+
+The local relay (`npm run relay`) prints the emails it would send to its console instead.
 
 ## Running locally
 ```bash

@@ -32,6 +32,8 @@ const sockets = new Map<string, WebSocket>();
 let nextId = 1;
 const ctx: Ctx = {
   store,
+  // The local relay prints emails instead of sending them.
+  mail: async (to, subject, text) => { console.log(`EMAIL to ${to}: ${subject}\n${text}\n`); },
   now: () => Date.now(),
   send: async (conn, msg) => {
     const ws = sockets.get(conn);

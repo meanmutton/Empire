@@ -622,5 +622,6 @@ A human who is eliminated can keep watching. A human who leaves is replaced by t
 
 ## 13. Online play
 See `docs/RELAY.md`. In short: an AWS API Gateway WebSocket relay (like Hexfront's), backed by Lambda and
-DynamoDB, stores each game's current state, roster and turn order, and notifies the next player.
+DynamoDB, stores each game's current state, roster and turn order, and notifies the next player: pushed to
+anyone connected, and optionally by email (each player can opt in per game; see `docs/RELAY.md`).
 Games are joined with a six-letter code.
