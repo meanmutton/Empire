@@ -28,8 +28,8 @@ Status key: `[ ]` not started, `[~]` PR open, `[x]` merged.
 - [~] **08 Research**: tech tree (6 fields), unlocks, research progress.
 - [~] **09 Diplomacy and espionage**: diplomats (travel, capture, embassies), relation states, agreements,
   trade proposals, vassals, opinion; spies and missions.
-- [ ] **10 Turn engine**: turn order, phases, orders → resolution, victory checks, event log.
-- [ ] **11 Computer players**: AI for majors (personalities) and minors.
+- [~] **10 Turn engine**: turn order, phases, orders → resolution, victory checks, event log.
+- [~] **11 Computer players**: AI for majors (personalities) and minors.
 - [ ] **12 Client: map rendering**: canvas hex map, pan/zoom, territory borders, system icons,
   procedural faction ship tokens, minimap.
 - [ ] **13 Client: UI**: new game setup, system panel, fleet panel and battle groups, build queue,
@@ -40,6 +40,8 @@ Status key: `[ ]` not started, `[~]` PR open, `[x]` merged.
 - [ ] **16 Online async play**: create/join by code, seat claiming, turn upload/download, "your turn"
   notifications, reconnect, version checks.
 - [ ] **17 Polish and balance**: autoplay balance simulations, tutorial hints, sound, accessibility, mobile.
+  Known from the phase 11 simulation (`test/ai.test.ts` prints a table): territory grows fast (~200+ hexes
+  per major by turn 80); the Concord settles far fewer systems than the others; the Varrhen bank metals.
 
 ## Notes for the next session
 - Read `docs/GAME_DESIGN.md` for rules; keep it updated when rules change.

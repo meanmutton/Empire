@@ -8,7 +8,7 @@ export const BALANCE = {
   defenseAttackPerPoint: 1.2,
   maxShipsPerFleet: 6,
 
-  ownedHexEnergy: 0.3,
+  ownedHexEnergy: 0.1,
   disconnectedPenalty: 0.5,
   populationGrowth: 0.05,
   repairFriendly: 0.1,
@@ -42,6 +42,9 @@ export const BALANCE = {
   /** Opinion penalty with everyone for breaking a treaty. */
   treatyBreakPenalty: 30,
   diplomatCaptureChance: 0.75,
+
+  ascensionGate: { metals: 900, energy: 700, exotics: 250, points: 220 },
+  allianceVictoryTurns: 10,
 
   startingStock: { energy: 100, metals: 120, exotics: 5 },
   minorStartingStock: { energy: 60, metals: 60, exotics: 0 },

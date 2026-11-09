@@ -240,6 +240,14 @@ export function checkBuild(state: GameState, faction: FactionId, hex: number, ki
         cost: { metals: Math.round(c.metals * mult), energy: Math.round(c.energy * mult), exotics: 0, population: 0, points: Math.round(c.turns * prod) },
       };
     }
+    case 'wonder': {
+      if (item !== 'ascensionGate') return { ok: false, reason: 'Unknown project.' };
+      if (!known.has('ascension')) return { ok: false, reason: 'Needs Ascension Theory.' };
+      if (sys.homeOf !== faction) return { ok: false, reason: 'Build it at your home system.' };
+      if (sys.queue.some((q) => q.kind === 'wonder')) return { ok: false, reason: 'Already under construction.' };
+      const c = BALANCE.ascensionGate;
+      return { ok: true, cost: { metals: c.metals, energy: c.energy, exotics: c.exotics, population: 0, points: c.points } };
+    }
     default:
       return { ok: false, reason: 'Cannot build that here.' };
   }
@@ -373,6 +381,11 @@ export function completeBuild(state: GameState, faction: FactionId, hex: number,
       if (imp?.defense) sys.defense += imp.defense * (hasAbility(faction, 'fortressWorlds') ? 2 : 1);
       if (imp?.garrison) sys.garrison += imp.garrison;
       log(state, [faction], 'built', `${imp?.name ?? order.item} completed at ${sys.name}.`, hex);
+      break;
+    }
+    case 'wonder': {
+      state.factions[faction].flags.ascensionGate = state.turn;
+      log(state, [], 'wonder', `The Ascension Gate is complete at ${sys.name}!`, hex);
       break;
     }
     case 'develop': {

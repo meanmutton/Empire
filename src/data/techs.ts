@@ -44,7 +44,7 @@ export interface TechDef {
   effects: TechEffects;
 }
 
-export const TIER_COST = [0, 40, 90, 170, 280, 420, 600, 1200];
+export const TIER_COST = [0, 60, 160, 340, 620, 1000, 1500, 3000];
 
 const T = (id: string, name: string, field: TechField, tier: number, requires: string[], text: string, effects: TechEffects = {}): TechDef =>
   ({ id, name, field, tier, requires, text, effects });
