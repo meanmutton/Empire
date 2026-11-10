@@ -1,4 +1,6 @@
 /** Global styles for the client, injected once. */
+import splashWide from './assets/splash-wide.webp';
+
 export const CSS = `
 :root { --bg:#070b16; --panel:#0e1426ee; --panel2:#141c33; --line:#26304f; --text:#e6ebf5; --dim:#9aa6c4; --accent:#ffd166; --good:#7cfc9a; --bad:#ff6b6b; }
 * { box-sizing: border-box; }
@@ -80,7 +82,33 @@ table.manage td { white-space:nowrap; }
 .roster { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
 .roster-cell { width:58px; text-align:center; }
 .roster-label { font-size:10px; opacity:.75; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.screen { position:absolute; inset:0; overflow:auto; padding:24px; background:radial-gradient(ellipse at top, #16204a 0%, #070b16 60%); }
+.screen { position:absolute; inset:0; overflow:auto; padding:24px;
+  background:linear-gradient(rgba(5, 8, 18, 0.84), rgba(5, 8, 18, 0.94)), url(${splashWide}) center 35% / cover no-repeat, #070b16; }
+.splash { position:fixed; inset:0; overflow:hidden; background:#04060d; animation:splash-in .9s ease both; }
+.splash.leaving { opacity:0; transition:opacity .25s ease; }
+@keyframes splash-in { from { opacity:0; } to { opacity:1; } }
+@keyframes splash-rise { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+.splash-art { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.splash-art.wide { object-position:center 40%; }
+.splash-art.tall { display:none; object-position:center top; }
+.splash-shade { position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(ellipse 60% 35% at 50% 26%, rgba(4, 6, 13, 0.6), transparent 70%),
+    linear-gradient(to bottom, transparent 62%, rgba(4, 6, 13, 0.8)); }
+.splash-title { position:absolute; left:0; right:0; top:17%; text-align:center; animation:splash-rise 1.2s .3s ease both; }
+.splash-name { display:inline-block; font-size:clamp(52px, 11vw, 150px); font-weight:200; letter-spacing:.32em; padding-left:.32em; line-height:1;
+  background:linear-gradient(#fff8e2 10%, #f2c46d 60%, #b9772c); -webkit-background-clip:text; background-clip:text; color:transparent;
+  filter:drop-shadow(0 0 22px rgba(255, 186, 90, 0.45)); }
+.splash-tag { margin-top:10px; font-size:clamp(11px, 1.5vw, 17px); letter-spacing:.42em; padding-left:.42em; text-transform:uppercase; color:#d6def7; opacity:.88; }
+.splash-actions { position:absolute; left:0; right:0; bottom:6%; display:flex; flex-direction:column; align-items:center; gap:10px; animation:splash-rise 1s .8s ease both; }
+.btn.splash-play { font-size:20px; padding:12px 64px; letter-spacing:.24em; text-transform:uppercase; border-radius:999px; box-shadow:0 0 28px rgba(255, 190, 90, 0.4); }
+.splash-links { color:#aab4d6; font-size:13px; text-shadow:0 1px 4px #000; }
+.splash-links a { color:#e4eaff; }
+@media (max-aspect-ratio: 4/5) {
+  .splash-art.wide { display:none; }
+  .splash-art.tall { display:block; }
+  .splash-title { top:9%; }
+  .splash-shade { background:linear-gradient(to bottom, transparent 70%, rgba(4, 6, 13, 0.85)); }
+}
 .title { font-size:44px; letter-spacing:.35em; color:var(--accent); text-align:center; margin:30px 0 4px; font-weight:300; }
 .subtitle { text-align:center; color:var(--dim); margin-bottom:24px; }
 .faction-card { border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:8px 0; background:#0d1428cc; }

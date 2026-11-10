@@ -1,4 +1,6 @@
 import { aiTurn } from './ai/ai';
+import { showSplash } from './ui/screens/splash';
+import { VERSION } from './version';
 import { createGame } from './engine/setup';
 import { beginGame } from './engine/turn';
 import type { GameState } from './engine/types';
@@ -74,4 +76,5 @@ else if (params.has('quick')) {
   const game = createGame({ seed: params.get('seed') ?? 'quick', seats });
   beginGame(game, aiTurn);
   playLocal(game, newSaveId());
-} else title();
+} else if (params.has('join')) title();
+else showSplash(app, title, VERSION);

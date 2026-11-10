@@ -8,7 +8,7 @@ export const ABILITIES = {
   consensus: { name: 'Consensus Government', text: 'Output −10% while fighting a war the Concord started. Systems never revolt and unrest is halved.' },
   // Ryn'kai Dominion
   wayOfTheBlade: { name: 'Way of the Blade', text: 'Battle groups never retreat and deal +25% damage in the first round of a battle.' },
-  boardingActions: { name: 'Boarding Actions', text: 'Enemy ships left at 25% hull or less may be captured instead of destroyed.' },
+  boardingActions: { name: 'Boarding Actions', text: 'Enemy ships destroyed at close quarters are captured 35% of the time (20% at medium range) instead of lost.' },
   honorBound: { name: 'Honor Bound', text: 'Never breaks a treaty first. Factions that break one with the Dominion take −50 opinion, and the Dominion gets +10% attack against them for the rest of the game.' },
   // Varrhen Ascendancy
   totalMobilization: { name: 'Total Mobilization', text: 'Can mobilize the economy: ship and army build time −50%, science −50%. Demobilizing takes 3 turns.' },
@@ -45,7 +45,7 @@ export const ABILITIES = {
   cloakingFields: { name: 'Cloaking Fields', text: 'Ships are invisible unless an enemy has sensors at least equal to their stealth.' },
   infiltrators: { name: 'Infiltrators', text: '+40% spy mission success.' },
   berserkers: { name: 'Berserkers', text: '+30% attack, −30% shields.' },
-  boardingParties: { name: 'Boarding Parties', text: 'May capture crippled enemy ships.' },
+  boardingParties: { name: 'Boarding Parties', text: 'Enemy ships destroyed at close quarters are captured 35% of the time (20% at medium range) instead of lost.' },
   blackMarket: { name: 'Black Market', text: 'Pays no fee on the galactic exchange (others pay 40%); anyone with a trade agreement with them pays only 20%.' },
   bribery: { name: 'Bribery', text: 'Enemy crews fighting in their territory are paid off: −30% damage.' },
   photonicWeapons: { name: 'Photonic Weapons', text: 'Energy weapons +25%.' },
