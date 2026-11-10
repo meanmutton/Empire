@@ -78,7 +78,8 @@ Email is **off unless configured**. In AWS it goes through Amazon SES:
 1. In the SES console, verify a sender (an address, or better a domain you own).
 2. New SES accounts are in the **sandbox** and can only email verified addresses. To email your friends,
    request **production access** in the SES console (a short form; usually approved within a day).
-3. Deploy with the sender: `sam deploy --parameter-overrides NotifyFrom=empire@yourdomain.com`.
+3. Deploy with the sender: `NOTIFY_FROM=empire@yourdomain.com relay/deploy.sh` (see below). To turn email off
+   again, deploy with `NOTIFY_FROM=` (empty).
 
 The local relay (`npm run relay`) prints the emails it would send to its console instead.
 
@@ -90,32 +91,59 @@ That starts `ws://localhost:8787` (in memory, saved to `relay/.data/relay.json`)
 `?relay=ws://localhost:8787`.
 
 ## Deploying to AWS
-You need the [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
-and AWS credentials. From the repo root:
+Everything AWS needs is in one CloudFormation template, `relay/cloudformation.yaml`, and `relay/deploy.sh`
+builds the Lambda package and deploys it. The easiest place to run it is **AWS CloudShell**, a terminal in the
+AWS console that is already signed in and has the AWS CLI, Node.js, git and zip.
+
+1. Sign in to the AWS console and pick the region the relay should live in (top right; Hexfront's relay is in
+   **US East (Ohio), us-east-2**).
+2. Open **CloudShell** (the `>_` icon in the top bar).
+3. Get the code and deploy:
 
 ```bash
-npm ci
+git clone https://github.com/meanmutton/Empire.git && cd Empire
 ```
 
 ```bash
-cd relay && sam build && sam deploy --guided
+relay/deploy.sh
 ```
 
-Pick a stack name such as `empire-relay` and a region (Hexfront's relay runs in `us-east-2`). The output
-**RelayUrl** is a `wss://…amazonaws.com/live` address. Build the game with it:
+The script prints the relay address at the end, a `wss://….execute-api.us-east-2.amazonaws.com/live` URL. It
+is also the **RelayUrl** output of the `empire-relay` stack in the CloudFormation console.
+
+4. Build the game with that address baked in (on your own machine, or in CloudShell and download
+   `dist/index.html` with **Actions → Download file**):
 
 ```bash
 EMPIRE_RELAY=wss://xxxx.execute-api.us-east-2.amazonaws.com/live npm run build
 ```
 
-Or pass it at runtime with `?relay=wss://…`.
+Or pass it at runtime: `index.html?relay=wss://…`.
+
+**Updating**: after relay code changes, run `git pull` and `relay/deploy.sh` again. The script uploads the new
+package under a new name, so CloudFormation updates the function in place; games are kept.
+
+**Options**: `AWS_REGION=us-west-2 relay/deploy.sh` for another region, `relay/deploy.sh my-stack` for another
+stack name, `NOTIFY_FROM=…` for email (above), `CODE_BUCKET=…` to use an existing S3 bucket for the package.
+
+**Without the script**: in the CloudFormation console, choose **Create stack → With new resources**, upload
+`relay/cloudformation.yaml`, and give it an S3 bucket and key holding a zip of the built `lambda.mjs`
+(`npm run relay:bundle`, then zip `relay/.build/lambda.mjs`; CI also attaches it to every run as the
+`relay-lambda` artifact). Acknowledge that the stack creates an IAM role.
 
 ### What it creates and costs
 - One DynamoDB table (on-demand, with TTL cleanup: upload chunks and connections expire after a day, and
-  games 90 days after their last turn).
-- One Lambda function (Node 22, arm64) and one WebSocket API.
+  games 90 days after their last turn). It is **kept if you delete the stack**, so games are never lost by
+  accident; delete it by hand in the DynamoDB console if you really mean to.
+- One Lambda function (Node 22, arm64) with its IAM role and a log group (logs kept 14 days).
+- One WebSocket API (API Gateway), throttled to 50 messages a second.
+- One S3 bucket, `empire-relay-code-<account>-<region>`, holding the Lambda packages (private).
 
-For a group of friends this is a few cents a month: each turn is a handful of small writes.
+For a group of friends this is a few cents a month: each turn is a handful of small writes, and everything
+is well inside the AWS free tier at first.
+
+**Removing it**: delete the `empire-relay` stack in the CloudFormation console, then (if you want) the table
+and the code bucket.
 
 ## Security notes
 - Seat tokens are random secrets kept in each player's browser and stored only as SHA-256 hashes.

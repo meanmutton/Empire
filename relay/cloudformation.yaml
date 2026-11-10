@@ -1,0 +1,167 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Empire relay: a WebSocket API (API Gateway) and a Lambda function that store asynchronous games in DynamoDB and
+  pass turns between players. Optional "your turn" emails through Amazon SES. See docs/RELAY.md.
+
+Parameters:
+  CodeBucket:
+    Type: String
+    Description: S3 bucket holding the relay's Lambda package (relay/deploy.sh creates and fills it).
+  CodeKey:
+    Type: String
+    Description: Key of the Lambda package (a zip containing lambda.mjs). Use a new key for each version so updates deploy.
+  NotifyFrom:
+    Type: String
+    Default: ''
+    Description: >-
+      Verified Amazon SES sender for "your turn" emails, e.g. empire@yourdomain.com. Leave empty to turn email off.
+  StageName:
+    Type: String
+    Default: live
+    Description: Last part of the relay address (wss://.../live).
+  LogRetentionDays:
+    Type: Number
+    Default: 14
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90]
+    Description: How long the relay's logs are kept.
+
+Conditions:
+  EmailOn: !Not [!Equals [!Ref NotifyFrom, '']]
+
+Resources:
+  # Games, lobbies, chat, connections and uploaded states, in one table. Items carry a `ttl` attribute and
+  # expire on their own (upload chunks and connections after a day, games 90 days after their last turn).
+  # Kept if the stack is deleted, so games are never lost by accident.
+  Table:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: pk, AttributeType: S }
+        - { AttributeName: sk, AttributeType: S }
+      KeySchema:
+        - { AttributeName: pk, KeyType: HASH }
+        - { AttributeName: sk, KeyType: RANGE }
+      TimeToLiveSpecification: { AttributeName: ttl, Enabled: true }
+      PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: false }
+
+  FunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: relay
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:BatchGetItem
+                Resource: !GetAtt Table.Arn
+              - Effect: Allow
+                Action: execute-api:ManageConnections
+                Resource: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/${StageName}/POST/@connections/*
+              - !If
+                - EmailOn
+                - Effect: Allow
+                  Action: ses:SendEmail
+                  Resource: '*'
+                  Condition:
+                    StringEquals: { 'ses:FromAddress': !Ref NotifyFrom }
+                - !Ref AWS::NoValue
+
+  RelayFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Empire relay (WebSocket $connect, $disconnect and messages)
+      Runtime: nodejs22.x
+      Architectures: [arm64]
+      Handler: lambda.handler
+      MemorySize: 512
+      Timeout: 29
+      Role: !GetAtt FunctionRole.Arn
+      Code:
+        S3Bucket: !Ref CodeBucket
+        S3Key: !Ref CodeKey
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref Table
+          NOTIFY_FROM: !Ref NotifyFrom
+
+  FunctionLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${RelayFunction}
+      RetentionInDays: !Ref LogRetentionDays
+
+  WebSocketApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub ${AWS::StackName}
+      ProtocolType: WEBSOCKET
+      RouteSelectionExpression: '$request.body.action'
+
+  Integration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebSocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RelayFunction.Arn}/invocations
+
+  ConnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties: { ApiId: !Ref WebSocketApi, RouteKey: $connect, Target: !Sub 'integrations/${Integration}' }
+  DisconnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties: { ApiId: !Ref WebSocketApi, RouteKey: $disconnect, Target: !Sub 'integrations/${Integration}' }
+  DefaultRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties: { ApiId: !Ref WebSocketApi, RouteKey: $default, Target: !Sub 'integrations/${Integration}' }
+
+  Deployment:
+    Type: AWS::ApiGatewayV2::Deployment
+    DependsOn: [ConnectRoute, DisconnectRoute, DefaultRoute]
+    Properties: { ApiId: !Ref WebSocketApi }
+
+  Stage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref WebSocketApi
+      StageName: !Ref StageName
+      DeploymentId: !Ref Deployment
+      # A group of friends sends a few messages a minute; this keeps a runaway client from running up a bill.
+      DefaultRouteSettings: { ThrottlingBurstLimit: 100, ThrottlingRateLimit: 50 }
+
+  InvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref RelayFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*
+
+Outputs:
+  RelayUrl:
+    Description: The relay address. Build the game with it (EMPIRE_RELAY) or open the game with ?relay=<this>.
+    Value: !Sub wss://${WebSocketApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${StageName}
+  TableName:
+    Description: DynamoDB table holding the games.
+    Value: !Ref Table
+  FunctionName:
+    Description: The relay's Lambda function (its logs are in CloudWatch under /aws/lambda/<this>).
+    Value: !Ref RelayFunction
