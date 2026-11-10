@@ -9,6 +9,8 @@ import { routeDisruptors } from '../engine/routes';
 import { AXIAL_DIRECTIONS, axialOf, axialToOffset, hexToPixel, pixelToHex } from '../engine/hex';
 import type { FactionId, Fleet, GameState, StarKind } from '../engine/types';
 import { canSeeFleet, visibleHexes } from '../engine/visibility';
+import { connectedHexes, relation } from '../engine/query';
+import { drawGlyph } from './glyphs';
 import { shade, tokenImage } from './tokens';
 
 export const HEX = 30;
@@ -45,8 +47,14 @@ export class MapView {
   onHexClick: (hex: number, ev: PointerEvent) => void = () => {};
   onHover: (hex: number | null) => void = () => {};
   onCamera: () => void = () => {};
+  /** Tint borders by the viewer's relation with each owner (war red, allies green, …). */
+  relationsOverlay = false;
   private visible = new Set<number>();
   private blockaded = new Set<number>();
+  /** Owned hexes cut off from their owner's home (they yield half). */
+  private disconnected = new Set<number>();
+  /** Where to write each faction's name when zoomed out: the middle of its explored home territory. */
+  private regions: { faction: FactionId; x: number; y: number; n: number }[] = [];
   private visibleFleets: Fleet[] = [];
   private dirty = true;
   private stars: { x: number; y: number; r: number; a: number }[] = [];
@@ -87,7 +95,34 @@ export class MapView {
     this.visible = this.revealAll ? new Set(this.state.map.hexes.map((_, i) => i)) : visibleHexes(this.state, this.viewer);
     this.visibleFleets = Object.values(this.state.fleets).filter((f) => this.revealAll || canSeeFleet(this.state, this.viewer, f, this.visible));
     this.blockaded = new Set([...blockadedHexes(this.state)].filter((h) => this.visible.has(h)));
+    this.disconnected = new Set();
+    this.regions = [];
+    const explored = (i: number) => this.revealAll || getBit(this.state.factions[this.viewer].explored, i);
+    for (const f of Object.values(this.state.factions)) {
+      if (!f.alive) continue;
+      const home = connectedHexes(this.state, f.id);
+      let sx = 0, sy = 0, n = 0;
+      this.state.map.hexes.forEach((h, i) => {
+        if (h.owner !== f.id) return;
+        if (!home.has(i)) { this.disconnected.add(i); return; }
+        if (!explored(i)) return;
+        const p = hexToPixel(this.state.map, i, HEX);
+        sx += p.x; sy += p.y; n++;
+      });
+      if (n >= 3) this.regions.push({ faction: f.id, x: sx / n, y: sy / n, n });
+    }
     this.dirty = true;
+  }
+
+  /** Border colour for an owner: its own colour, or (with the relations overlay) the viewer's relation. */
+  private borderColor(owner: FactionId): string {
+    if (!this.relationsOverlay) return factionDef(owner).color;
+    if (owner === this.viewer) return '#ffd166';
+    const o = this.state.factions[owner];
+    if (o?.overlord === this.viewer) return '#7cfc9a';
+    const r = relation(this.state, this.viewer, owner);
+    if (!r.contact) return '#5c6684';
+    return ({ war: '#ff4d4d', hostile: '#ff9f43', neutral: '#9aa6c4', relations: '#8fb3ff', nap: '#4fd1c5', alliance: '#7cfc9a' } as Record<string, string>)[r.status] ?? '#9aa6c4';
   }
 
   invalidate(): void {
@@ -230,6 +265,7 @@ export class MapView {
       if (this.pointers.size === 0) this.dragStart = null;
     };
     c.addEventListener('pointerup', up);
+    c.addEventListener('pointerleave', () => { if (this.hoverHex !== null) { this.hoverHex = null; this.dirty = true; this.onHover(null); } });
     // Right-click is an order (move there), not the browser menu.
     c.addEventListener('contextmenu', (e) => e.preventDefault());
     c.addEventListener('pointercancel', (e) => { this.pointers.delete(e.pointerId); this.dragStart = null; this.pinch = null; });
@@ -279,6 +315,36 @@ export class MapView {
     for (const i of inView) if (explored(i) && !this.visible.has(i)) this.fogHex(i);
     if (this.hoverHex !== null) this.outlineHex(this.hoverHex, 'rgba(255,255,255,0.35)', 1.5);
     if (this.selectedHex !== null) this.outlineHex(this.selectedHex, '#ffd166', 2.5);
+    if (this.zoom <= 0.7) this.drawRegionNames(dpr);
+  }
+
+  /** Zoomed out, each power's name (and glyph) over the middle of its territory, like an atlas. */
+  private drawRegionNames(dpr: number): void {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    for (const r of this.regions) {
+      const known = r.faction === this.viewer || this.revealAll || relation(this.state, this.viewer, r.faction).contact;
+      if (!known) continue;
+      const def = factionDef(r.faction);
+      const x = (r.x - this.camX) * this.zoom, y = (r.y - this.camY) * this.zoom;
+      const major = this.state.factions[r.faction].kind === 'major';
+      const size = major ? 15 : 12;
+      const text = def.short.toUpperCase();
+      ctx.font = `${major ? 700 : 600} ${size}px system-ui, sans-serif`;
+      const spaced = text.split('').join('\u200a');
+      const w = ctx.measureText(spaced).width;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(4, 6, 13, 0.85)';
+      ctx.strokeText(spaced, x + 8, y);
+      ctx.fillStyle = shade(def.color, 0.35);
+      ctx.fillText(spaced, x + 8, y);
+      drawGlyph(ctx, r.faction, x + 8 - w / 2 - 10, y, size, def.color);
+    }
+    ctx.restore();
   }
 
   private hexPath(i: number, inset = 0): void {
@@ -402,16 +468,34 @@ export class MapView {
     const hx = this.state.map.hexes[i];
     const ctx = this.ctx;
     if (hx.owner) {
-      const color = factionDef(hx.owner).color;
+      const color = this.borderColor(hx.owner);
+      const cut = this.disconnected.has(i);
       this.hexPath(i);
-      ctx.fillStyle = hexAlpha(color, 0.16);
+      ctx.fillStyle = hexAlpha(color.startsWith('#') ? color : '#ffffff', cut ? 0.07 : 0.22);
       ctx.fill();
-      // Borders on edges facing a different owner.
+      if (cut) {
+        // Cut off from home: hatched, with a dashed border (it yields half).
+        ctx.save();
+        this.hexPath(i, 2);
+        ctx.clip();
+        ctx.strokeStyle = hexAlpha(color, 0.35);
+        ctx.lineWidth = 1;
+        const p0 = hexToPixel(this.state.map, i, HEX);
+        ctx.beginPath();
+        for (let k = -HEX * 2; k < HEX * 2; k += 6) { ctx.moveTo(p0.x + k - HEX, p0.y - HEX); ctx.lineTo(p0.x + k + HEX, p0.y + HEX); }
+        ctx.stroke();
+        ctx.restore();
+        this.hexPath(i, 2);
+        ctx.setLineDash([4, 3]);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      // Borders on edges facing a different owner: a dark line outside, the owner's colour inside.
       const p = hexToPixel(this.state.map, i, HEX);
       const a = axialOf(this.state.map, i);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2.2;
-      for (let d = 0; d < 6; d++) {
+      for (let d = 0; d < 6 && !cut; d++) {
         const dir = AXIAL_DIRECTIONS[d];
         const { col, row } = axialToOffset(a.q + dir.q, a.r + dir.r);
         const inside = col >= 0 && row >= 0 && col < this.state.map.width && row < this.state.map.height;
@@ -420,11 +504,14 @@ export class MapView {
         // Edge facing direction d: corners at angles (−60d + 30) and (−60d − 30) degrees for pointy-top axial dirs.
         const angle = (-60 * d * Math.PI) / 180;
         const a1 = angle - Math.PI / 6, a2 = angle + Math.PI / 6;
-        const r = HEX - 1.2;
-        ctx.beginPath();
-        ctx.moveTo(p.x + r * Math.cos(a1), p.y + r * Math.sin(a1));
-        ctx.lineTo(p.x + r * Math.cos(a2), p.y + r * Math.sin(a2));
-        ctx.stroke();
+        for (const [r, w, c] of [[HEX - 0.6, 4.2, 'rgba(4, 6, 13, 0.85)'], [HEX - 2.2, 2.4, color]] as const) {
+          ctx.strokeStyle = c;
+          ctx.lineWidth = w;
+          ctx.beginPath();
+          ctx.moveTo(p.x + r * Math.cos(a1), p.y + r * Math.sin(a1));
+          ctx.lineTo(p.x + r * Math.cos(a2), p.y + r * Math.sin(a2));
+          ctx.stroke();
+        }
       }
     }
     if (hx.pendingClaim && this.visible.has(i)) {
@@ -472,6 +559,8 @@ export class MapView {
       ctx.strokeStyle = factionDef(sys.homeOf).color;
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(sx, sy, starR + 4, 0, Math.PI * 2); ctx.stroke();
+      // The faction's emblem above its capital.
+      drawGlyph(ctx, sys.homeOf, sx, sy - starR - 9, 11, factionDef(sys.homeOf).color);
     }
     if (this.blockaded.has(i)) {
       ctx.strokeStyle = '#ff6b6b';
@@ -490,10 +579,17 @@ export class MapView {
       ctx.fillStyle = this.state.map.hexes[i].owner ? factionDef(this.state.map.hexes[i].owner!).color : '#aaa';
       ctx.fillRect(p.x - HEX * 0.45 + k * 4.2, p.y + HEX * 0.38, 3, 3);
     }
-    if (this.zoom >= 0.65) {
-      ctx.font = `${sys.homeOf ? 'bold ' : ''}9px system-ui, sans-serif`;
+    // Names: at least 11 screen pixels with a dark halo; zoomed out, only your systems and capitals.
+    const owner = this.state.map.hexes[i].owner;
+    if (this.zoom >= 0.65 || owner === this.viewer || sys.homeOf) {
+      const px = Math.max(9, 11 / this.zoom);
+      ctx.font = `${sys.homeOf ? 'bold ' : ''}${px.toFixed(1)}px system-ui, sans-serif`;
       ctx.textAlign = 'center';
-      ctx.fillStyle = 'rgba(230, 236, 250, 0.9)';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 3 / this.zoom;
+      ctx.strokeStyle = 'rgba(4, 6, 13, 0.9)';
+      ctx.strokeText(sys.name, p.x, p.y + HEX * 0.72);
+      ctx.fillStyle = owner === this.viewer ? '#ffffff' : 'rgba(230, 236, 250, 0.9)';
       ctx.fillText(sys.name, p.x, p.y + HEX * 0.72);
       ctx.textAlign = 'start';
     }
@@ -572,6 +668,11 @@ export class MapView {
     }
   }
 
+  /**
+   * Fleets: one stack token per owner in a hex (the biggest ship's icon, the total ship count, extra rims
+   * when several fleets share it), set off to the top corner so the system and its name stay visible. Your
+   * stack sits top right, others' top left. The selected hex, or a close zoom, fans the fleets out.
+   */
   private drawFleets(inView: Set<number>): void {
     const byHex = new Map<number, Fleet[]>();
     for (const f of this.visibleFleets) {
@@ -580,45 +681,95 @@ export class MapView {
       list.push(f);
       byHex.set(f.hex, list);
     }
-    const ctx = this.ctx;
     for (const [hex, list] of byHex) {
       const p = hexToPixel(this.state.map, hex, HEX);
-      list.sort((a, b) => (a.owner === this.viewer ? -1 : 0) - (b.owner === this.viewer ? -1 : 0));
-      const n = Math.min(list.length, 4);
-      list.slice(0, 4).forEach((f, k) => {
-        const off = n === 1 ? { x: 0, y: 0 } : { x: (k % 2 ? 1 : -1) * HEX * 0.32, y: (k < 2 ? -1 : 1) * HEX * 0.28 };
-        const x = p.x + off.x, y = p.y + off.y + (n === 1 ? -HEX * 0.05 : 0);
-        const lead = [...f.ships].sort((a, b) => CLASSES[design(this.state.ships[b].design).cls].size - CLASSES[design(this.state.ships[a].design).cls].size)[0];
-        const size = n === 1 ? 34 : 24;
-        const img = tokenImage(this.state.ships[lead].design, size * 2);
-        const color = factionDef(f.owner).color;
-        ctx.fillStyle = 'rgba(4, 6, 13, 0.55)';
-        ctx.beginPath(); ctx.arc(x, y, size * 0.52, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = f.id === this.selectedFleet ? '#ffd166' : color;
-        ctx.lineWidth = f.id === this.selectedFleet ? 2.5 : 1.2;
-        ctx.stroke();
-        ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
-        if (f.ships.length > 1) {
-          ctx.fillStyle = shade(color, -0.4);
-          ctx.beginPath(); ctx.arc(x + size * 0.42, y - size * 0.38, 6, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = '#fff';
-          ctx.font = 'bold 8px system-ui, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(String(f.ships.length), x + size * 0.42, y - size * 0.38 + 0.5);
-          ctx.textAlign = 'start';
-          ctx.textBaseline = 'alphabetic';
-        }
-        if (f.owner === this.viewer && f.movesLeft > 0) {
-          ctx.fillStyle = '#7CFC9A';
-          ctx.beginPath(); ctx.arc(x - size * 0.42, y - size * 0.38, 2.5, 0, Math.PI * 2); ctx.fill();
-        }
+      if (hex === this.selectedHex || this.zoom >= 2) { this.drawFleetsFanned(p, list); continue; }
+      const owners = [...new Set(list.map((f) => f.owner))].sort((a, b) => (a === this.viewer ? -1 : b === this.viewer ? 1 : 0)
+        || list.filter((f) => f.owner === b).length - list.filter((f) => f.owner === a).length);
+      const sys = !!this.state.map.hexes[hex].system;
+      const spots = owners.length === 1
+        ? [sys ? { x: owners[0] === this.viewer ? 0.34 : -0.34, y: -0.36 } : { x: 0, y: -0.05 }]
+        : [{ x: 0.34, y: -0.36 }, { x: -0.34, y: -0.4 }];
+      owners.slice(0, 2).forEach((o, k) => {
+        const spot = owners[0] === this.viewer || owners.length > 1 ? spots[k] : spots[0];
+        const size = !sys && owners.length === 1 ? 32 : 26;
+        this.drawStack(p.x + spot.x * HEX, p.y + spot.y * HEX, size, list.filter((f) => f.owner === o));
       });
-      if (list.length > 4) {
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 9px system-ui';
-        ctx.fillText(`+${list.length - 4}`, p.x + HEX * 0.5, p.y + HEX * 0.6);
+      if (owners.length > 2) {
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = 'bold 9px system-ui';
+        this.ctx.fillText(`+${owners.length - 2}`, p.x - HEX * 0.1, p.y - HEX * 0.62);
       }
+    }
+  }
+
+  private leadDesign(fleets: Fleet[]): string {
+    let best = '', size = -1;
+    for (const f of fleets) for (const sid of f.ships) {
+      const d = this.state.ships[sid].design;
+      const s = CLASSES[design(d).cls].size;
+      if (s > size) { size = s; best = d; }
+    }
+    return best;
+  }
+
+  /** One owner's fleets in a hex, as a single token. */
+  private drawStack(x: number, y: number, size: number, fleets: Fleet[]): void {
+    const ctx = this.ctx;
+    const owner = fleets[0].owner;
+    const color = factionDef(owner).color;
+    const selected = fleets.some((f) => f.id === this.selectedFleet);
+    const ships = fleets.reduce((n, f) => n + f.ships.length, 0);
+    const r = size * 0.52;
+    // Extra rims behind for each further fleet (up to two), so a stack reads as a stack.
+    for (let k = Math.min(2, fleets.length - 1); k >= 1; k--) {
+      ctx.fillStyle = 'rgba(4, 6, 13, 0.7)';
+      ctx.strokeStyle = hexAlpha(color, 0.7);
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(x + k * 2.5, y - k * 2.5, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(4, 6, 13, 0.72)';
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = selected ? '#ffd166' : color;
+    ctx.lineWidth = selected ? 2.5 : 1.6;
+    ctx.stroke();
+    ctx.drawImage(tokenImage(this.leadDesign(fleets), size * 2), x - size / 2, y - size / 2, size, size);
+    if (ships > 1) {
+      const bx = x + r * 0.8, by = y + r * 0.72;
+      ctx.fillStyle = shade(color, -0.45);
+      ctx.strokeStyle = '#04060d';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(bx, by, 6.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 8px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(ships), bx, by + 0.5);
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
+    }
+    // Green: something here is still waiting for your orders this turn.
+    if (owner === this.viewer && fleets.some((f) => f.movesLeft > 0 && f.path.length === 0 && !f.hold)) {
+      ctx.fillStyle = '#7CFC9A';
+      ctx.strokeStyle = '#04060d';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(x - r * 0.78, y - r * 0.7, 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+  }
+
+  /** Every fleet in a hex on its own (the selected hex, or zoomed in). */
+  private drawFleetsFanned(p: { x: number; y: number }, list: Fleet[]): void {
+    const ctx = this.ctx;
+    list.sort((a, b) => (a.owner === this.viewer ? -1 : 0) - (b.owner === this.viewer ? -1 : 0));
+    const n = Math.min(list.length, 4);
+    list.slice(0, 4).forEach((f, k) => {
+      const off = n === 1 ? { x: 0.34, y: -0.36 } : { x: (k % 2 ? 1 : -1) * 0.34, y: (k < 2 ? -1 : 1) * 0.3 };
+      this.drawStack(p.x + off.x * HEX, p.y + off.y * HEX, n === 1 ? 26 : 22, [f]);
+    });
+    if (list.length > 4) {
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 9px system-ui';
+      ctx.fillText(`+${list.length - 4}`, p.x + HEX * 0.5, p.y + HEX * 0.6);
     }
   }
 
@@ -641,8 +792,8 @@ export class MapView {
     for (const [hex, e] of byHex) {
       const p = hexToPixel(this.state.map, hex, HEX);
       // Down the left side of the hex, clear of fleet tokens (center) and the system name (bottom).
-      const x = p.x - HEX * 0.74;
-      let y = e.diplomats && e.spies ? p.y - HEX * 0.26 : p.y - HEX * 0.08;
+      const x = p.x - HEX * 0.7;
+      let y = e.diplomats && e.spies ? p.y - HEX * 0.02 : p.y + HEX * 0.16;
       if (e.diplomats) { this.drawAgentBadge(x, y, 'diplomat', e.diplomats, color, e.ambassador); y += HEX * 0.5; }
       if (e.spies) this.drawAgentBadge(x, y, 'spy', e.spies, color, false);
     }

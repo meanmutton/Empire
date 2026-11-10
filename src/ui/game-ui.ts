@@ -84,12 +84,13 @@ export class GameUI {
     this.side = h('div', { id: 'side' });
     this.hint = h('div', { id: 'hint' });
     const miniCanvas = h('canvas', { id: 'mini' });
-    root.append(canvas, this.top, this.side, this.hint, miniCanvas);
+    root.append(canvas, this.top, this.side, this.hint, miniCanvas, this.mapTools());
     this.overlayRoot = root;
     this.view = new MapView(canvas);
     this.mini = new Minimap(miniCanvas, this.view);
-    this.view.onCamera = () => this.mini.draw();
-    this.view.onHexClick = (hex, ev) => this.clickHex(hex, ev);
+    this.view.onCamera = () => { this.mini.draw(); this.hideHoverCard(); };
+    this.view.onHexClick = (hex, ev) => { this.hideHoverCard(); this.clickHex(hex, ev); };
+    this.view.onHover = (hex) => this.hover(hex);
     this.unsubscribe = host.messaging?.subscribe(() => { if (this.game) this.renderTop(); }) ?? null;
     const signal = this.listeners.signal;
     window.addEventListener('resize', () => { this.view.resize(); this.mini.draw(); if (this.game) this.renderTop(); }, { signal });
@@ -98,6 +99,9 @@ export class GameUI {
       if (e.key === 'Escape') { if (this.moveMode) this.toggleMove(false); else this.select(null); }
       if (e.key === 'n' && !typing) this.nextIdle();
       if (e.key === 'm' && !typing) this.toggleMove();
+      if ((e.key === '+' || e.key === '=') && !typing) this.zoomBy(1.25);
+      if (e.key === '-' && !typing) this.zoomBy(0.8);
+      if (e.key === 'h' && !typing) this.view.centerOn(this.game.factions[this.viewer].home);
     }, { signal });
   }
 
@@ -150,6 +154,79 @@ export class GameUI {
 
   private runHooks(): void {
     for (const fn of [...this.refreshHooks]) fn();
+  }
+
+  /** Zoom in or out around the middle of the visible map. */
+  zoomBy(factor: number): void {
+    const c = this.view.canvas;
+    this.view.zoomAt((c.clientWidth - this.view.rightInset) / 2, (c.clientHeight - this.view.bottomInset) / 2, factor);
+    this.mini.draw();
+  }
+
+  /** Zoom, home and relations-overlay buttons beside the minimap (the only zoom control on phones). */
+  private mapTools(): HTMLElement {
+    const rel = button('🤝', () => {
+      this.view.relationsOverlay = !this.view.relationsOverlay;
+      rel.classList.toggle('on', this.view.relationsOverlay);
+      legend.style.display = this.view.relationsOverlay ? '' : 'none';
+      this.view.invalidate();
+    }, { cls: 'small', title: 'Relations overlay: colour borders by how each power stands with you' });
+    const legend = h('div', { class: 'map-legend', style: 'display:none' },
+      ...([['#ffd166', 'You'], ['#7cfc9a', 'Ally or vassal'], ['#4fd1c5', 'Pact'], ['#8fb3ff', 'Relations'], ['#9aa6c4', 'Neutral'], ['#ff9f43', 'Hostile'], ['#ff4d4d', 'War'], ['#5c6684', 'Not met']] as const)
+        .map(([c, t]) => h('div', { class: 'row', style: 'gap:6px' }, h('span', { style: `width:10px;height:10px;border-radius:2px;background:${c};display:inline-block` }), t)));
+    return h('div', { id: 'map-tools' },
+      button('+', () => this.zoomBy(1.25), { cls: 'small', title: 'Zoom in (+)' }),
+      button('−', () => this.zoomBy(0.8), { cls: 'small', title: 'Zoom out (−)' }),
+      button('⌂', () => this.view.centerOn(this.game.factions[this.viewer].home), { cls: 'small', title: 'Centre on your capital (H)' }),
+      rel, legend);
+  }
+
+  private hoverTimer: number | undefined;
+  private hoverCard: HTMLElement | null = null;
+
+  /** Desktop only: after a short pause over a hex, a card with what is there. */
+  private hover(hex: number | null): void {
+    window.clearTimeout(this.hoverTimer);
+    this.hideHoverCard();
+    if (hex === null || isTouch()) return;
+    this.hoverTimer = window.setTimeout(() => this.showHoverCard(hex), 320);
+  }
+
+  private hideHoverCard(): void {
+    window.clearTimeout(this.hoverTimer);
+    this.hoverCard?.remove();
+    this.hoverCard = null;
+  }
+
+  private showHoverCard(hex: number): void {
+    const g = this.game;
+    if (!g || !getBit(g.factions[this.viewer].explored, hex)) return;
+    const hx = g.map.hexes[hex];
+    const card = h('div', { class: 'hover-card' });
+    card.append(h('div', { class: 'row' }, h('b', null, hx.system ? hx.system.name : TERRAIN_INFO[hx.terrain].name), h('span', { class: 'grow' }),
+      hx.owner ? factionChip(hx.owner, true) : h('span', { class: 'dim' }, 'unclaimed')));
+    if (hx.system) {
+      const s = hx.system;
+      card.append(h('div', { class: 'dim' }, `${PLANET_YIELDS[s.planet].name} · size ${s.size}${s.development ? ` · ${DEV_NAMES[s.development]}` : ''}${s.homeOf ? ' · capital' : ''}`));
+      if (s.development && hx.owner === this.viewer) card.append(h('div', { class: 'dim' }, `Pop ${num(s.population)} · ${s.queue.length ? `building ${s.queue.length}` : 'nothing queued'}`));
+      if (s.defense > 0 && hx.owner !== this.viewer) card.append(h('div', { class: 'dim' }, `Planetary defense ${num(s.defense)}`));
+    } else if (hx.terrain !== 'space') card.append(h('div', { class: 'dim' }, TERRAIN_INFO[hx.terrain].text));
+    const fleets = this.fleetsAt(hex);
+    const owners = [...new Set(fleets.map((f) => f.owner))];
+    for (const o of owners) {
+      const mine = fleets.filter((f) => f.owner === o);
+      const ships = mine.reduce((n, f) => n + f.ships.length, 0);
+      card.append(h('div', { class: 'row', style: 'gap:6px' }, factionChip(o, true), h('span', null, `${mine.length} fleet${mine.length > 1 ? 's' : ''}, ${ships} ship${ships > 1 ? 's' : ''}`),
+        o !== this.viewer && relation(g, this.viewer, o).status === 'war' ? h('span', { class: 'bad' }, 'at war') : ''));
+    }
+    const fc = battleForecast(g, this.viewer, hex, this.selFleet && g.fleets[this.selFleet]?.hex !== hex && g.fleets[this.selFleet]?.owner === this.viewer ? [this.selFleet] : []);
+    if (fc && (owners.includes(this.viewer) || this.selFleet)) card.append(h('div', null, 'Forecast: ', h('b', null, FORECAST_NAMES[fc.label])));
+    const sp = this.view.hexScreen(hex);
+    const r = this.view.canvas.getBoundingClientRect();
+    card.style.left = `${Math.min(r.left + sp.x + 24, window.innerWidth - 260)}px`;
+    card.style.top = `${Math.max(56, r.top + sp.y - 20)}px`;
+    this.overlayRoot.append(card);
+    this.hoverCard = card;
   }
 
   /** Fleet whose name is being edited. */
