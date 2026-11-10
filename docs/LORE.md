@@ -217,5 +217,86 @@ colonies they once kept.
   - **HALCYON** directs the fleets. It is brief and precise, and it sends every warning exactly once.
 
 ## Minor factions
-*Next: one paragraph for each of the 30, written in batches of 10 once the premise and the great powers are
-settled.*
+
+Ten of the thirty appear in any one game. None of them has a single named leader; their portraits show a
+typical envoy.
+
+Three of them are humanoid species whose envoys are strikingly beautiful women, each for her own reasons: the
+Thessic Banking Houses, the Sylph Gardeners and the Ilyrian Courts.
+
+### Batch 1
+
+**Myrr Choir.** The Myrr are translucent, drifting beings like great glowing jellyfish. They think in harmony
+and speak in song. They are one of the elder peoples who survived the Quieting. For two thousand years their
+cathedral-ships have sung a single unbroken hymn, the Long Note, meant to fill a silence they say they *heard*
+begin in 2031. That is why they are pacifists: violence breaks the harmony. Anyone who attacks a Choir world
+feels the song working on their will, and finds their hand slowing on the trigger. The Myrr will not explain
+what they heard stop. They only say it has not started again.
+
+**Quorr Salvage Fleets.** The Quorr are soft-bodied, many-legged scavengers. Like hermit crabs, they live
+inside armour shells cut from machine wreckage, and a Quorr's shell is its history, its wealth and its name.
+They have no homeworld and no government. Where they have a home at all, it is the Great Raft: a drifting
+city of hulls welded together, most of them Cryx. The Quorr strip every battlefield in the Reach and sell
+everything, with no questions asked. Every clan claims to own the biggest Cryx wreck ever found. None of them
+will say where it is.
+
+**Thessic Banking Houses.** The Thessic are a humanoid people with gold-flecked skin, and they are famous
+for their beauty. The Houses are ruled by matriarchs, and outsiders almost only ever deal with the Houses'
+daughters, who are glamorous, charming and very hard to out-bargain. The Houses quietly kept trade alive
+during the Long Silence by funding the rare ships that still crossed between stars. Now half the Reach owes
+them money. The Thessic consider war a poor investment. They hire other people's warships when they must,
+and they rent out their own to anyone who pays.
+
+**Ghal'tar Pirate Clans.** The Ghal'tar are lean grey raiders with no eyes. They sense the world through
+electric fields, which makes nebulae and asteroid fields, blind to everyone else, their natural hunting
+grounds. Their clans began as border garrisons of the Cryx Imperium, stranded when the Threadways went dark,
+and they never stopped collecting tolls. Their raids are fast, their loyalties are short, and their tattooed
+hides record every ship they have taken. To the Ghal'tar, a convoy without an escort is an invitation.
+
+**Ixxi Swarm.** The Ixxi are an insectoid hive ruled by a single brood-mind. They spread across their worlds
+like a tide, with billions of drones and the warriors to match. Their swarm ships are cheap and numberless.
+The Ixxi did not ask for diplomacy, but other species kept demanding it, so the brood-mind grew a caste of
+speaker-drones for the purpose. Speaker-drones are said to be the only Ixxi that can feel fear. Every
+species the Swarm has met has, sooner or later, tried to fight it. The Swarm is still here.
+
+**Celestine Order.** The Celestine are tall, white-feathered avians with long, curved beaks. They are
+warrior-monks who swear lifelong vows to guard a handful of sacred worlds. Their faith grew up around a
+sealed Cryx vault they call the Reliquary. They believe it holds whatever ended the Cryx, and that it must
+never be opened. Celestine knights fight under shields blessed by their abbots, and their soldiers are the
+most fearsome in the Reach. Anyone who asks about the Reliquary is politely refused, and anyone who asks
+twice is watched.
+
+**Voidborn Drifters.** The Voidborn are descended from colony ships of many species that were stranded when
+the Quieting cut them off halfway between stars. Generations born in zero gravity have made them very tall,
+very thin and pale as frost, with large dark eyes. One of their oldest arks was the human colony ship
+*Perseverance*, lost in 2411, and the Voidborn still fly it. They never land on a planet if they can help it,
+they cross hazardous space without harm, and they slip out of battles they cannot win. To the Voidborn, worlds
+are where other people go to be trapped.
+
+**Aurelian Republic.** The Aurelians are massive, slow, long-lived beings with folded grey hide and a ring of
+small golden eyes around a domed head. They live for three centuries and think in decades. Their republic was
+a client state of the Cryx, and their Senate still meets in a chamber the Cryx built. They are the only
+power left with a living memory, through their archives, of what the Reach was like before the Quieting.
+That memory makes them respected everywhere and listened to nowhere. It was an Aurelian senator who first
+proposed the Galactic Council. Their archives are open to anyone willing to trade for them; their reasons for
+keeping the oldest records sealed are not.
+
+**Korrigan Miners' Guild.** The Korrigan are short and broad, with plated, basalt-dark skin, glowing ore-red
+veins, and eyes like miners' lamps. They are born in the deep tunnels of asteroid fields and love it there.
+The Guild belongs to its members: every miner holds an equal share, every decision is put to a vote, and
+nobody, from a Varrhen admiral to the Guild's own elected Steward, is allowed to give a Korrigan an order
+without one. They mine the deepest veins in the Reach, sell metal to everyone, and treat a claim on their
+asteroids as a declaration of war.
+
+**Sylph Gardeners.** The Sylph are a single slow plant-mind spread across forests that cover whole worlds.
+They think in seasons and cultivate planets over centuries. Animal peoples could never understand them, so
+the Sylph grew **speaking-blooms** to do it for them: lovely humanoid figures of bark, vine and petal,
+shaped like women because the Sylph found that animals trust a beautiful face. The blooms are charming,
+gentle and a little unsettling, because every one of them is the same mind. The Sylph heal what others
+burn. Their ships regrow their own hulls, and their gardeners can make a barren world bloom in a fraction of
+the usual time.
+
+### Batches 2 and 3
+*To be written: factions 11–30. Design already agreed for the **Ilyrian Courts**: a humanoid royal species
+whose princesses and courtiers are famed for their glamour. They rule through marriages, favours and
+whispers.*
