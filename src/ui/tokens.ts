@@ -47,6 +47,18 @@ export function tokenImage(designId: string, px: number): HTMLCanvasElement {
   return c;
 }
 
+/**
+ * A ship token for the page: a fresh canvas each time (a cached canvas can only sit in one place in the
+ * page, so reusing it would make an earlier icon of the same design vanish).
+ */
+export function tokenElement(designId: string, px: number): HTMLCanvasElement {
+  const src = tokenImage(designId, px);
+  const c = document.createElement('canvas');
+  c.width = c.height = px;
+  c.getContext('2d')!.drawImage(src, 0, 0);
+  return c;
+}
+
 /** Small deterministic hash of a string, for per-design variation. */
 function hash(text: string): number {
   let h = 2166136261;

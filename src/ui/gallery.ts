@@ -2,7 +2,7 @@
 import { DESIGNS_BY_FACTION } from '../data/designs';
 import { FACTIONS } from '../data/factions';
 import { CLASSES, ROLES } from '../data/ships';
-import { tokenImage } from './tokens';
+import { tokenElement } from './tokens';
 
 export function rosterStrip(factionId: string, px = 48): HTMLElement {
   const wrap = document.createElement('div');
@@ -12,7 +12,7 @@ export function rosterStrip(factionId: string, px = 48): HTMLElement {
     const cell = document.createElement('div');
     cell.className = 'roster-cell';
     cell.title = `${d.name}: ${CLASSES[d.cls].name}, ${ROLES[d.role].name}`;
-    const img = tokenImage(d.id, px * 2);
+    const img = tokenElement(d.id, px * 2);
     img.style.width = img.style.height = `${px}px`;
     cell.appendChild(img);
     const label = document.createElement('div');

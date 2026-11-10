@@ -157,6 +157,40 @@ export function splitFleet(state: GameState, fleetId: string, shipIds: string[])
   return id;
 }
 
+/** Moves some ships of one fleet into another fleet in the same hex (all of them merges the two). */
+export function transferShips(state: GameState, fromId: string, toId: string, shipIds: string[]): Result {
+  const from = state.fleets[fromId], to = state.fleets[toId];
+  if (!from || !to || from === to) return fail('Pick two fleets.');
+  if (from.owner !== to.owner || from.hex !== to.hex) return fail('Fleets must be together.');
+  if (shipIds.length === 0 || !shipIds.every((s) => from.ships.includes(s))) return fail('Pick ships from the fleet.');
+  const moving = shipIds.filter((s) => design(state.ships[s].design).cls !== 'fighter').length;
+  if (groupSize(state, to) + moving > BALANCE.maxShipsPerFleet) return fail(`A battle group holds at most ${BALANCE.maxShipsPerFleet} ships.`);
+  if (shipIds.length === from.ships.length) return mergeFleets(state, toId, fromId);
+  const split = splitFleet(state, fromId, shipIds)!;
+  return mergeFleets(state, toId, split);
+}
+
+/**
+ * Packs a faction's fleets in a hex into as few battle groups as possible (up to 6 ships each), biggest
+ * first. Warships go with warships and support ships (scouts, colony ships, transports…) with their own
+ * kind, so a scout isn't slowed by a battleship or a colony ship dragged into battle. Returns how many
+ * fleets were folded into others.
+ */
+export function combineFleets(state: GameState, faction: FactionId, hex: number): number {
+  const SUPPORT = new Set(['scout', 'explore', 'science', 'cargo', 'colony', 'constructor', 'transport']);
+  const armed = (f: Fleet) => f.ships.some((s) => { const d = design(state.ships[s].design); return !SUPPORT.has(d.role) && d.stats.energy + d.stats.missile + d.stats.hangar > 0; });
+  const fleets = Object.values(state.fleets).filter((f) => f.owner === faction && f.hex === hex)
+    .sort((a, b) => groupSize(state, b) - groupSize(state, a) || a.id.localeCompare(b.id));
+  const groups: Fleet[] = [];
+  let merged = 0;
+  for (const f of fleets) {
+    const into = groups.find((g) => armed(g) === armed(f) && groupSize(state, g) + groupSize(state, f) <= BALANCE.maxShipsPerFleet);
+    if (into && mergeFleets(state, into.id, f.id).ok) merged++;
+    else groups.push(f);
+  }
+  return merged;
+}
+
 /** Removes a ship; deletes its fleet if empty, and anything aboard. */
 export function removeShip(state: GameState, shipId: string): void {
   const s = state.ships[shipId];
