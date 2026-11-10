@@ -4,7 +4,11 @@ import { button, h, modal } from '../dom';
 import { num } from '../format';
 import type { GameUI } from '../game-ui';
 
-export function openResearch(ui: GameUI): void {
+/**
+ * The research tree. With `beforeEndTurn`, it was opened because the player pressed End Turn with nothing
+ * being researched: it says so, and offers to end the turn once a project is picked.
+ */
+export function openResearch(ui: GameUI, opts: { beforeEndTurn?: boolean } = {}): void {
   const body = h('div');
   const m = modal('Research', body, { wide: true });
   const render = () => {
@@ -12,6 +16,13 @@ export function openResearch(ui: GameUI): void {
     const r = g.factions[ui.viewer].research;
     const known = new Set(r.known);
     body.innerHTML = '';
+    if (opts.beforeEndTurn) {
+      body.append(h('div', { class: 'card', style: 'margin-bottom:8px;border-color:var(--accent)' },
+        h('div', { class: 'row' },
+          h('span', { class: 'grow' }, r.current ? `Researching ${TECHS.find((t) => t.id === r.current)!.name}. Ready to end your turn.` : 'Nothing is being researched. Pick a project, then end your turn.'),
+          r.current ? button('End turn', () => { m.close(); ui.endTurn(); }, { cls: 'primary' }) : null,
+          button(r.current ? 'Keep playing' : 'End turn anyway', () => { m.close(); if (!r.current) ui.endTurn(true); }, { cls: 'small ghost' }))));
+    }
     body.append(h('div', { class: 'row', style: 'margin-bottom:8px' },
       h('span', null, r.current ? `Researching ${TECHS.find((t) => t.id === r.current)!.name}: ${num(r.progress)} / ${techCost(r.current)}` : `Banked science: ${num(r.progress)}. Pick a project.`),
       h('span', { class: 'grow' }),

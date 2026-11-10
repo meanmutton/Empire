@@ -9,6 +9,8 @@ export interface ImprovementDef {
   yields?: Partial<Record<ResourceKind, number>>;
   /** Extra population capacity. */
   popCap?: number;
+  /** Extra production points per turn for the system's build queue. */
+  production?: number;
   defense?: number;
   garrison?: number;
   /** Minimum development level. */
@@ -31,6 +33,11 @@ export const IMPROVEMENTS: Record<string, ImprovementDef> = {
   planetShield: { name: 'Planetary Shield', text: '+20 planetary defense.',                  cost: { metals: 50, energy: 30, exotics: 0 }, buildPoints: 12, defense: 20, minLevel: 2, tech: 'deflectors' },
   garrison:     { name: 'Ground Garrison', text: '+20 ground defense.',                      cost: { metals: 30, energy: 10, exotics: 0 }, buildPoints: 8,  garrison: 20, minLevel: 1, tech: null },
   tradePort:    { name: 'Trade Port',      text: '+2 energy per trade agreement.',           cost: { metals: 35, energy: 15, exotics: 0 }, buildPoints: 9,  minLevel: 2, tech: 'commerce', unique: true },
+  factory:      { name: 'Factory',         text: '+3 production per turn.',                  cost: { metals: 35, energy: 15, exotics: 0 }, buildPoints: 9,  production: 3, minLevel: 2, tech: null },
+  orbitalFarm:  { name: 'Orbital Farm',    text: '+3 population capacity, +1 energy.',       cost: { metals: 25, energy: 10, exotics: 0 }, buildPoints: 7,  popCap: 3, yields: { energy: 1 }, minLevel: 1, tech: 'hydroponics' },
+  deepMine:     { name: 'Deep Core Mine',  text: '+7 metals.',                               cost: { metals: 45, energy: 20, exotics: 0 }, buildPoints: 12, yields: { metals: 7 }, minLevel: 3, tech: 'asteroidMining' },
+  fusionReactor:{ name: 'Antimatter Reactor', text: '+6 energy.',                            cost: { metals: 45, energy: 15, exotics: 2 }, buildPoints: 12, yields: { energy: 6 }, minLevel: 3, tech: 'antimatter' },
+  university:   { name: 'University',      text: '+6 science. One per system.',              cost: { metals: 50, energy: 30, exotics: 0 }, buildPoints: 14, yields: { science: 6 }, minLevel: 3, tech: 'quantumComputing', unique: true },
   academy:      { name: 'Academy',         text: 'Ships and armies built here start as veterans.', cost: { metals: 60, energy: 30, exotics: 0 }, buildPoints: 14, minLevel: 3, tech: 'tactics', unique: true },
 };
 

@@ -361,19 +361,23 @@ function chooseImprovement(ctx: Ctx, hex: number): string | null {
   if (sys.development >= 3 && !has('shipyard') && ownedHexes(ctx.state, ctx.me).filter((h) => ctx.state.map.hexes[h].system?.improvements.includes('shipyard')).length < 3) order.push('shipyard');
   if (sys.development >= 4 && !has('heavyShipyard')) order.push('heavyShipyard');
   if (sys.development === 5 && availableVictories(ctx.state, ctx.me).includes('singularity')) order.push('lab');
-  if (p.metals >= p.energy && p.metals >= p.science) order.push('mine', 'powerPlant', 'lab');
-  else if (p.science >= p.energy) order.push('lab', 'mine', 'powerPlant');
-  else order.push('powerPlant', 'mine', 'lab');
-  order.push('refinery', 'habitat', 'planetShield', 'garrison', 'tradePort', 'academy');
-  for (const id of order) {
-    if (IMPROVEMENTS[id].unique && has(id)) continue;
-    if (checkBuild(ctx.state, ctx.me, hex, 'improvement', id).ok) {
-      const c = IMPROVEMENTS[id].cost;
-      const s = ctx.state.factions[ctx.me].stock;
-      if (c.metals <= s.metals - 20 && c.energy <= s.energy - 10) return id;
-    }
-  }
-  return null;
+  if (p.metals >= p.energy && p.metals >= p.science) order.push('deepMine', 'mine', 'factory', 'fusionReactor', 'powerPlant', 'university', 'lab');
+  else if (p.science >= p.energy) order.push('university', 'lab', 'factory', 'deepMine', 'mine', 'fusionReactor', 'powerPlant');
+  else order.push('fusionReactor', 'powerPlant', 'factory', 'deepMine', 'mine', 'university', 'lab');
+  order.push('refinery', 'orbitalFarm', 'habitat', 'planetShield', 'garrison', 'tradePort', 'academy');
+  // Earlier in the list is better, but each copy already built counts against a choice (repeats yield less).
+  const copies = (id: string) => sys.improvements.filter((x) => x === id).length;
+  const s = ctx.state.factions[ctx.me].stock;
+  let best: string | null = null, bestScore = -Infinity;
+  order.forEach((id, i) => {
+    if (IMPROVEMENTS[id].unique && has(id)) return;
+    const score = -i - copies(id) * 3;
+    if (score <= bestScore) return;
+    if (!checkBuild(ctx.state, ctx.me, hex, 'improvement', id).ok) return;
+    const c = IMPROVEMENTS[id].cost;
+    if (c.metals <= s.metals - 20 && c.energy <= s.energy - 10 && c.exotics <= s.exotics) { best = id; bestScore = score; }
+  });
+  return best;
 }
 
 // ---------------------------------------------------------------------------------------------------------

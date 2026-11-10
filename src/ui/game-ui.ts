@@ -14,11 +14,11 @@ import { applyAction, type Action } from '../engine/actions';
 import { getBit } from '../engine/bitset';
 import { cargoFree } from '../engine/ground';
 import { blockadersAt } from '../engine/blockade';
-import { checkBuild, factionIncome, popCapOf, productionOf, rushCost, slotsOf, systemYield } from '../engine/economy';
+import { checkBuild, factionIncome, popCapOf, productionOf, REPEAT_FALLOFF, rushCost, slotsOf, systemYield } from '../engine/economy';
 import { MISSIONS, type MissionId } from '../engine/espionage';
 import { planPath, reachableThisTurn } from '../engine/movement';
 import { activeFaction, relation } from '../engine/query';
-import { techCost } from '../engine/research';
+import { availableTechs, techCost } from '../engine/research';
 import type { Fleet, GameState } from '../engine/types';
 import { canSeeFleet } from '../engine/visibility';
 import { bar, button, clear, h, modal, toast } from './dom';
@@ -142,6 +142,12 @@ export class GameUI {
     for (const fn of [...this.refreshHooks]) fn();
   }
 
+  /** Redraws the side panel and anything else showing the same controls (the management screens). */
+  private rerender(): void {
+    this.renderSide();
+    this.runHooks();
+  }
+
   /** True while the viewer is choosing a destination for the selected fleet or agent. */
   get moving(): boolean {
     return this.moveMode;
@@ -156,8 +162,14 @@ export class GameUI {
     this.runHooks();
   }
 
-  endTurn(): void {
+  /** Ends the turn; with nothing being researched (and something to research), opens Research first. */
+  endTurn(skipResearchCheck = false): void {
     if (!this.myTurn) return;
+    const research = this.game.factions[this.viewer].research;
+    if (!skipResearchCheck && !research.current && availableTechs(this.game, this.viewer).length > 0) {
+      openResearch(this, { beforeEndTurn: true });
+      return;
+    }
     const r = applyAction(this.game, this.viewer, { type: 'endTurn' });
     if (!r.ok) { toast(r.reason, 'error'); return; }
     this.select(null);
@@ -470,7 +482,7 @@ export class GameUI {
     card.append(kv);
     if (sys.improvements.length || sys.development > 0) {
       card.append(h('div', { class: 'dim', style: 'margin-top:4px' }, `Improvements (${sys.improvements.length}/${slotsOf(sys)}): `,
-        sys.improvements.map((i) => IMPROVEMENTS[i]?.name ?? i).join(', ') || 'none'));
+        [...new Set(sys.improvements)].map((i) => { const n = sys.improvements.filter((x) => x === i).length; return `${IMPROVEMENTS[i]?.name ?? i}${n > 1 ? ` ×${n}` : ''}`; }).join(', ') || 'none'));
     }
     if (mine && sys.development > 0) card.append(this.buildPanel(hex));
     return card;
@@ -493,7 +505,7 @@ export class GameUI {
         })));
     });
     const tabs = h('div', { class: 'tabs' },
-      ...(['ships', 'improvements', 'other'] as const).map((t) => button(t[0].toUpperCase() + t.slice(1), () => { this.buildTab = t; this.renderSide(); }, { cls: `small ${this.buildTab === t ? 'on' : ''}` })));
+      ...(['ships', 'improvements', 'other'] as const).map((t) => button(t[0].toUpperCase() + t.slice(1), () => { this.buildTab = t; this.rerender(); }, { cls: `small ${this.buildTab === t ? 'on' : ''}` })));
     wrap.append(tabs);
     const opt = (label: string, cost: string, check: { ok: boolean; reason?: string }, action: Action, title?: string) =>
       button(h('span', { class: 'row grow' }, h('span', { class: 'grow' }, label), h('span', { class: 'dim' }, cost)), () => this.act(action),
@@ -509,7 +521,9 @@ export class GameUI {
     } else if (this.buildTab === 'improvements') {
       for (const [id, imp] of Object.entries(IMPROVEMENTS)) {
         const c = checkBuild(g, this.viewer, hex, 'improvement', id);
-        wrap.append(opt(imp.name, costText(imp.cost), c, { type: 'build', hex, kind: 'improvement', item: id }, imp.text));
+        const copies = sys.improvements.filter((x) => x === id).length + sys.queue.filter((q) => q.kind === 'improvement' && q.item === id).length;
+        const repeat = copies && (imp.yields || imp.production) ? ` Another one here yields ${Math.round(Math.pow(REPEAT_FALLOFF, copies) * 100)}% (each repeat on the same world yields 20% less).` : '';
+        wrap.append(opt(copies ? `${imp.name} (${copies + 1}${copies === 1 ? 'nd' : copies === 2 ? 'rd' : 'th'})` : imp.name, costText(imp.cost), c, { type: 'build', hex, kind: 'improvement', item: id }, imp.text + repeat));
       }
     } else {
       const items: [string, Parameters<typeof checkBuild>[3], string][] = [
@@ -545,7 +559,7 @@ export class GameUI {
         if (!sel) return;
         e.stopPropagation();
         if (this.splitSet.has(sid)) this.splitSet.delete(sid); else this.splitSet.add(sid);
-        this.renderSide();
+        this.rerender();
       } }, img, h('div', { class: 'grow' }, h('div', null, `${d.name} `, h('span', { class: 'dim' }, `${CLASSES[d.cls].name} ${ROLES[d.role].name}`)),
         h('div', { class: 'row' }, bar(s.hull / d.stats.hull, s.hull / d.stats.hull > 0.5 ? '#7cfc9a' : '#ff6b6b'),
           h('span', { class: 'dim', style: 'font-size:11px' }, `${s.hull}/${d.stats.hull}${isCrippled(s.hull, d.stats.hull) ? ' · crippled' : s.hull < d.stats.hull * BALANCE.combat.damagedAt ? ' · damaged' : ''}${s.xp ? ` · ${['', 'regular', 'veteran', 'elite'][s.xp]}` : ''}${d.stats.hangar ? ` · ${s.fighters} fighters` : ''}${s.cargo.length ? ` · ${s.cargo.length} aboard` : ''}`))));
