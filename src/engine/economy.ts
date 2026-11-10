@@ -289,11 +289,22 @@ export function queueBuild(state: GameState, faction: FactionId, hex: number, ki
   s.exotics = round1(s.exotics - check.cost.exotics);
   const sys = state.map.hexes[hex].system!;
   sys.population = round1(sys.population - check.cost.population);
-  sys.queue.push({ kind, item, remaining: check.cost.points });
+  sys.queue.push({
+    kind, item, remaining: check.cost.points, total: check.cost.points,
+    paid: { metals: check.cost.metals, energy: check.cost.energy, exotics: check.cost.exotics, population: check.cost.population },
+  });
   return check;
 }
 
-/** Cancels a queued build and refunds half of its cost. */
+/** Whether work on a queued build has begun (production points spent on it, or rushed). */
+export function buildStarted(order: BuildOrder): boolean {
+  return order.total === undefined ? true : order.remaining < order.total;
+}
+
+/**
+ * Cancels a queued build. Everything paid comes back (population too) until construction begins; after that,
+ * half of the resources.
+ */
 export function cancelBuild(state: GameState, faction: FactionId, hex: number, index: number): boolean {
   const h = state.map.hexes[hex];
   if (!h.system || h.owner !== faction || !h.system.queue[index]) return false;
@@ -303,10 +314,23 @@ export function cancelBuild(state: GameState, faction: FactionId, hex: number, i
   const s = state.factions[faction].stock;
   s.metals = round1(s.metals + refund.metals);
   s.energy = round1(s.energy + refund.energy);
+  s.exotics = round1(s.exotics + refund.exotics);
+  h.system.population = round1(h.system.population + refund.population);
   return true;
 }
 
-function refundFor(order: BuildOrder): { metals: number; energy: number } {
+/** What cancelling an order gives back. */
+export function refundFor(order: BuildOrder): { metals: number; energy: number; exotics: number; population: number } {
+  if (order.paid) {
+    const k = buildStarted(order) ? 0.5 : 1;
+    const p = order.paid;
+    return { metals: p.metals * k, energy: p.energy * k, exotics: p.exotics * k, population: p.population * k };
+  }
+  return { ...legacyRefund(order), exotics: 0, population: 0 };
+}
+
+/** Orders queued before costs were recorded on them: half of a ship's or improvement's price. */
+function legacyRefund(order: BuildOrder): { metals: number; energy: number } {
   if (order.kind === 'ship') {
     const d = DESIGNS[order.item];
     return d ? { metals: d.cost.metals / 2, energy: d.cost.energy / 2 } : { metals: 0, energy: 0 };

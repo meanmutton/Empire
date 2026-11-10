@@ -15,11 +15,11 @@ const SECTIONS: [string, string[]][] = [
   ['Economy', [
     'Systems produce energy ⚡, metals ⛏, science 🔬 and exotics ✦. Population 👥 grows on habitable worlds and crews big ships.',
     'Found colonies with colony ships and outposts with constructors. Develop systems to raise yields and unlock improvement slots and shipyards.',
-    'Builds are paid up front. Each system then works on its own queue. Rush with energy, or cancel for half back.',
+    'Builds are paid up front. Each system then works on its own queue. Rush with energy. Cancelling gives everything back until work on it begins, and half once it is under way.',
     'Ships, starbases, agents and armies cost energy upkeep. Running out of energy weakens your fleets.',
   ]],
   ['Fleets and combat', [
-    'Tap a fleet, then tap a destination twice to move. Up to six ships form a battle group and move at the speed of the slowest.',
+    'Tap a fleet to select it (tap again to cycle through your fleets there). To move it, press Move (or M, or right-click on a computer), then tap the destination twice: once to see the route and battle forecast, once to confirm. Up to six ships form a battle group and move at the speed of the slowest.',
     'Moving into enemies stops your fleet. At the end of each turn there is a battle wherever enemies share a hex: several combat rounds (the host picks 3–10), fought without you.',
     'Give each fleet battle orders: Full Attack, Engage, Cautious, Hold the Line, Hit and Run or Retreat. They set when it withdraws, how much it trades defense for offense, and which range it fights at (beams like close quarters, missiles and fighters long range). The Ryn’kai never withdraw.',
     'Battles are uncertain: every shot can miss or land a critical hit, each side has its fortunes of war, and rare events can swing a fight. A side with 1.5× the force still loses about a quarter of the time. Damaged ships fire less; crippled ones (under a quarter hull) also move a hex slower until repaired.',

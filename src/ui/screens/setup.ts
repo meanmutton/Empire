@@ -92,11 +92,15 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
     }
     const sizeSel = h('select', { onchange: (e: Event) => { size = (e.target as HTMLSelectElement).value as typeof size; } },
       ...Object.entries(MAP_SIZES).map(([k, v]) => h('option', { value: k, selected: k === size }, `${k[0].toUpperCase() + k.slice(1)} (${v.width}×${v.height})`)));
-    const seedIn = h('input', { value: seed, style: 'width:120px', oninput: (e: Event) => { seed = (e.target as HTMLInputElement).value; } });
+    const seedIn = h('input', {
+      value: seed, style: 'width:120px', placeholder: 'random',
+      title: 'Any word or number. The same seed with the same settings makes the same galaxy (map, minor factions and starting luck), so you can replay a map or share one with friends. Leave it blank for a new random galaxy.',
+      oninput: (e: Event) => { seed = (e.target as HTMLInputElement).value; },
+    });
     const limit = h('input', { value: turnLimit, placeholder: 'none', style: 'width:70px', oninput: (e: Event) => { turnLimit = (e.target as HTMLInputElement).value; } });
     left.append(h('h3', null, 'Galaxy'), h('div', { class: 'kv' },
       h('span', { class: 'k' }, 'Map size'), sizeSel,
-      h('span', { class: 'k' }, 'Seed'), seedIn,
+      h('span', { class: 'k', title: 'The same seed makes the same galaxy' }, 'Galaxy seed'), seedIn,
       h('span', { class: 'k' }, 'Turn limit'), limit,
       h('span', { class: 'k' }, 'Combat rounds per battle'), h('select', {
         title: 'How long each battle lasts. More rounds: bloodier battles, since fleets that fight to the end keep fighting.',

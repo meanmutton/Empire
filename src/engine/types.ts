@@ -57,6 +57,10 @@ export interface BuildOrder {
   item: string;
   /** Production points still needed. */
   remaining: number;
+  /** Production points when queued: work has begun once `remaining` drops below it. */
+  total?: number;
+  /** What was paid when it was queued (refunded in full if cancelled before work begins, half after). */
+  paid?: { metals: number; energy: number; exotics: number; population: number };
 }
 
 export interface Hex {
