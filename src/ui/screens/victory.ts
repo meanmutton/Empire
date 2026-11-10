@@ -3,7 +3,7 @@ import { factionDef } from '../../data/factions';
 import { PRESETS, VICTORIES } from '../../data/victories';
 import { intelLevel, intelScore, rivalReport, spyQuality } from '../../engine/intel';
 import { availableVictories, presetOf, progress } from '../../engine/victory';
-import { bar, h, modal } from '../dom';
+import { bar, h } from '../dom';
 import { factionChip } from '../format';
 import type { GameUI } from '../game-ui';
 
@@ -14,7 +14,8 @@ const LEVEL_TEXT = [
   'Your spies know their exact progress.',
 ];
 
-export function openVictory(ui: GameUI): void {
+/** Victory progress (yours and what your spies know of rivals'): the Victory tab of the briefing. */
+export function victoryView(ui: GameUI): HTMLElement {
   const g = ui.game;
   const me = ui.viewer;
   const body = h('div');
@@ -55,6 +56,6 @@ export function openVictory(ui: GameUI): void {
     }
     body.append(card);
   }
-  modal('Victory', body, { wide: true });
   void factionDef;
+  return body;
 }

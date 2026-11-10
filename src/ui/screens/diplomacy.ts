@@ -1,4 +1,4 @@
-/** Diplomacy: relations, embassies and diplomats, proposals and conversations, all in one screen. */
+/** Diplomacy: relations, embassies and diplomats, proposals, conversations and the market, all in one screen. */
 import { factionDef } from '../../data/factions';
 import { TECH_BY_ID } from '../../data/techs';
 import { hasEmbassy, opinionOf } from '../../engine/agents';
@@ -12,6 +12,7 @@ import { costText, factionChip, ICON, num } from '../format';
 import { checkBuild } from '../../engine/economy';
 import { hexDistance } from '../../engine/hex';
 import { intelLevel } from '../../engine/intel';
+import { marketPane, type MarketTab } from './market';
 import { aiThread, aiUnread, chatPanel, groupThreads, threadName, threadUnread } from './messages';
 import type { GameUI } from '../game-ui';
 
@@ -47,11 +48,12 @@ export function seesTechOf(ui: GameUI, other: FactionId): boolean {
  * one: relations, embassy and diplomats, proposals, and the conversation (chat with human players,
  * statements to computer powers).
  *
- * `focus` picks what opens first: a faction id, 'overview', 'all' (chat with everyone), or a group thread
+ * `focus` picks what opens first: a faction id, 'overview', 'market', 'all' (chat with everyone), or a group thread
  * (comma-separated factions). 'ai:<faction>' (older callers) means that faction.
  */
 export function openDiplomacy(ui: GameUI, focus: string = 'overview'): void {
   let current = focus.startsWith('ai:') ? focus.slice(3) : focus;
+  let marketTab: MarketTab = 'exchange';
   const drafts = new Map<string, string>();
   const body = h('div', { class: 'msg-grid' });
   const messaging = ui.messaging;
@@ -66,7 +68,7 @@ export function openDiplomacy(ui: GameUI, focus: string = 'overview'): void {
     const unmet = Object.keys(g.factions).filter((o) => o !== me && g.factions[o].alive && !relation(g, me, o).contact).length;
     const inbox = Object.values(g.proposals).filter((p) => p.to === me && !p.answer);
     const groups = humanGame ? groupThreads(ui, messaging!) : [];
-    const valid = new Set(['overview', ...(humanGame ? ['all', ...groups] : []), ...met]);
+    const valid = new Set(['overview', 'market', ...(humanGame ? ['all', ...groups] : []), ...met]);
     if (!valid.has(current)) current = 'overview';
 
     const list = h('div', { class: 'dip-list' });
@@ -75,6 +77,7 @@ export function openDiplomacy(ui: GameUI, focus: string = 'overview'): void {
       list.append(button(h('span', { class: 'row grow' }, label, sub ? h('span', { class: 'dim', style: 'font-size:11px' }, sub) : '', h('span', { class: 'grow' }), badge(n, flavour)),
         () => { current = key; render(); }, { cls: `list-btn small ${key === current ? 'on' : ''}` }));
     entry('overview', h('b', null, 'Overview'), inbox.length);
+    entry('market', h('span', null, '💱 Market'), 0, 'exchange, routes, hire');
     if (humanGame) {
       entry('all', h('span', null, '📢 All players'), threadUnread(ui, messaging!, 'all'));
       for (const k of groups) entry(k, h('span', null, ...k.split(',').map((f) => factionChip(f, true))), threadUnread(ui, messaging!, k));
@@ -90,7 +93,8 @@ export function openDiplomacy(ui: GameUI, focus: string = 'overview'): void {
     if (!met.length) list.append(h('div', { class: 'dim', style: 'font-size:12px;margin-top:6px' }, 'You have not met anyone yet. Explore with scouts.'));
 
     let right: HTMLElement;
-    if (current === 'overview') right = overviewPane(ui, met, (k) => { current = k; render(); }, render);
+    if (current === 'market') right = h('div', null, h('h3', null, 'Market'), marketPane(ui, marketTab, (t) => { marketTab = t; render(); }, render));
+    else if (current === 'overview') right = overviewPane(ui, met, (k) => { current = k; render(); }, render);
     else if (current === 'all' || current.includes(',')) right = h('div', null, h('h3', null, threadName(current)), chatPanel(ui, messaging!, current, drafts));
     else right = factionPane(ui, current, drafts, render);
     body.append(list, right);

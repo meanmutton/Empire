@@ -601,7 +601,7 @@ language-model mode could let you chat with computer leaders in free text, with 
 going through these rules.)*
 
 ### 9.9 Mercenaries and shipyard contracts
-Opened from **Market**. Buyers need contact with the seller and must not be at war with it.
+Opened from **Diplomacy → Market**. Buyers need contact with the seller and must not be at war with it.
 - **Thessic Banking Houses** (Mercenary Contracts) offer two of their warships every round, for energy.
   The ship waits at the Thessic home system for its new owner.
 - **Grendis Iron Legion** (For Hire) offer two veteran armies (strength 15, elite) every round. A hired army
@@ -617,7 +617,7 @@ Opened from **Market**. Buyers need contact with the seller and must not be at w
 ## 10. Victory
 
 Each great power can only win in ways that fit its ideology, and each has exactly one victory of its own
-(★). Progress on every path is shown on the **Victory** screen.
+(★). Progress on every path is shown on the **Victory** tab of the briefing.
 
 ### 10.1 Victories
 

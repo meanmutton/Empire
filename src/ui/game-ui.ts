@@ -31,8 +31,6 @@ import { openResearch } from './screens/research';
 import { injectStyles } from './styles';
 import { isGameOver } from '../engine/victory';
 import { unreadAi, unreadChat, type Messaging } from './messaging';
-import { openMarket } from './screens/market';
-import { openVictory } from './screens/victory';
 import { routeCapacity, routeIncome, routesOf } from '../engine/routes';
 import { tokenElement } from './tokens';
 
@@ -67,6 +65,8 @@ export class GameUI {
   private top: HTMLElement;
   private side: HTMLElement;
   private hint: HTMLElement;
+  /** Phones: the tab bar along the bottom (screens, and End Turn within thumb reach). */
+  private nav: HTMLElement;
   selHex: number | null = null;
   selFleet: string | null = null;
   selAgent: string | null = null;
@@ -85,8 +85,9 @@ export class GameUI {
     this.top = h('div', { id: 'topbar' });
     this.side = h('div', { id: 'side' });
     this.hint = h('div', { id: 'hint' });
+    this.nav = h('nav', { id: 'phone-nav', 'aria-label': 'Screens' });
     const miniCanvas = h('canvas', { id: 'mini' });
-    root.append(canvas, this.top, this.side, this.hint, miniCanvas, this.mapTools());
+    root.append(canvas, this.top, this.side, this.hint, miniCanvas, this.mapTools(), this.nav);
     this.overlayRoot = root;
     this.view = new MapView(canvas);
     this.mini = new Minimap(miniCanvas, this.view);
@@ -95,7 +96,15 @@ export class GameUI {
     this.view.onHover = (hex) => this.hover(hex);
     this.unsubscribe = host.messaging?.subscribe(() => { if (this.game) this.renderTop(); }) ?? null;
     const signal = this.listeners.signal;
-    window.addEventListener('resize', () => { this.view.resize(); this.mini.draw(); if (this.game) this.renderTop(); }, { signal });
+    window.addEventListener('resize', () => {
+      this.view.resize();
+      this.mini.draw();
+      if (!this.game) return;
+      this.view.rightInset = this.phone ? 0 : 360;
+      this.renderTop();
+      this.renderSide();
+      this.keepSelectionVisible();
+    }, { signal });
     window.addEventListener('keydown', (e) => this.onKey(e), { signal });
     window.addEventListener('keyup', (e) => this.held.delete(e.key.toLowerCase()), { signal });
     window.addEventListener('blur', () => this.held.clear(), { signal });
@@ -117,7 +126,7 @@ export class GameUI {
     this.game = game;
     this.viewer = viewer;
     this.view.resize();
-    this.view.rightInset = window.innerWidth > 760 ? 360 : 0;
+    this.view.rightInset = this.phone ? 0 : 360;
     this.view.setState(game, viewer);
     if (center) this.view.centerOn(game.factions[viewer].home);
     this.select(null);
@@ -423,8 +432,8 @@ export class GameUI {
 
   /** On a phone the selection sheet covers the bottom of the map: keep the selected hex above it. */
   private keepSelectionVisible(): void {
-    const phone = window.innerWidth <= 760;
-    this.view.bottomInset = phone && this.selHex !== null ? this.side.offsetHeight : 0;
+    const phone = this.phone;
+    this.view.bottomInset = phone ? this.nav.offsetHeight + (this.selHex !== null ? this.side.offsetHeight : 0) : 0;
     if (!phone || this.selHex === null) return;
     const y = this.view.hexScreen(this.selHex).y;
     const visible = this.view.canvas.clientHeight - this.view.bottomInset;
@@ -578,8 +587,10 @@ export class GameUI {
     const r = f.research;
     const pending = Object.values(g.proposals).filter((p) => p.to === this.viewer && !p.answer).length;
     const res = (icon: string, val: number, net?: number, title?: string) =>
-      h('span', { class: 'res', title }, icon, h('b', null, num(val)), net !== undefined ? h('span', { class: net >= 0 ? 'good' : 'bad' }, `(${signed(net)})`) : null);
-    const researchText = r.current ? `${TECH_BY_ID[r.current].name} ${Math.min(100, Math.floor((r.progress / techCost(r.current)) * 100))}%` : 'choose research';
+      h('span', { class: 'res', title }, icon, h('b', null, num(val)), net !== undefined ? h('span', { class: `top-net ${net >= 0 ? 'good' : 'bad'}` }, `(${signed(net)})`) : null);
+    const researchPct = r.current ? Math.min(100, Math.floor((r.progress / techCost(r.current)) * 100)) : 0;
+    // Nothing being researched (with something left to research): a red mark on Research, like Diplomacy's.
+    const noResearch = !r.current && availableTechs(g, this.viewer).length > 0;
     const endTurnButton = button('End Turn', () => this.endTurn(), { cls: 'primary', disabled: !this.myTurn });
     endTurnButton.id = 'endturn';
     const waiting = !this.myTurn ? (this.host.waitingText?.(this) ?? `Waiting: ${factionDef(activeFaction(g)).short}`) : '';
@@ -601,15 +612,16 @@ export class GameUI {
     requestAnimationFrame(fit);
     scroll.append(...[
       factionChip(this.viewer, true),
-      h('span', { class: 'dim' }, `Turn ${g.turn}`),
+      h('span', { class: 'dim top-turn' }, `Turn ${g.turn}`),
       res(ICON.energy, f.stock.energy, inc.net.energy, 'Energy (net per turn)'),
       res(ICON.metals, f.stock.metals, inc.net.metals, 'Metals'),
       res(ICON.exotics, f.stock.exotics, inc.net.exotics, 'Exotics'),
-      h('span', { class: 'res', title: 'Science per turn' }, ICON.science, h('b', null, `+${num(inc.net.science)}`), h('span', { class: r.current ? 'dim' : 'bad' }, researchText)),
-      button('Colonies', () => openColonies(this), { title: 'Every system you run, in one list' }),
-      button('Fleets', () => openFleets(this), { title: 'Every fleet, its orders and condition' }),
-      button('Agents', () => openAgents(this), { title: 'Diplomats, spies and embassies' }),
-      button('Research', () => openResearch(this)),
+      h('span', { class: 'res', title: 'Science per turn' }, ICON.science, h('b', null, `+${num(inc.net.science)}`)),
+      button('Colonies', () => openColonies(this), { title: 'Every system you run, in one list', cls: 'desk-only' }),
+      button('Fleets', () => openFleets(this), { title: 'Every fleet, its orders and condition', cls: 'desk-only' }),
+      button('Agents', () => openAgents(this), { title: 'Diplomats, spies and embassies', cls: 'desk-only' }),
+      button(h('span', { class: 'row', style: 'gap:0' }, 'Research', r.current ? h('span', { class: 'dim', style: 'margin-left:6px' }, `${researchPct}%`) : noResearch ? h('span', { class: 'badge' }, '!') : ''),
+        () => openResearch(this), { cls: 'desk-only', title: r.current ? `Researching ${TECH_BY_ID[r.current].name} (${researchPct}%)` : noResearch ? 'Nothing is being researched: choose something' : 'Research' }),
       (() => {
         // A red count for what needs you (proposals to answer, messages from players); a dot for unread
         // words from computer powers.
@@ -618,20 +630,71 @@ export class GameUI {
         const title = action ? `${pending ? `${pending} proposal${pending > 1 ? 's' : ''} to answer` : ''}${pending && action > pending ? ', ' : ''}${action > pending ? `${action - pending} unread message${action - pending > 1 ? 's' : ''}` : ''}`
           : flavour ? 'Computer powers have said something' : 'Relations, embassies, proposals and messages';
         return button(h('span', { class: 'row', style: 'gap:0' }, 'Diplomacy', action ? h('span', { class: 'badge' }, String(action)) : flavour ? h('span', { class: 'notice-dot' }) : ''),
-          () => openDiplomacy(this), { title });
+          () => openDiplomacy(this), { title, cls: 'desk-only' });
       })(),
-      button('Victory', () => openVictory(this)),
-      button('Market', () => openMarket(this)),
-      button('Briefing', () => openBriefing(this), { title: 'What happened since your last turn, and the history of the game so far' }),
-      button('Next fleet', () => this.nextIdle(), { title: 'Shortcut: N' }),
+      button('Briefing', () => openBriefing(this), { title: 'What happened since your last turn, the history of the game, and how close everyone is to winning', cls: 'desk-only' }),
+      button('Next fleet', () => this.nextIdle(), { title: 'Shortcut: N', cls: 'desk-only' }),
     ].filter((x): x is HTMLElement => x !== null));
     fixed.append(...[
       g.winner ? h('b', { class: 'good' }, `${factionDef(g.winner).name} won`) : g.over ? h('b', { class: 'bad' }, 'Game over: no winner') : null,
       waiting ? h('span', { class: 'dim' }, waiting) : null,
-      button('Menu', () => this.host.openMenu(this)),
-      button('Empire', () => this.openEmpire(), { cls: 'mobile-only' }),
+      button('Menu', () => this.host.openMenu(this), { cls: 'desk-only' }),
       endTurnButton,
     ].filter((x): x is HTMLElement => x !== null));
+    endTurnButton.classList.add('desk-only');
+    // Phones show End Turn and Menu on the tab bar: keep the fixed zone only for "waiting" and the result.
+    fixed.classList.toggle('desk-only', !g.winner && !g.over && !waiting);
+    this.renderNav(pending + unreadChat(this.host.messaging, this.game, this.viewer), unreadAi(this.game, this.viewer) > 0, noResearch, researchPct);
+  }
+
+  /** Whether the phone layout is in use (the tab bar and the selection sheet). */
+  private get phone(): boolean {
+    return window.innerWidth <= 760;
+  }
+
+  /**
+   * Phones: Research, Diplomacy, Colonies, Fleets, More, and End Turn along the bottom, each with a count of
+   * what is waiting there; More holds the rest (Empire, Next fleet, Agents, Briefing, Menu).
+   */
+  private renderNav(diplomacyCount: number, aiWords: boolean, noResearch: boolean, researchPct: number): void {
+    const nav = clear(this.nav);
+    if (!this.phone) return;
+    const g = this.game;
+    const r = g.factions[this.viewer].research;
+    const c = this.myTurn ? this.turnChecklist() : null;
+    const tab = (icon: string, label: string, onclick: () => void, count: number | string = 0, title = label, dot = false) =>
+      h('button', { class: 'nav-tab', title, 'aria-label': count ? `${title} (${count})` : title, onclick },
+        h('span', { class: 'nav-icon' }, icon,
+          count ? h('span', { class: 'badge' }, String(count)) : dot ? h('span', { class: 'notice-dot' }) : null),
+        h('span', { class: 'nav-label' }, label));
+    nav.append(
+      tab('🔬', r.current ? `${researchPct}%` : 'Research', () => openResearch(this),
+        noResearch ? '!' : 0, r.current ? `Research: ${TECH_BY_ID[r.current].name}` : 'Research: nothing chosen'),
+      tab('🤝', 'Diplomacy', () => openDiplomacy(this), diplomacyCount, 'Diplomacy', aiWords),
+      tab('🪐', 'Colonies', () => openColonies(this, c?.idleSystems.length ? 'Idle' : undefined), c?.idleSystems.length ?? 0,
+        c?.idleSystems.length ? 'Colonies (some have nothing to build)' : 'Colonies'),
+      tab('🚀', 'Fleets', () => openFleets(this, c?.idleFleets.length ? 'Idle' : undefined), c?.idleFleets.length ?? 0,
+        c?.idleFleets.length ? 'Fleets (some are waiting for orders)' : 'Fleets'),
+      tab('☰', 'More', () => this.openMore()),
+    );
+    const waiting = !this.myTurn ? (this.host.waitingText?.(this) ?? `Waiting: ${factionDef(activeFaction(g)).short}`) : '';
+    const end = h('button', { class: 'nav-end btn primary', disabled: !this.myTurn, onclick: () => this.endTurn(), title: waiting || 'End your turn' },
+      this.myTurn ? 'End Turn' : isGameOver(g) ? 'Game over' : 'Waiting');
+    nav.append(end);
+  }
+
+  /** Phones: everything that does not fit on the tab bar. */
+  private openMore(): void {
+    const body = h('div', { class: 'more-list' });
+    const m = modal('More', body);
+    const item = (icon: string, label: string, text: string, fn: () => void) =>
+      body.append(h('button', { class: 'btn list-btn more-item', onclick: () => { m.close(); fn(); } },
+        h('span', { class: 'nav-icon' }, icon), h('span', { class: 'grow' }, h('b', null, label), h('div', { class: 'dim', style: 'font-size:12px' }, text))));
+    item('🏛', 'Empire', 'Overview, income and idle systems', () => this.openEmpire());
+    item('🧭', 'Next fleet', 'The next fleet still waiting for orders', () => this.nextIdle());
+    item('🕵', 'Agents', 'Diplomats, spies and embassies', () => openAgents(this));
+    item('📰', 'Briefing', 'This turn, the history of the game, and victory progress', () => openBriefing(this));
+    item('⚙', 'Menu', 'Save, settings, help and leaving the game', () => this.host.openMenu(this));
   }
 
   // -------------------------------------------------------------------------------------------------------
@@ -652,11 +715,70 @@ export class GameUI {
   /** The selection the side panel last showed: a new one starts at the top. */
   private sideKey = '';
 
+  /** Phones: how far the selection sheet is pulled up (drag its handle, or tap it). */
+  private sheet: 'peek' | 'half' | 'full' = 'half';
+  private handle: HTMLElement | null = null;
+
+  /** The grab bar on top of the phone selection sheet: drag to resize (or down to close), tap to toggle. */
+  private sheetHandle(): HTMLElement {
+    if (this.handle) return this.handle;
+    const el = h('div', { class: 'sheet-handle', role: 'button', 'aria-label': 'Resize the panel: drag, or tap to expand or shrink it' }, h('span'));
+    let start: { y: number; h: number; id: number } | null = null;
+    let moved = false;
+    el.addEventListener('pointerdown', (e) => {
+      start = { y: e.clientY, h: this.side.offsetHeight, id: e.pointerId };
+      moved = false;
+      el.setPointerCapture(e.pointerId);
+      this.side.classList.add('sizing');
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (!start || e.pointerId !== start.id) return;
+      const dy = e.clientY - start.y;
+      if (Math.abs(dy) > 6) moved = true;
+      if (moved) this.side.style.height = `${Math.max(0, Math.min(this.sheetMax(), start.h - dy))}px`;
+    });
+    const finish = (e: PointerEvent) => {
+      if (!start || e.pointerId !== start.id) return;
+      const height = this.side.offsetHeight;
+      start = null;
+      this.side.classList.remove('sizing');
+      this.side.style.height = '';
+      if (!moved) this.sheet = this.sheet === 'full' ? 'half' : this.sheet === 'half' ? 'full' : 'half';
+      else if (height < 90) { this.select(null); return; }
+      else {
+        const max = this.sheetMax();
+        const snaps = { peek: 150, half: max / 2, full: max };
+        this.sheet = (Object.keys(snaps) as (keyof typeof snaps)[]).reduce((a, b) => Math.abs(snaps[a] - height) <= Math.abs(snaps[b] - height) ? a : b);
+      }
+      this.applySheet();
+      setTimeout(() => this.keepSelectionVisible(), 200); // once the sheet has finished resizing
+    };
+    el.addEventListener('pointerup', finish);
+    el.addEventListener('pointercancel', finish);
+    return (this.handle = el);
+  }
+
+  /** The tallest the phone sheet can be: everything between the top bar and the tab bar. */
+  private sheetMax(): number {
+    return this.root.clientHeight - this.top.offsetHeight - this.nav.offsetHeight;
+  }
+
+  private applySheet(): void {
+    for (const k of ['peek', 'half', 'full']) this.side.classList.toggle(`sheet-${k}`, this.sheet === k);
+  }
+
   private renderSide(): void {
     const s = clear(this.side);
     const key = `${this.selHex}|${this.selFleet}|${this.selAgent}`;
-    if (key !== this.sideKey) { this.sideKey = key; this.side.scrollTop = 0; }
+    if (key !== this.sideKey) {
+      // A new selection on a phone opens the sheet halfway (unless it was pulled all the way up).
+      if (this.sheet === 'peek' && this.selHex !== null && !this.sideKey.startsWith(`${this.selHex}|`)) this.sheet = 'half';
+      this.sideKey = key;
+      this.side.scrollTop = 0;
+    }
     this.side.classList.toggle('empty', this.selHex === null);
+    this.applySheet();
+    if (this.phone && this.selHex !== null) s.append(this.sheetHandle());
     if (this.selHex === null) {
       s.append(this.empirePanel());
       return;

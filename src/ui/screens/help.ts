@@ -21,7 +21,7 @@ const SECTIONS: [string, string[]][] = [
   ['Fleets and combat', [
     'Tap a fleet to select it (tap again to cycle through your fleets there). To move it, press Move (or M, or right-click on a computer), then tap the destination twice: once to see the route and battle forecast, once to confirm. Up to six ships form a battle group (fleet) and move at the speed of the slowest. To form one, drag a fleet or a single ship onto another fleet in the side panel, select a fleet and press Add fleet, or press Combine all. Tap ships in a fleet and press Split to break them off.',
     'New warships join their shipyard’s reserve fleet (up to six) instead of each becoming a fleet of one; send the reserve somewhere and it takes a numbered name. Rename any fleet with ✎. Press Hold on a fleet you are leaving where it is on purpose, so it stops counting as waiting for orders.',
-    'At the start of your turn the Briefing opens beside the map when something worth reading happened: counters for battles, wars, proposals, builds and idle colonies and fleets, then events by Military, Diplomacy, Empire and Galaxy. Click a line to see it on the map. The Briefing button reopens it, and History pages back through every turn this browser has seen.',
+    'At the start of your turn the Briefing opens beside the map when something worth reading happened: counters for battles, wars, proposals, builds and idle colonies and fleets, then events by Military, Diplomacy, Empire and Galaxy. Click a line to see it on the map. The Briefing button reopens it; its History tab pages back through every turn this browser has seen, and its Victory tab shows how close everyone is to winning.',
     'End Turn first lists anything still waiting: research, colonies with nothing to build, fleets without orders, proposals to answer, each with a button that takes you there. You can switch the list off (research is always checked).',
     'Moving into enemies stops your fleet. At the end of each turn there is a battle wherever enemies share a hex: several combat rounds (the host picks 3–10), fought without you.',
     'Give each fleet battle orders: Full Attack, Engage, Cautious, Hold the Line, Hit and Run or Retreat. They set when it withdraws, how much it trades defense for offense, and which range it fights at (beams like close quarters, missiles and fighters long range). The Ryn’kai never withdraw.',
@@ -29,12 +29,13 @@ const SECTIONS: [string, string[]][] = [
     'Select a hex where your forces meet enemies, or tap an enemy hex once with a fleet selected, to see the battle forecast, from Overwhelming victory to Hopeless cause. It only counts what you can see: scouts nearby reveal their real designs, and a spy at their capital reveals their technology.',
     'Shields stop beams, point defense stops missiles and fighters, and escorts draw fire.',
     'Reading the map: each hex shows one token per power (the biggest ship, and how many ships are there; a green dot means some still need orders). Select the hex, or zoom in, to see each fleet. Hatched hexes with dashed borders are cut off from their owner’s home and yield half. Zoomed out, each power’s name is written over its territory, and every power has its own emblem as well as its colour.',
-    'Map buttons (bottom left, or top right on phones): zoom in and out (+ and − keys), centre on your capital (H), and 🤝 to colour borders by how each power stands with you: red for war, green for allies. On a computer, rest the pointer on a hex for a summary of what is there.',
+    'Map buttons (bottom left, or top right on phones): zoom in and out (+ and − keys), centre on your capital (H), and 🤝 to colour borders by how each power stands with you: red for war, green for allies. On a computer, rest the pointer on a hex for a summary of what is there. On a phone, the screens and End Turn are on the bar along the bottom (More holds the rest), and the panel for what you select slides up from it: drag its handle to resize it, or down to close it.',
     'Enemy warships sitting on one of your systems, with none of yours there to contest them, blockade it: half output, and its shipyard can’t finish ships or armies.',
     'Grind a system’s planetary defense to 0, then invade with armies carried by transports.',
   ]],
   ['Diplomacy and spies', [
     'Send a diplomat to another empire’s home system to open an embassy. You need one to trade or sign treaties. Diplomats travelling through hostile space can be captured.',
+    'The Market is in Diplomacy too: swap resources on the galactic exchange, run trade routes, hire mercenaries and order ships from other shipyards.',
     'Trade resources, technology, fleets, territory and star charts, or sign trade, research, economic and manufacturing agreements, pacts and alliances.',
     'Minor factions can become your vassals: they pay tribute and join your wars.',
     'Everything about other powers is in Diplomacy: relations, embassies (send a diplomat from there), proposals, and conversations. Pick a power on the left. Computer-run great powers talk to you there, and you can make statements to them (demand they withdraw, ask for help, threaten, reassure, ask their intentions, denounce a rival), and they answer on their turn.',
@@ -46,7 +47,7 @@ const SECTIONS: [string, string[]][] = [
     'M: move the selected fleet or agent. Enter: end your turn. Esc: cancel a move, close a dialog, or clear the selection.',
   ]],
   ['Winning', [
-    'Each great power wins in its own ways (see the Victory screen and the faction cards), and each has one victory of its own: Ascendance (Concord), Glorious Campaign (Ryn’kai), Hegemony (Varrhen), World Revolution (Krasnyr), Singularity (Lattice).',
+    'Each great power wins in its own ways (see Briefing → Victory and the faction cards), and each has one victory of its own: Ascendance (Concord), Glorious Campaign (Ryn’kai), Hegemony (Varrhen), World Revolution (Krasnyr), Singularity (Lattice).',
     'Shared paths include Conquest, Economic Supremacy, Grand Alliance and the Galactic Council. If nobody wins by the turn limit (200 rounds by default), the highest score wins.',
     'Station spies at a rival’s home system to learn how close they are to winning; idle spies at your own home guard against theirs.',
   ]],

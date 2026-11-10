@@ -164,9 +164,40 @@ input, select { background:#0a1022; color:var(--text); border:1px solid #33416b;
 .mobile-only { display:none; }
 .msg-grid { display:grid; grid-template-columns:minmax(150px, 210px) minmax(0, 1fr); gap:12px; min-height:360px; }
 .msg-grid > * { min-width:0; }
+/* Mid-size windows: drop the turn number and per-turn changes (both are in the Empire panel) so the bar fits. */
+@media (min-width: 761px) and (max-width: 1180px) {
+  #topbar .top-turn, #topbar .top-net { display:none; }
+  #topbar .top-scroll { gap:7px; padding:0 8px; }
+}
+:root { --nav-h:calc(58px + env(safe-area-inset-bottom, 0px)); }
+#phone-nav { display:none; }
 @media (max-width: 760px) {
-  #side { width:100%; top:auto; height:46%; border-left:none; border-top:1px solid var(--line); padding-bottom:20px; }
-  #side.empty { display:none; }
+  #side { width:100%; top:auto; bottom:var(--nav-h); height:calc((100% - 46px - var(--nav-h)) / 2); border-left:none; border-top:1px solid var(--line);
+    border-radius:14px 14px 0 0; padding:0 12px 20px; transition:height .18s ease; box-shadow:0 -6px 20px #0008; }
+  #side.sheet-full { height:calc(100% - 46px - var(--nav-h)); border-radius:0; }
+  #side.sheet-peek { height:150px; }
+  #side.sizing { transition:none; }
+  /* Closing slides the sheet away. */
+  #side.empty { transform:translateY(calc(100% + var(--nav-h))); pointer-events:none; visibility:hidden; transition:transform .18s ease, visibility 0s .18s; }
+  .sheet-handle { position:sticky; top:0; z-index:2; height:24px; margin:0 -12px 4px; display:flex; align-items:center; justify-content:center;
+    background:var(--panel2); border-bottom:1px solid var(--line); border-radius:14px 14px 0 0; touch-action:none; cursor:grab; }
+  #side.sheet-full .sheet-handle { border-radius:0; }
+  .sheet-handle span { width:44px; height:5px; border-radius:3px; background:#5a6690; }
+  #phone-nav { display:flex; position:absolute; left:0; right:0; bottom:0; height:var(--nav-h); padding:0 4px env(safe-area-inset-bottom, 0px); z-index:7;
+    background:#0b1122f8; border-top:1px solid var(--line); align-items:stretch; gap:2px; }
+  .nav-tab { flex:1 1 0; min-width:0; border:none; background:none; color:var(--text); font:inherit; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:2px; padding:4px 0; cursor:pointer; border-radius:8px; }
+  .nav-tab:active { background:#1a2442; }
+  .nav-icon { position:relative; font-size:19px; line-height:1; }
+  .nav-icon .badge { position:absolute; top:-6px; left:14px; margin:0; }
+  .nav-icon .notice-dot { position:absolute; top:-2px; left:16px; margin:0; }
+  .nav-label { font-size:10px; color:var(--dim); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .nav-end { flex:0 0 auto; align-self:center; margin:0 4px; min-height:44px; padding:0 14px; font-weight:700; border-radius:10px; }
+  .desk-only { display:none !important; }
+  .more-item { justify-content:flex-start; gap:12px; padding:10px 12px; }
+  .more-item .nav-icon { width:26px; text-align:center; }
+  #toast { bottom:calc(var(--nav-h) + 12px); }
+  .briefing { bottom:var(--nav-h); }
   #mini { display:none; }
   #map-tools { top:56px; bottom:auto; left:auto; right:10px; flex-direction:column; align-items:flex-end; }
   #side:not(.empty) ~ #map-tools { display:none; }

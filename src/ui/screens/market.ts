@@ -1,4 +1,4 @@
-/** Market: the galactic exchange (and, in later tabs, mercenaries and trade routes). */
+/** Market: the galactic exchange, trade routes, mercenaries and shipyard contracts (a section of Diplomacy). */
 import { design, DESIGNS_BY_FACTION } from '../../data/designs';
 import { factionDef } from '../../data/factions';
 import { CLASSES, ROLES } from '../../data/ships';
@@ -7,7 +7,7 @@ import { contractCost, contractTerms, offersFor } from '../../engine/mercenaries
 import { DOMESTIC_MIN_DISTANCE, routeCapacity, routeDisruptors, routesOf, routeValue } from '../../engine/routes';
 import { costText, factionChip } from '../format';
 import type { StockpileKind } from '../../engine/types';
-import { button, clear, h, modal } from '../dom';
+import { button, h } from '../dom';
 import { ICON, num } from '../format';
 import type { GameUI } from '../game-ui';
 
@@ -15,16 +15,16 @@ export type MarketTab = 'exchange' | 'mercenaries' | 'contracts' | 'routes';
 
 const RES: StockpileKind[] = ['energy', 'metals', 'exotics'];
 
-export function openMarket(ui: GameUI, tab: MarketTab = 'exchange'): void {
+/**
+ * The market, shown inside Diplomacy: the galactic exchange, trade routes, mercenaries and shipyard
+ * contracts, one tab each. `tab` is the open tab; `pick` switches tabs and `rerender` redraws after an order.
+ */
+export function marketPane(ui: GameUI, tab: MarketTab, pick: (t: MarketTab) => void, rerender: () => void): HTMLElement {
   const body = h('div');
-  modal('Market', body, { wide: true });
-  const render = () => {
-    clear(body);
-    const tabs: [MarketTab, string][] = [['exchange', 'Galactic exchange'], ['routes', 'Trade routes'], ['mercenaries', 'Mercenaries & services'], ['contracts', 'Shipyard contracts']];
-    body.append(h('div', { class: 'tabs' }, ...tabs.map(([k, label]) => button(label, () => { tab = k; render(); }, { cls: `small ${tab === k ? 'on' : ''}` }))));
-    body.append(tab === 'exchange' ? exchangeTab(ui, render) : tab === 'routes' ? routesTab(ui, render) : tab === 'mercenaries' ? mercenaryTab(ui, render) : contractTab(ui, render));
-  };
-  render();
+  const tabs: [MarketTab, string][] = [['exchange', 'Galactic exchange'], ['routes', 'Trade routes'], ['mercenaries', 'Mercenaries & services'], ['contracts', 'Shipyard contracts']];
+  body.append(h('div', { class: 'tabs' }, ...tabs.map(([k, label]) => button(label, () => pick(k), { cls: `small ${tab === k ? 'on' : ''}` }))));
+  body.append(tab === 'exchange' ? exchangeTab(ui, rerender) : tab === 'routes' ? routesTab(ui, rerender) : tab === 'mercenaries' ? mercenaryTab(ui, rerender) : contractTab(ui, rerender));
+  return body;
 }
 
 function exchangeTab(ui: GameUI, rerender: () => void): HTMLElement {

@@ -13,6 +13,7 @@ import { eventsFor } from '../../engine/events';
 import { button, clear, h, isTouch, onEscape } from '../dom';
 import type { GameUI } from '../game-ui';
 import { openBattle } from './battle';
+import { victoryView } from './victory';
 import { openDiplomacy } from './diplomacy';
 import { openColonies, openFleets } from './manage';
 
@@ -91,14 +92,14 @@ let current: { close: () => void } | null = null;
  * Opens the briefing. `auto` (the start of your turn) starts a new briefing and opens only if something
  * worth reading happened; otherwise it opens on the current briefing (or History).
  */
-export function openBriefing(ui: GameUI, opts: { auto?: boolean; tab?: 'turn' | 'history' } = {}): void {
+export function openBriefing(ui: GameUI, opts: { auto?: boolean; tab?: 'turn' | 'history' | 'victory' } = {}): void {
   const g = ui.game;
   const a = sync(ui.gameKey, g, ui.viewer, !!opts.auto);
   const items = a.items.filter((i) => i.b === a.last);
   const pending = Object.values(g.proposals).filter((p) => p.to === ui.viewer && !p.answer).length;
   if (opts.auto && !pending && !items.some((i) => !ROUTINE.has(i.kind))) return;
   current?.close();
-  let tab = opts.tab ?? 'turn';
+  let tab: 'turn' | 'history' | 'victory' = opts.tab ?? 'turn';
   let page = 0;
   const drawer = h('div', { class: 'briefing' });
   const close = () => { drawer.remove(); offEsc(); if (current?.close === close) current = null; };
@@ -114,11 +115,15 @@ export function openBriefing(ui: GameUI, opts: { auto?: boolean; tab?: 'turn' | 
   const render = () => {
     clear(drawer);
     const turnLabel = a.lastTurn ? `Turn ${a.lastTurn}` : `Turn ${g.turn}`;
-    drawer.append(h('div', { class: 'row briefing-head' },
-      h('b', { style: 'font-size:16px' }, tab === 'turn' ? `${turnLabel} briefing` : 'History'), h('span', { class: 'grow' }),
-      button(tab === 'turn' ? 'History' : 'This turn', () => { tab = tab === 'turn' ? 'history' : 'turn'; page = 0; render(); }, { cls: 'small' }),
-      button('✕', close, { cls: 'small ghost', title: 'Close (Esc)' })));
-    drawer.append(tab === 'turn' ? turnView(ui, items, pending, jump, close) : historyView(ui, a, page, (p) => { page = p; render(); }, jump));
+    const tabs: ['turn' | 'history' | 'victory', string][] = [['turn', 'This turn'], ['history', 'History'], ['victory', 'Victory']];
+    drawer.append(h('div', { class: 'briefing-head' },
+      h('div', { class: 'row' }, h('b', { style: 'font-size:16px' }, tab === 'turn' ? `${turnLabel} briefing` : tab === 'history' ? 'History' : 'Victory'), h('span', { class: 'grow' }),
+        button('✕', close, { cls: 'small ghost', title: 'Close (Esc)' })),
+      h('div', { class: 'tabs', style: 'margin:6px 0 0' }, ...tabs.map(([k, label]) =>
+        button(label, () => { tab = k; page = 0; render(); }, { cls: `small ${tab === k ? 'on' : ''}` })))));
+    drawer.append(tab === 'turn' ? turnView(ui, items, pending, jump, close)
+      : tab === 'history' ? historyView(ui, a, page, (p) => { page = p; render(); }, jump)
+      : victoryView(ui));
   };
   render();
   ui.overlayRoot.append(drawer);

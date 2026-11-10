@@ -1,7 +1,7 @@
 /**
  * Victory conditions (§10). Each great power can only win in the ways its ideology allows
  * (src/data/victories.ts), filtered by the game's preset. Progress is measured for every track so the
- * Victory screen (and spies) can show how close each empire is.
+ * Victory tab of the briefing (and spies) can show how close each empire is.
  */
 import {
   AVAILABILITY, COUNCIL_EVERY, COUNCIL_SHARE, ECONOMIC_SHARE, gloriousWinsNeeded, PRESETS, STREAK_TURNS, VICTORIES,
