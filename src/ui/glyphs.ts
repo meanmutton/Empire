@@ -54,7 +54,7 @@ const MINOR_POOL: string[] = [
   ring(polygon(4, 10), polygon(4, 5)),
   ring(polygon(3, 10), polygon(3, 4.5)),
   ring(polygon(6, 9.5), polygon(6, 5)),
-  'M13 2 A8 8 0 1 0 13 18 A6 6 0 1 1 13 2 Z',
+  'M14 2.5 A8.5 8.5 0 1 0 14 17.5 A8 8 0 0 1 14 2.5 Z',
   'M2 13 L10 4 L18 13 L15 16 L10 10 L5 16 Z',
   'M2 7 L10 16 L18 7 L15 4 L10 10 L5 4 Z',
   'M3 2 H17 L10 10 L17 18 H3 L10 10 Z',
@@ -76,6 +76,20 @@ const glyphOf = new Map<string, string>();
 FACTIONS.filter((f) => f.kind === 'minor').forEach((f, i) => glyphOf.set(f.id, MINOR_POOL[i % MINOR_POOL.length]));
 for (const [id, path] of Object.entries(MAJOR_GLYPHS)) glyphOf.set(id, path);
 
+/**
+ * The colour a glyph is drawn in: the faction's colour, lifted toward white when it is too dark to stand out
+ * on the dark map and panels (the faction's own colour is unchanged everywhere else).
+ */
+export function glyphColor(color: string): string {
+  const n = parseInt(color.slice(1), 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const lum = (x: number, y: number, z: number) => (0.2126 * x + 0.7152 * y + 0.0722 * z) / 255;
+  for (let k = 0; k < 8 && lum(r, g, b) < 0.42; k++) {
+    r += (255 - r) * 0.18; g += (255 - g) * 0.18; b += (255 - b) * 0.18;
+  }
+  return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+}
+
 export function glyphPath(faction: string): string {
   return glyphOf.get(faction) ?? circle(8);
 }
@@ -93,7 +107,7 @@ export function drawGlyph(ctx: CanvasRenderingContext2D, faction: string, x: num
   ctx.lineWidth = 3;
   ctx.strokeStyle = 'rgba(4, 6, 13, 0.9)';
   ctx.stroke(p);
-  ctx.fillStyle = color;
+  ctx.fillStyle = color.startsWith('#') ? glyphColor(color) : color;
   ctx.fill(p, 'evenodd');
   ctx.restore();
 }
@@ -109,7 +123,7 @@ export function glyphElement(faction: string, color: string, px = 11): SVGSVGEle
   svg.classList.add('glyph');
   const path = document.createElementNS(ns, 'path');
   path.setAttribute('d', glyphPath(faction));
-  path.setAttribute('fill', color);
+  path.setAttribute('fill', color.startsWith('#') ? glyphColor(color) : color);
   path.setAttribute('fill-rule', 'evenodd');
   path.setAttribute('stroke', 'rgba(4,6,13,0.8)');
   path.setAttribute('stroke-width', '1.5');
