@@ -16,3 +16,10 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - name: Build the relay Lambda package
+        run: npm run relay:bundle && cd relay/.build && zip -q lambda.zip lambda.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: relay-lambda
+          path: relay/.build/lambda.zip
+          retention-days: 30

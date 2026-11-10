@@ -35,7 +35,7 @@ Status key: `[ ]` not started, `[~]` PR open, `[x]` merged.
 - [~] **13 Client: UI**: new game setup, system panel, fleet panel and battle groups, build queue,
   research, diplomacy inbox, turn report, combat report.
 - [~] **14 Hotseat play**: play locally with several humans plus AI end to end.
-- [~] **15 Relay backend**: AWS SAM template (API Gateway WebSocket + Lambda + DynamoDB + S3), local dev
+- [~] **15 Relay backend**: CloudFormation template (API Gateway WebSocket + Lambda + DynamoDB), local dev
   relay with the same protocol, protocol tests.
 - [~] **16 Online async play**: create/join by code, seat claiming, turn upload/download, "your turn"
   notifications, reconnect, version checks.
@@ -45,9 +45,10 @@ Status key: `[ ]` not started, `[~]` PR open, `[x]` merged.
 
 ## Backlog (pick up here)
 Ordered roughly by value. Open a PR per item or small group.
-1. **Deploy the relay** (`docs/RELAY.md`) and build `dist/index.html` with `EMPIRE_RELAY` baked in. The game
-   itself is one HTML file players open directly; only online play needs the relay. Needs the owner's AWS
-   account.
+1. **Deploy the relay**: `relay/cloudformation.yaml` and `relay/deploy.sh` are ready (`docs/RELAY.md`); the
+   owner runs the script in AWS CloudShell, then builds `dist/index.html` with `EMPIRE_RELAY` baked in. The
+   game itself is one HTML file players open directly; only online play needs the relay. After the first
+   deploy: a real online test game, and optionally a custom domain for the relay address.
 2. **Balance from real games** (combat lethality, luck and doctrine numbers are in `BALANCE.combat` and
    `src/data/doctrines.ts`; `test/combat.test.ts` checks the calibration): territory spreads fast (~230 hexes per major by turn 80 in
    `test/ai.test.ts`); some AIs field 150–200 ships; tune claims, upkeep and research costs after playtests.
