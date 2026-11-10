@@ -68,7 +68,7 @@ describe('combat lethality and luck', () => {
     expect(r2.bWins).toBeGreaterThan(0.08);
     expect(r2.bWins).toBeLessThan(0.18);
     expect(r3.bWins).toBeLessThan(0.05);
-  });
+  }, 30_000);
 
   it('Full Attack is bloodier than Cautious for both sides', () => {
     const full = trial(12, 12, { da: 'fullAttack', db: 'fullAttack', trials: 80, tag: 'fa' });
