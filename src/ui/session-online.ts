@@ -16,6 +16,7 @@ import { rosterStrip } from './gallery';
 import { GameUI } from './game-ui';
 import { openHelp } from './screens/help';
 import { openOptions } from './screens/options';
+import { openGuide } from './screens/guide';
 import { openBriefing } from './screens/briefing';
 import { injectStyles } from './styles';
 
@@ -202,6 +203,7 @@ export class OnlineSession {
       h('div', { class: 'row wrap', style: 'margin-top:10px' },
         button('How to play', () => { m.close(); openHelp(); }),
         button('Options', () => { m.close(); openOptions(() => ui.refresh()); }),
+        button('Faction guide', () => { m.close(); openGuide(ui.viewer, ui.game); }),
         button('Reload from relay', async () => { m.close(); await this.fetchState(); }),
         button(this.email ? `Email notices: ${this.email}` : 'Email me when it’s my turn…', () => { m.close(); this.emailDialog(); }),
         other && overdue ? button(`Play a caretaker turn for ${factionDef(other).short}`, () => { m.close(); void this.caretaker(other); }, { title: `They have had more than ${lobby.config.timeoutHours} hours.` }) : null,

@@ -79,8 +79,10 @@ Ordered roughly by value. Open a PR per item or small group.
 
 ## Before we call it done
 These come last, once the game is settled. The owner wants to collaborate on both.
-- **Faction lore and history**: backgrounds, histories and relationships for the 5 great powers and 30 minor
-  factions, written together with the owner. It feeds the faction guide and the computer powers' voices.
+- [x] **Faction lore and history** (`docs/LORE.md`), leaders and portraits, and the in-game **faction guide**
+  built from it.
+- **Still to come from the lore**: the computer powers' voices rewritten in their leaders' words, and detailed
+  faction emblems.
 - **Instruction manual with screenshots**: how to play, every screen explained with real screenshots, plus the
   **faction guide** (lore, abilities, ships and victory paths for each faction). Built after the UI and
   rules stop changing.

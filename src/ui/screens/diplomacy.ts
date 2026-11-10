@@ -14,6 +14,7 @@ import { hexDistance } from '../../engine/hex';
 import { intelLevel } from '../../engine/intel';
 import { marketPane, type MarketTab } from './market';
 import { leaderInfo, portraitElement } from '../portraits';
+import { openGuide } from './guide';
 import { aiThread, aiUnread, chatPanel, groupThreads, threadName, threadUnread } from './messages';
 import type { GameUI } from '../game-ui';
 
@@ -171,7 +172,8 @@ function factionPane(ui: GameUI, o: FactionId, drafts: Map<string, string>, rere
       h('span', { class: r.status === 'war' ? 'bad' : r.status === 'alliance' ? 'good' : 'dim' }, STATUS_LABEL[r.status])),
     h('div', { style: 'margin:2px 0 4px' }, leader.full),
     h('div', { class: 'dim' }, `${def.government}${f.kind === 'minor' ? ' · minor power' : ''}${f.overlord ? ` · vassal of the ${factionDef(f.overlord).short}` : ''}${f.player ? ` · played by ${f.player}` : f.kind === 'major' ? ' · computer' : ''}`),
-    h('div', { class: 'dim', style: 'font-size:12px;margin-top:4px' }, def.text)));
+    h('div', { class: 'row', style: 'margin-top:4px;align-items:flex-start' }, h('span', { class: 'dim grow', style: 'font-size:12px' }, def.text),
+      button('Guide ›', () => openGuide(o, g), { cls: 'small ghost', title: `The story of the ${def.short}${def.kind === 'major' ? ', their leaders and how they see the others' : ''}` }))));
   pane.append(head);
   pane.append(h('div', { class: 'kv' },
     h('span', { class: 'k' }, 'Their view of you'), h('span', { class: op >= 0 ? 'good' : 'bad' }, num(op)),

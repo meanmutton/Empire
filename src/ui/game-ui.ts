@@ -28,6 +28,7 @@ import { MapView, Minimap } from './mapview';
 import { openDiplomacy } from './screens/diplomacy';
 import { closeBriefing, openBriefing } from './screens/briefing';
 import { openResearch } from './screens/research';
+import { openGuide } from './screens/guide';
 import { injectStyles } from './styles';
 import { isGameOver } from '../engine/victory';
 import { unreadAi, unreadChat, type Messaging } from './messaging';
@@ -694,6 +695,7 @@ export class GameUI {
     item('🧭', 'Next fleet', 'The next fleet still waiting for orders', () => this.nextIdle());
     item('🕵', 'Agents', 'Diplomats, spies and embassies', () => openAgents(this));
     item('📰', 'Briefing', 'This turn, the history of the game, and victory progress', () => openBriefing(this));
+    item('📖', 'Faction guide', 'The story of the Reach, every faction and its leaders', () => openGuide(this.viewer, this.game));
     item('⚙', 'Menu', 'Save, settings, help and leaving the game', () => this.host.openMenu(this));
   }
 

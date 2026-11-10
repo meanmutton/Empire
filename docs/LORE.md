@@ -1,6 +1,10 @@
 # Empire: lore
 
-Draft for review. Tone: space opera with a mystery at its heart. The present is the year **4026 CE**.
+Tone: space opera with a mystery at its heart. The present is the year **4026 CE**.
+
+The in-game faction guide is built from this file, so keep its layout: `##` parts, `###` sections, paragraphs,
+`- ` bullets (`**Appearance:**`, `**Views:**`, `**Leaders:**` for each great power), and each minor faction as a
+paragraph that opens with its bold name and a full stop (`**Myrr Choir.**`).
 
 ## The Meridian Reach
 

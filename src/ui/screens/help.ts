@@ -47,6 +47,7 @@ const SECTIONS: [string, string[]][] = [
     'M: move the selected fleet or agent. Enter: end your turn. Esc: cancel a move, close a dialog, or clear the selection.',
   ]],
   ['Winning', [
+    'The Faction guide (title screen, Menu, More on phones, or Guide on any power in Diplomacy) tells the story of the Meridian Reach and every faction in it: their leaders, how they see each other and what they do in the game.',
     'Each great power wins in its own ways (see Briefing → Victory and the faction cards), and each has one victory of its own: Ascendance (Concord), Glorious Campaign (Ryn’kai), Hegemony (Varrhen), World Revolution (Krasnyr), Singularity (Lattice).',
     'Shared paths include Conquest, Economic Supremacy, Grand Alliance and the Galactic Council. If nobody wins by the turn limit (200 rounds by default), the highest score wins.',
     'Station spies at a rival’s home system to learn how close they are to winning; idle spies at your own home guard against theirs.',
