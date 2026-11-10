@@ -80,6 +80,8 @@ export function moveFleet(state: GameState, fleetId: string, dest: number): Resu
   const path = planPath(state, fleetId, dest);
   if (!path) return fail('No route.');
   f.path = path;
+  delete f.hold;
+  leaveReserve(state, f);
   advanceFleet(state, fleetId);
   return OK;
 }
@@ -148,13 +150,37 @@ export function splitFleet(state: GameState, fleetId: string, shipIds: string[])
   if (!shipIds.every((s) => f.ships.includes(s))) return null;
   const id = newId(state, 'f');
   const first = state.ships[shipIds[0]];
+  const name = shipIds.some((s) => isWarship(design(state.ships[s].design))) ? nextFleetName(state, f.owner) : design(first.design).name;
   state.fleets[id] = {
-    id, owner: f.owner, name: design(first.design).name, hex: f.hex, ships: [...shipIds],
+    id, owner: f.owner, name, hex: f.hex, ships: [...shipIds],
     movesLeft: f.movesLeft, path: [], doctrine: f.doctrine,
   };
   f.ships = f.ships.filter((s) => !shipIds.includes(s));
   for (const s of shipIds) state.ships[s].fleet = id;
   return id;
+}
+
+const SUPPORT_ROLES = new Set(['scout', 'explore', 'science', 'cargo', 'colony', 'constructor', 'transport']);
+
+/** Warships fight; support ships (scouts, colony ships, constructors, transports…) do other jobs. */
+export function isWarship(d: { role: string; stats: { energy: number; missile: number; hangar: number } }): boolean {
+  return !SUPPORT_ROLES.has(d.role) && d.stats.energy + d.stats.missile + d.stats.hangar > 0;
+}
+
+/** "1st Fleet", "2nd Fleet", …: the next numbered fleet name for a faction. */
+export function nextFleetName(state: GameState, faction: FactionId): string {
+  const flags = state.factions[faction].flags;
+  const n = (flags.fleetSeq ?? 0) + 1;
+  flags.fleetSeq = n;
+  const suffix = n % 100 >= 11 && n % 100 <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th';
+  return `${n}${suffix} Fleet`;
+}
+
+/** A shipyard's reserve leaves reserve duty (and takes a numbered name) once it is sent somewhere. */
+function leaveReserve(state: GameState, f: Fleet): void {
+  if (!f.reserve) return;
+  delete f.reserve;
+  if (f.name.endsWith(' Reserve')) f.name = nextFleetName(state, f.owner);
 }
 
 /** Moves some ships of one fleet into another fleet in the same hex (all of them merges the two). */

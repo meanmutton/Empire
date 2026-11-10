@@ -70,9 +70,9 @@ export function openDiplomacy(ui: GameUI, focus: string = 'overview'): void {
     if (!valid.has(current)) current = 'overview';
 
     const list = h('div', { class: 'dip-list' });
-    const badge = (n: number) => (n ? h('b', { class: 'good' }, String(n)) : '');
-    const entry = (key: string, label: HTMLElement | string, n: number, sub = '') =>
-      list.append(button(h('span', { class: 'row grow' }, label, sub ? h('span', { class: 'dim', style: 'font-size:11px' }, sub) : '', h('span', { class: 'grow' }), badge(n)),
+    const badge = (n: number, flavour = 0) => (n ? h('span', { class: 'badge' }, String(n)) : flavour ? h('span', { class: 'notice-dot', title: 'New words from them' }) : '');
+    const entry = (key: string, label: HTMLElement | string, n: number, sub = '', flavour = 0) =>
+      list.append(button(h('span', { class: 'row grow' }, label, sub ? h('span', { class: 'dim', style: 'font-size:11px' }, sub) : '', h('span', { class: 'grow' }), badge(n, flavour)),
         () => { current = key; render(); }, { cls: `list-btn small ${key === current ? 'on' : ''}` }));
     entry('overview', h('b', null, 'Overview'), inbox.length);
     if (humanGame) {
@@ -80,10 +80,11 @@ export function openDiplomacy(ui: GameUI, focus: string = 'overview'): void {
       for (const k of groups) entry(k, h('span', null, ...k.split(',').map((f) => factionChip(f, true))), threadUnread(ui, messaging!, k));
     }
     for (const o of met) {
-      const unread = humanSeat(ui, o) && messaging ? threadUnread(ui, messaging, o) : g.factions[o].kind === 'major' ? aiUnread(ui, o) : 0;
+      const chat = humanSeat(ui, o) && messaging ? threadUnread(ui, messaging, o) : 0;
+      const ai = !humanSeat(ui, o) && g.factions[o].kind === 'major' ? aiUnread(ui, o) : 0;
       const pending = inbox.filter((p) => p.from === o).length;
       const st = relation(g, me, o).status;
-      entry(o, factionChip(o, true), unread + pending, st === 'war' ? 'war' : st === 'alliance' ? 'ally' : g.factions[o].kind === 'minor' ? 'minor' : '');
+      entry(o, factionChip(o, true), chat + pending, st === 'war' ? 'war' : st === 'alliance' ? 'ally' : g.factions[o].kind === 'minor' ? 'minor' : '', ai);
     }
     if (unmet) list.append(h('div', { class: 'dim', style: 'font-size:12px;margin-top:6px' }, `${unmet} power${unmet > 1 ? 's' : ''} not yet met.`));
     if (!met.length) list.append(h('div', { class: 'dim', style: 'font-size:12px;margin-top:6px' }, 'You have not met anyone yet. Explore with scouts.'));
@@ -144,7 +145,7 @@ function overviewPane(ui: GameUI, met: FactionId[], open: (key: string) => void,
       h('td', null, `${hasEmbassy(g, me, o) ? 'yours ✓' : 'yours ✗'} · ${hasEmbassy(g, o, me) ? 'theirs ✓' : 'theirs ✗'}`),
       h('td', null, r.agreements.map((a) => AGREEMENTS[a as AgreementId]?.name ?? a).join(', ') || h('span', { class: 'dim' }, 'none'))));
   }
-  if (met.length) pane.append(table);
+  if (met.length) pane.append(h('div', { style: 'overflow-x:auto;max-width:100%' }, table));
   return pane;
 }
 

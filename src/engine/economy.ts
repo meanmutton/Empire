@@ -1,4 +1,6 @@
 /** Yields, income, upkeep, population growth and build queues (§5). */
+import { groupSize, isWarship } from './movement';
+import { TECH_BY_ID } from '../data/techs';
 import { BALANCE } from '../data/balance';
 import { design, DESIGNS } from '../data/designs';
 import { hasAbility, modifiersOf } from '../data/factions';
@@ -222,7 +224,7 @@ export function checkBuild(state: GameState, faction: FactionId, hex: number, ki
     case 'ship': {
       const d = DESIGNS[item];
       if (!d || d.faction !== faction) return { ok: false, reason: 'Unknown design.' };
-      if (d.tech && !known.has(d.tech)) return { ok: false, reason: `Needs ${d.tech}.` };
+      if (d.tech && !known.has(d.tech)) return { ok: false, reason: `Needs ${TECH_BY_ID[d.tech]?.name ?? d.tech}.` };
       const yard = shipyardOf(sys);
       if (!yard) return { ok: false, reason: 'Needs a shipyard.' };
       if (yard === 'light' && CLASSES[d.cls].size > CLASSES.destroyer.size) return { ok: false, reason: 'Needs a heavy shipyard.' };
@@ -247,7 +249,7 @@ export function checkBuild(state: GameState, faction: FactionId, hex: number, ki
     case 'improvement': {
       const imp = IMPROVEMENTS[item];
       if (!imp) return { ok: false, reason: 'Unknown improvement.' };
-      if (imp.tech && !known.has(imp.tech)) return { ok: false, reason: `Needs ${imp.tech}.` };
+      if (imp.tech && !known.has(imp.tech)) return { ok: false, reason: `Needs ${TECH_BY_ID[imp.tech]?.name ?? imp.tech}.` };
       if (sys.development < imp.minLevel) return { ok: false, reason: `Needs development level ${imp.minLevel}.` };
       const pending = queued.filter((q) => q.kind === 'improvement');
       if (sys.improvements.length + pending.length >= slotsOf(sys)) return { ok: false, reason: 'No free slots.' };
@@ -407,10 +409,17 @@ export function completeBuild(state: GameState, faction: FactionId, hex: number,
   switch (order.kind) {
     case 'ship': {
       const d = DESIGNS[order.item];
-      const fid = spawnShip(state, faction, d, hex);
-      const ship = state.ships[state.fleets[fid].ships[0]];
+      // New warships join the shipyard's reserve fleet (up to 6) instead of each forming a fleet of one.
+      const reserve = isWarship(d)
+        ? Object.values(state.fleets).find((f) => f.owner === faction && f.hex === hex && f.reserve && f.path.length === 0 && groupSize(state, f) < BALANCE.maxShipsPerFleet)
+        : undefined;
+      const fid = reserve ? spawnShip(state, faction, d, hex, reserve.id) : spawnShip(state, faction, d, hex);
+      const ship = state.ships[state.fleets[fid].ships.at(-1)!];
       if (veteran) ship.xp = 2;
-      state.fleets[fid].movesLeft = 0;
+      if (!reserve) {
+        state.fleets[fid].movesLeft = 0;
+        if (isWarship(d)) { state.fleets[fid].reserve = true; state.fleets[fid].name = `${sys.name} Reserve`; }
+      }
       log(state, [faction], 'built', `${d.name} (${CLASSES[d.cls].name}) completed at ${sys.name}.`, hex);
       break;
     }

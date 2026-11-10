@@ -297,3 +297,21 @@ describe('the fog of battle', () => {
     expect(engageLeft).toBeGreaterThan(10);
   });
 });
+
+describe('battle report wording', () => {
+  it('names the sides and counts only ships as lost ships', () => {
+    const g = newGame('words');
+    const hex = g.map.hexes.findIndex((h) => !h.owner && h.system && h.system.development > 0 && h.system.defense > 0);
+    expect(hex).toBeGreaterThanOrEqual(0);
+    const fid = fleetOf(g, 'concord', DESIGNS['lattice:proof'], hex, 6);
+    g.fleets[fid].doctrine = 'fullAttack';
+    resolveBattleAt(g, hex, 'concord');
+    const e = g.log.filter((x) => x.kind === 'battle').at(-1)!;
+    expect(e.text).not.toMatch(/@independent|concord lost/);
+    expect(e.text).toMatch(/Concord lost \d+\/6 ships/);
+    expect(e.text).toMatch(/Independents/);
+    const rec = g.battleLog!.at(-1)!;
+    const indepLost = rec.rounds!.reduce((a, r) => a + (r.sides.find((s) => s.faction === '@independent')?.lost ?? 0), 0);
+    expect(indepLost).toBe(0);
+  });
+});

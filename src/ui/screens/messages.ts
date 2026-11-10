@@ -90,11 +90,18 @@ export function aiThread(ui: GameUI, power: string, rerender: () => void): HTMLE
   const items = dispatchesWith(g, me, power);
   if (items.length) markRead(g.id, me, `ai:${power}`, items[items.length - 1].n);
   const log = h('div', { style: 'overflow:auto;max-height:42vh;display:flex;flex-direction:column;gap:6px;padding:4px' });
-  if (items.length === 0) log.append(h('div', { class: 'dim' }, `The ${d.name} have said nothing to you yet.`));
+  if (items.length === 0) log.append(h('div', { class: 'dim' }, `${/^the /i.test(d.name) ? d.name : `The ${d.name}`} have said nothing to you yet.`));
+  // The same words said again in a row show once, with a count.
+  const shown: { x: (typeof items)[number]; times: number; last: number }[] = [];
   for (const x of items) {
+    const prev = shown[shown.length - 1];
+    if (prev && prev.x.from === x.from && prev.x.text === x.text && !x.statement) { prev.times++; prev.last = x.turn; continue; }
+    shown.push({ x, times: 1, last: x.turn });
+  }
+  for (const { x, times, last } of shown) {
     const mine = x.from === me;
     const bubble = h('div', { style: `align-self:${mine ? 'flex-end' : 'flex-start'};max-width:80%;background:${mine ? '#26355f' : '#18203a'};border:1px solid ${mine ? 'var(--line)' : d.color};border-radius:10px;padding:6px 9px` },
-      h('div', { class: 'dim', style: 'font-size:11px' }, mine ? 'You' : d.name, ` · turn ${x.turn}`, mine && x.statement ? (x.answered ? ' · answered' : ' · they will answer on their turn') : ''),
+      h('div', { class: 'dim', style: 'font-size:11px' }, mine ? 'You' : d.name, times > 1 ? ` · turns ${x.turn}–${last} · said ${times} times` : ` · turn ${x.turn}`, mine && x.statement ? (x.answered ? ' · answered' : ' · they will answer on their turn') : ''),
       h('div', { style: 'white-space:pre-wrap;word-break:break-word' }));
     (bubble.lastChild as HTMLElement).textContent = x.text;
     log.append(bubble);

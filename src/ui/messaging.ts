@@ -70,6 +70,16 @@ export function dispatchesWith(game: GameState, viewer: string, power: string): 
   return (game.dispatches ?? []).filter((d) => (d.from === viewer && d.to === power) || (d.from === power && d.to === viewer));
 }
 
+/** Unread chat messages from other human players. */
+export function unreadChat(messaging: Messaging | undefined, game: GameState, viewer: string): number {
+  return messaging ? messaging.list(viewer).filter((m) => m.from !== viewer && m.at > lastRead(game.id, viewer, threadKey(m, viewer))).length : 0;
+}
+
+/** Unread words from computer powers (flavour and answers, never something that must be acted on). */
+export function unreadAi(game: GameState, viewer: string): number {
+  return (game.dispatches ?? []).filter((d) => d.to === viewer && d.n > lastRead(game.id, viewer, `ai:${d.from}`)).length;
+}
+
 export function unreadCount(messaging: Messaging | undefined, game: GameState, viewer: string): number {
   const chat = messaging ? messaging.list(viewer).filter((m) => m.from !== viewer && m.at > lastRead(game.id, viewer, threadKey(m, viewer))).length : 0;
   const ai = (game.dispatches ?? []).filter((d) => d.to === viewer && d.n > lastRead(game.id, viewer, `ai:${d.from}`)).length;
