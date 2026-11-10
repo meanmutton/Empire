@@ -619,19 +619,75 @@ export class MapView {
     }
   }
 
+  /**
+   * The viewer's agents: diplomats as a white pennant on a pole, spies as a dark diamond with an eye, both on
+   * a faction-colored badge at the top left of the hex, with a count when several share a hex. Diplomats
+   * serving as ambassadors get a gold ring.
+   */
   private drawAgents(inView: Set<number>): void {
     const ctx = this.ctx;
+    const byHex = new Map<number, { diplomats: number; spies: number; ambassador: boolean }>();
     for (const a of Object.values(this.state.agents)) {
       if (a.owner !== this.viewer || a.ship || a.capturedBy || !inView.has(a.hex)) continue;
-      const p = hexToPixel(this.state.map, a.hex, HEX);
-      const x = p.x - HEX * 0.5, y = p.y - HEX * 0.42;
-      ctx.fillStyle = a.kind === 'diplomat' ? '#f1faee' : '#2b2d42';
-      ctx.strokeStyle = factionDef(a.owner).color;
-      ctx.lineWidth = 1.2;
+      const e = byHex.get(a.hex) ?? { diplomats: 0, spies: 0, ambassador: false };
+      if (a.kind === 'diplomat') e.diplomats++; else e.spies++;
+      if (a.resident) e.ambassador = true;
+      byHex.set(a.hex, e);
+    }
+    const color = factionDef(this.viewer).color;
+    for (const [hex, e] of byHex) {
+      const p = hexToPixel(this.state.map, hex, HEX);
+      // Down the left side of the hex, clear of fleet tokens (center) and the system name (bottom).
+      const x = p.x - HEX * 0.74;
+      let y = e.diplomats && e.spies ? p.y - HEX * 0.26 : p.y - HEX * 0.08;
+      if (e.diplomats) { this.drawAgentBadge(x, y, 'diplomat', e.diplomats, color, e.ambassador); y += HEX * 0.5; }
+      if (e.spies) this.drawAgentBadge(x, y, 'spy', e.spies, color, false);
+    }
+  }
+
+  private drawAgentBadge(x: number, y: number, kind: 'diplomat' | 'spy', count: number, color: string, ring: boolean): void {
+    const ctx = this.ctx;
+    const r = HEX * 0.21;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = shade(color, -0.25);
+    ctx.fill();
+    ctx.lineWidth = ring ? 2.4 : 1.4;
+    ctx.strokeStyle = ring ? '#ffd166' : '#f1faee';
+    ctx.stroke();
+    if (kind === 'diplomat') {
+      // A pennant on a pole.
+      ctx.strokeStyle = '#f1faee';
+      ctx.lineWidth = 1.3;
       ctx.beginPath();
-      if (a.kind === 'diplomat') ctx.arc(x, y, 4, 0, Math.PI * 2);
-      else { ctx.moveTo(x, y - 5); ctx.lineTo(x + 4, y); ctx.lineTo(x, y + 5); ctx.lineTo(x - 4, y); ctx.closePath(); }
-      ctx.fill(); ctx.stroke();
+      ctx.moveTo(x - r * 0.35, y + r * 0.6);
+      ctx.lineTo(x - r * 0.35, y - r * 0.6);
+      ctx.stroke();
+      ctx.fillStyle = '#f1faee';
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.35, y - r * 0.6);
+      ctx.lineTo(x + r * 0.6, y - r * 0.3);
+      ctx.lineTo(x - r * 0.35, y);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // A diamond with an eye.
+      ctx.fillStyle = '#c9d1e8';
+      ctx.beginPath();
+      ctx.moveTo(x, y - r * 0.65); ctx.lineTo(x + r * 0.65, y); ctx.lineTo(x, y + r * 0.65); ctx.lineTo(x - r * 0.65, y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#0b1122';
+      ctx.beginPath();
+      ctx.arc(x, y, r * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (count > 1) {
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.round(HEX * 0.2)}px system-ui`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(count), x + r * 0.75, y + r * 0.7);
     }
   }
 }
