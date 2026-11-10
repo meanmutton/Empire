@@ -7,7 +7,7 @@ import { factionDef } from '../data/factions';
 import { defaultLeader, LEADER_TITLES, LEADERS, SELF_LEADER } from '../data/leaders';
 import type { FactionId, GameState } from '../engine/types';
 import { h } from './dom';
-import { glyphElement } from './glyphs';
+import { crestElement } from './crests';
 import { revealingPortraits } from './screens/options';
 
 const IMAGES: Record<string, string> = {};
@@ -70,6 +70,6 @@ export function portraitElement(faction: FactionId, key: string | undefined, siz
   });
   const url = key ? IMAGES[pick(key)] : undefined;
   if (url) frame.append(h('img', { src: url, alt: title, draggable: false }));
-  else frame.append(glyphElement(faction, def.color, Math.round(w * (avatar ? 0.55 : 0.5))));
+  else frame.append(crestElement(faction, Math.round(w * (avatar ? 0.78 : 0.7))));
   return frame;
 }

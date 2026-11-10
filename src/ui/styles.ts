@@ -91,6 +91,8 @@ h3 { margin:12px 0 6px; font-size:12px; letter-spacing:.08em; text-transform:upp
 .leader-pick.on { border-color:var(--accent); background:#1a2442; }
 .leader-name { font-size:11px; text-align:center; line-height:1.2; color:var(--dim); }
 .leader-pick.on .leader-name { color:var(--accent); }
+.crest { display:inline-block; flex:none; line-height:0; }
+.crest svg { width:100%; height:100%; display:block; filter:drop-shadow(0 2px 4px #0009); }
 .guide-grid { display:grid; grid-template-columns:minmax(170px, 230px) minmax(0, 1fr); gap:14px; min-height:420px; }
 .guide-grid > * { min-width:0; }
 .guide-list { display:flex; flex-direction:column; max-height:70vh; overflow:auto; padding-right:4px; }
