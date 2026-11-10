@@ -1,6 +1,6 @@
 import { DESIGNS_BY_FACTION } from '../src/data/designs';
 import {
-  cancelBuild, checkBuild, factionIncome, popCapOf, queueBuild, runEconomy, rushBuild, slotsOf, systemYield,
+  cancelBuild, checkBuild, factionIncome, popCapOf, productionOf, queueBuild, runEconomy, rushBuild, slotsOf, systemYield,
 } from '../src/engine/economy';
 import { createGame } from '../src/engine/setup';
 import type { GameState } from '../src/engine/types';
@@ -79,12 +79,30 @@ describe('economy', () => {
     const g = game();
     const home = g.factions.concord.home;
     const sys = g.map.hexes[home].system!;
-    expect(slotsOf(sys)).toBe(5);
-    g.factions.concord.stock.metals = 1000;
-    g.factions.concord.stock.energy = 1000;
+    // Size 5, development 4: 5 + 2×4 − 1 slots.
+    expect(slotsOf(sys)).toBe(12);
+    expect(slotsOf({ ...sys, size: 1, development: 1 })).toBe(2);
+    expect(slotsOf({ ...sys, size: 5, development: 5 })).toBe(14);
+    g.factions.concord.stock.metals = 5000;
+    g.factions.concord.stock.energy = 5000;
     expect(queueBuild(g, 'concord', home, 'improvement', 'shipyard').ok).toBe(false);
-    expect(queueBuild(g, 'concord', home, 'improvement', 'mine').ok).toBe(true);
+    while (sys.improvements.length + sys.queue.length < slotsOf(sys)) expect(queueBuild(g, 'concord', home, 'improvement', 'mine').ok).toBe(true);
     expect(queueBuild(g, 'concord', home, 'improvement', 'mine').ok).toBe(false);
+  });
+
+  it('repeats of the same improvement yield less each time', () => {
+    const g = game();
+    const home = g.factions.concord.home;
+    const sys = g.map.hexes[home].system!;
+    sys.improvements = [];
+    const base = systemYield(g, home).metals;
+    sys.improvements = ['mine'];
+    const one = systemYield(g, home).metals - base;
+    sys.improvements = ['mine', 'mine'];
+    const two = systemYield(g, home).metals - base;
+    expect(two - one).toBeCloseTo(one * 0.8, 5);
+    sys.improvements = ['factory'];
+    expect(productionOf(g, home)).toBeGreaterThan((() => { sys.improvements = []; return productionOf(g, home); })());
   });
 
   it('develops systems and cancels with a refund', () => {

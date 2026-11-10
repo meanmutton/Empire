@@ -17,8 +17,25 @@ export function zeroResources(): Resources {
 }
 
 /** Improvement slots a system has now: development + 1, capped by its size (0 when undeveloped). */
+/**
+ * Improvement slots: grow with both the world's size (1–5) and its development (1–5), from 2 on a small new
+ * outpost to 14 on a large core world.
+ */
 export function slotsOf(sys: StarSystem): number {
-  return sys.development === 0 ? 0 : Math.min(sys.size, sys.development + 1);
+  return sys.development === 0 ? 0 : Math.max(2, sys.size + 2 * sys.development - 1);
+}
+
+/** Each further copy of the same improvement in a system yields 20% less than the one before (×0.8, ×0.64, …). */
+export const REPEAT_FALLOFF = 0.8;
+
+/** Yield multipliers for a system's improvements, in order, with repeats tapering off. */
+export function improvementFactors(sys: StarSystem): number[] {
+  const seen = new Map<string, number>();
+  return sys.improvements.map((imp) => {
+    const n = seen.get(imp) ?? 0;
+    seen.set(imp, n + 1);
+    return Math.pow(REPEAT_FALLOFF, n);
+  });
 }
 
 export function popCapOf(state: GameState, sys: StarSystem, owner: FactionId | null): number {
@@ -35,6 +52,8 @@ export function productionOf(state: GameState, hex: number): number {
   const owner = state.map.hexes[hex].owner;
   if (!sys || !owner) return 0;
   let p = BALANCE.productionByLevel[sys.development] + sys.population * 0.3;
+  const factors = improvementFactors(sys);
+  sys.improvements.forEach((imp, i) => { p += (IMPROVEMENTS[imp]?.production ?? 0) * factors[i]; });
   const m = modifiersOf(owner);
   p *= 1 - m.buildTime + techEffects(state, owner).production;
   if (state.factions[owner].flags.mobilized) p *= 2;
@@ -86,11 +105,12 @@ export function systemYield(state: GameState, hex: number, connected?: Set<numbe
   out.metals = metals * dev;
   out.science = (p.science + st.science) * dev;
   out.exotics = (p.exotics + starExotics) * dev;
-  for (const imp of sys.improvements) {
+  const factors = improvementFactors(sys);
+  sys.improvements.forEach((imp, i) => {
     const y = IMPROVEMENTS[imp]?.yields;
-    if (!y) continue;
-    for (const k of RESOURCE_KINDS) out[k] += (y[k] ?? 0) * (1 + 0.1 * sys.development);
-  }
+    if (!y) return;
+    for (const k of RESOURCE_KINDS) out[k] += (y[k] ?? 0) * (1 + 0.1 * sys.development) * factors[i];
+  });
   if (h.terrain === 'nebula') out.science += 1;
   out.energy += sys.population * 0.25;
   out.science += sys.population * 0.4;

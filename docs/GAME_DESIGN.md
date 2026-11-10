@@ -184,7 +184,7 @@ in open space, an asteroid field, a nebula, or beside a neutron star or pulsar.
 | Wormhole | 1 | Paired; jumping to the twin costs 1 movement (0 for the Tal or with Wormhole Stabilization). |
 
 **Star systems** have a star (yellow, orange, red dwarf, blue giant, white, neutron, pulsar), a **planet
-type**, a size (1–5 improvement slots) and a development level (§5.2).
+type**, a size (1–5) and a development level (§5.2).
 
 | Planet type | Population | Notes |
 |-------------|------------|-------|
@@ -228,29 +228,33 @@ straight into research. A stockpile can go negative only for energy, and then sh
 until it's positive again.
 
 ### 5.2 Star systems and development
-Every system has a **planet type**, a **size** (1–5 improvement slots), base yields, and a **development
-level** of 0–5:
+Every system has a **planet type**, a **size** (1–5), base yields, and a **development level** of 0–5:
 
 | Level | Name | Unlocks |
 |-------|------|---------|
 | 0 | Unclaimed / Survey | — |
-| 1 | Outpost | 2 improvement slots, claims the hex |
-| 2 | Colony | population can grow; spies and diplomats; 3 slots |
-| 3 | Settlement | shipyard (up to Destroyer); 4 slots |
-| 4 | Industrial World | heavy shipyard (all classes); 5 slots |
+| 1 | Outpost | claims the hex |
+| 2 | Colony | population can grow; spies and diplomats |
+| 3 | Settlement | shipyard (up to Destroyer) |
+| 4 | Industrial World | heavy shipyard (all classes) |
 | 5 | Core World | highest yields (×2.5 base) |
 
-Slots are development level + 1, capped by the system's size (1–5). Gas giants and similar uninhabitable
-worlds can be developed only to level 2.
+**Improvement slots** = size + 2 × development − 1 (at least 2): from 2 on a small new outpost to 14 on a
+large core world. Gas giants and similar uninhabitable worlds can be developed only to level 2.
 
 Builds are paid for up front when queued; each system then puts production points into its own queue
 every turn (more for higher development and population). Unfinished builds can be rushed with energy
-(3 energy per remaining point) or cancelled for a 50% refund.
+(3 energy per remaining point). Cancelling gives everything back until work on a build begins, and half once
+it is under way.
 
-**Improvements** (each takes one slot): Mine (+Metals), Power Plant (+Energy), Research Lab (+Science),
-Habitat (+population capacity), Refinery (+Exotics, needs an exotic source), Shipyard / Heavy Shipyard,
-Planetary Shield (+defense), Ground Garrison (+army defense), Trade Port (+energy per trade agreement),
-Academy (new units start veteran).
+**Improvements** (each takes one slot): Mine (+4 Metals), Power Plant (+3 Energy), Research Lab (+3 Science),
+Factory (+3 production), Habitat (+4 population capacity), Orbital Farm (+3 population capacity, +1 energy;
+Hydroponics), Deep Core Mine (+7 Metals; level 3, Asteroid Mining), Antimatter Reactor (+6 Energy; level 3,
+Antimatter), University (+6 Science; level 3, Quantum Computing; one per system), Refinery (+Exotics, needs
+an exotic source), Shipyard / Heavy Shipyard, Planetary Shield (+defense), Ground Garrison (+army defense),
+Trade Port (+energy per trade agreement), Academy (new units start veteran). Yields grow 10% per development
+level. **Repeats taper off**: each further copy of the same improvement in one system yields 20% less than the
+one before (100%, 80%, 64%, …), so a mix pays better than a stack.
 
 ### 5.3 Claiming hexes
 - **Only empty hexes are taken by presence**: open space and unsettled star systems (development 0). Such a
