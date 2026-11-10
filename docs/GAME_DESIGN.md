@@ -537,6 +537,17 @@ armies (garrisoned ones; they move to the new owner's home), star systems/hexes 
 home, and a starbase there changes hands), map knowledge, and returning captured diplomats. A **resource
 swap** is a proposal with just one resource on each side.
 
+**Technology in trades.** You always know your own techs. You see which techs another power knows only with
+an embassy at its capital or a spy there (intelligence level 1+); then the proposal builder lists exactly
+what it has that you lack (and, when offering, what you have that it lacks). Either way you can trade **"a
+technology of the giver's choice"**: on acceptance the giver hands over its cheapest tech (lowest tier) that
+the other side lacks. Asking for one never reveals whether they have any; if they have nothing to give, the
+deal can't go through when they accept.
+
+All of this lives in the **Diplomacy** screen: an overview (proposals waiting for you, your recent ones,
+prisoners, every power you have met), then one page per power with relations, your embassy (send a
+diplomat from there, or train one if none is free), actions, proposals and the conversation.
+
 Agreements only ever add income: each side gets a share of the *other* side's output **on top of** its own,
 and nothing is taken from the partner, so both always come out ahead. AI factions judge proposals
 by value, opinion and personality.
@@ -554,7 +565,7 @@ tension, broken treaties, espionage caught, ideology (similar governments like e
 personality.
 
 ### 9.7 Messages between players
-- Human players can **message** each other: privately with any human they have met in the game, in group
+- Human players can **message** each other (in the Diplomacy screen): privately with any human they have met in the game, in group
   conversations, or on an **All players** channel.
 - Messages are talk only. Binding deals go through proposals (§9.4), which the engine enforces.
 - **Online**, chat lives on the relay, not in the game state. You can write at any time (not only on your

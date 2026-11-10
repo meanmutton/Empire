@@ -2,9 +2,11 @@ import {
   advanceAgents, boardShip, captureAgents, executeAgent, hasEmbassy, opinionOf, sendDiplomat,
 } from '../src/engine/agents';
 import {
-  acceptProposal, canPropose, cancelTreaty, checkForcedVassalage, declareWar, diplomacyIncome, propose,
+  acceptProposal, anyTechChoice, canPropose, cancelTreaty, checkForcedVassalage, declareWar, diplomacyIncome, itemValue, propose,
   proposalScore, rejectProposal, runDiplomacy,
 } from '../src/engine/diplomacy';
+import { TECH_BY_ID } from '../src/data/techs';
+import { grantTech } from '../src/engine/research';
 import { runEspionage, startMission, successChance } from '../src/engine/espionage';
 import { relationKey } from '../src/engine/ids';
 import { relation } from '../src/engine/query';
@@ -220,5 +222,30 @@ describe('espionage', () => {
     for (let i = 0; i < 30 && g.map.hexes[colony].owner === 'lattice'; i++) runEspionage(g, 'krasnyr');
     expect(g.map.hexes[colony].owner).toBe('krasnyr');
     void new Rng(g.rng);
+  });
+});
+
+describe('a technology of their choice', () => {
+  it('hands over the cheapest tech the taker lacks, without revealing anything when asked', () => {
+    const g = newGame('anytech');
+    setStatus(g, 'concord', 'lattice', 'relations');
+    embassy(g, 'concord', 'lattice');
+    g.factions.concord.research.known = [];
+    g.factions.lattice.research.known = [];
+    // Asking a power that knows nothing new is allowed: the answer shows only if they accept.
+    expect(propose(g, 'concord', 'lattice', [], [{ kind: 'anyTech' }]).ok).toBe(true);
+    grantTech(g, 'lattice', 'ionDrives');
+    grantTech(g, 'lattice', 'navigation');
+    grantTech(g, 'lattice', 'lasers');
+    const choice = anyTechChoice(g, 'lattice', 'concord')!;
+    expect(TECH_BY_ID[choice].tier).toBe(Math.min(...['ionDrives', 'navigation', 'lasers'].map((t) => TECH_BY_ID[t].tier)));
+    const r = propose(g, 'concord', 'lattice', [{ kind: 'resource', resource: 'energy', amount: 10 }], [{ kind: 'anyTech' }]);
+    expect(itemValue(g, 'lattice', 'concord', { kind: 'anyTech' })).toBeGreaterThan(0);
+    expect(acceptProposal(g, r.id!).ok).toBe(true);
+    expect(g.factions.concord.research.known).toContain(choice);
+    // Nothing left to give: accepting fails rather than giving nothing.
+    g.factions.lattice.research.known = [...g.factions.concord.research.known];
+    const r2 = propose(g, 'concord', 'lattice', [], [{ kind: 'anyTech' }]);
+    expect(acceptProposal(g, r2.id!).ok).toBe(false);
   });
 });

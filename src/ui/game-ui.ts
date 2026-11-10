@@ -30,7 +30,6 @@ import { openResearch } from './screens/research';
 import { injectStyles } from './styles';
 import { isGameOver } from '../engine/victory';
 import { unreadCount, type Messaging } from './messaging';
-import { openMessages } from './screens/messages';
 import { openMarket } from './screens/market';
 import { openVictory } from './screens/victory';
 import { routeCapacity, routeIncome, routesOf } from '../engine/routes';
@@ -146,6 +145,16 @@ export class GameUI {
   private rerender(): void {
     this.renderSide();
     this.runHooks();
+  }
+
+  /** Chat between human players, when this game has it. */
+  get messaging(): Messaging | undefined {
+    return this.host.messaging;
+  }
+
+  /** Redraws the top bar (counts of unread messages and pending proposals). */
+  updateTopBar(): void {
+    this.renderTop();
   }
 
   /** True while the viewer is choosing a destination for the selected fleet or agent. */
@@ -329,14 +338,14 @@ export class GameUI {
       button('Fleets', () => openFleets(this), { title: 'Every fleet, its orders and condition' }),
       button('Agents', () => openAgents(this), { title: 'Diplomats, spies and embassies' }),
       button('Research', () => openResearch(this)),
-      button(pending ? `Diplomacy (${pending})` : 'Diplomacy', () => openDiplomacy(this), { cls: pending ? 'primary' : '' }),
+      (() => {
+        // Proposals waiting for an answer, plus unread messages from players and computer powers.
+        const n = pending + unreadCount(this.host.messaging, this.game, this.viewer);
+        return button(n ? `Diplomacy (${n})` : 'Diplomacy', () => openDiplomacy(this), { cls: n ? 'primary' : '', title: 'Relations, embassies, proposals and messages' });
+      })(),
       button('Victory', () => openVictory(this)),
       button('Market', () => openMarket(this)),
       button('Report', () => openReport(this)),
-      this.host.messaging ? (() => {
-        const unread = unreadCount(this.host.messaging, this.game, this.viewer);
-        return button(unread ? `Messages (${unread})` : 'Messages', () => this.openMessages(), { cls: unread ? 'primary' : '' });
-      })() : null,
       button('Next fleet', () => this.nextIdle(), { title: 'Shortcut: N' }),
     ].filter((x): x is HTMLElement => x !== null));
     fixed.append(...[
@@ -353,7 +362,7 @@ export class GameUI {
 
   /** Opens chat, optionally at a conversation with one faction. */
   openMessages(thread?: string): void {
-    if (this.host.messaging) openMessages(this, this.host.messaging, thread);
+    openDiplomacy(this, thread);
   }
 
   /** Empire overview in a dialog (used on phones, where the side panel only shows selections). */

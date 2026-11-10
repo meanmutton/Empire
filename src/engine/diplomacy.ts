@@ -2,7 +2,7 @@
 import { BALANCE } from '../data/balance';
 import { design } from '../data/designs';
 import { factionDef, hasAbility, modifiersOf } from '../data/factions';
-import { TECH_BY_ID } from '../data/techs';
+import { TECH_BY_ID, TECHS } from '../data/techs';
 import { adjustOpinion, hasEmbassy, opinionOf, releaseAgent } from './agents';
 import { setBits } from './bitset';
 import { factionIncome } from './economy';
@@ -116,6 +116,8 @@ export function propose(state: GameState, from: FactionId, to: FactionId, give: 
     if (!v.ok) return v;
   }
   for (const item of receive) {
+    // Asking for "a technology of their choice" never reveals whether they have one: that shows on acceptance.
+    if (item.kind === 'anyTech') continue;
     const v = validItem(state, to, from, item);
     if (!v.ok) return v;
   }
@@ -123,6 +125,17 @@ export function propose(state: GameState, from: FactionId, to: FactionId, give: 
   state.proposals[id] = { id, from, to, turn: state.turn, give, receive, answer: null };
   log(state, [from, to], 'proposal', `${factionDef(from).name} sent a proposal to ${factionDef(to).name}.`);
   return { ok: true, id };
+}
+
+/**
+ * The tech `giver` hands over for "a technology of your choice": the cheapest it knows that `taker` lacks
+ * (lowest tier, then tree order). Null when it knows nothing the taker doesn't.
+ */
+export function anyTechChoice(state: GameState, giver: FactionId, taker: FactionId): string | null {
+  const theirs = new Set(state.factions[taker].research.known);
+  const options = state.factions[giver].research.known.filter((t) => !theirs.has(t) && t !== 'ascension' && TECH_BY_ID[t]);
+  options.sort((a, b) => TECH_BY_ID[a].tier - TECH_BY_ID[b].tier || TECHS.indexOf(TECH_BY_ID[a]) - TECHS.indexOf(TECH_BY_ID[b]));
+  return options[0] ?? null;
 }
 
 /** Can `giver` hand this item to `taker`? */
@@ -134,6 +147,8 @@ function validItem(state: GameState, giver: FactionId, taker: FactionId, item: T
       if (item.amount <= 0) return { ok: false, reason: 'Amounts must be positive.' };
       if (!item.perTurn && g.stock[item.resource] < item.amount) return { ok: false, reason: `Not enough ${item.resource}.` };
       return { ok: true };
+    case 'anyTech':
+      return anyTechChoice(state, giver, taker) ? { ok: true } : { ok: false, reason: 'No technology to give.' };
     case 'tech':
       if (!g.research.known.includes(item.tech)) return { ok: false, reason: 'They do not know that tech.' };
       if (state.factions[taker].research.known.includes(item.tech)) return { ok: false, reason: 'Already known.' };
@@ -228,6 +243,14 @@ function transfer(state: GameState, giver: FactionId, taker: FactionId, item: Tr
     case 'tech':
       grantTech(state, taker, item.tech);
       break;
+    case 'anyTech': {
+      const t = anyTechChoice(state, giver, taker);
+      if (t) {
+        grantTech(state, taker, t);
+        log(state, [giver, taker], 'proposal', `${factionDef(giver).name} shared ${TECH_BY_ID[t].name} with ${factionDef(taker).name}.`);
+      }
+      break;
+    }
     case 'fleet': {
       const f = state.fleets[item.fleet];
       f.owner = taker;
@@ -309,6 +332,10 @@ export function itemValue(state: GameState, from: FactionId, to: FactionId, item
     case 'tech': {
       const disc = hasAbility(from, 'prototypeLab') || hasAbility(to, 'prototypeLab') ? 0.7 : 1;
       return techCost(item.tech) * 1.2 * disc;
+    }
+    case 'anyTech': {
+      const t = anyTechChoice(state, from, to);
+      return t ? itemValue(state, from, to, { kind: 'tech', tech: t }) : 0;
     }
     case 'fleet': {
       const f = state.fleets[item.fleet];
