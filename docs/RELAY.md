@@ -120,6 +120,10 @@ EMPIRE_RELAY=wss://xxxx.execute-api.us-east-2.amazonaws.com/live npm run build
 
 Or pass it at runtime: `index.html?relay=wss://…`.
 
+**The live relay** is `wss://045fst54eg.execute-api.us-east-2.amazonaws.com/live` (stack `empire-relay`,
+us-east-2). It is set in the repo's `.env`, so a plain `npm run build` includes it. If you redeploy to a new
+stack, update `.env`.
+
 **Updating**: after relay code changes, run `git pull` and `relay/deploy.sh` again. The script uploads the new
 package under a new name, so CloudFormation updates the function in place; games are kept.
 
