@@ -5,7 +5,7 @@ import { hasAbility } from '../data/factions';
 import { PLANET_YIELDS, TERRAIN_INFO } from '../data/improvements';
 import { ROLES } from '../data/ships';
 import { log } from './events';
-import { hexesWithin } from './hex';
+import { hexesWithin, neighbors } from './hex';
 import { newId } from './ids';
 import { findPath, reachable } from './path';
 import { atWar, fleetSpeed, friendly } from './query';
@@ -232,6 +232,49 @@ export function resolveClaims(state: GameState, faction: FactionId): number[] {
       log(state, [faction, prev], 'captured', `${h.system.name} taken by ${faction} from ${prev}.`, i);
     }
   });
+  return claimed;
+}
+
+/** Largest pocket of empty space that is taken over automatically when a faction's territory surrounds it. */
+export const MAX_ENCLOSED = 60;
+
+/**
+ * Start of turn: empty space completely surrounded by this faction's territory joins it (§5.3). A pocket
+ * counts when every hex bordering it belongs to the faction and it doesn't touch the edge of the map. Within
+ * it, hexes with a settled independent world, a black hole, or someone else's ships stay unclaimed.
+ */
+export function claimEnclosed(state: GameState, faction: FactionId): number[] {
+  const hexes = state.map.hexes;
+  const seen = new Uint8Array(hexes.length);
+  const claimed: number[] = [];
+  for (let start = 0; start < hexes.length; start++) {
+    if (seen[start] || hexes[start].owner) continue;
+    // Flood-fill this pocket of unowned hexes.
+    const pocket: number[] = [];
+    const stack = [start];
+    seen[start] = 1;
+    let enclosed = true;
+    while (stack.length) {
+      const h = stack.pop()!;
+      pocket.push(h);
+      const ns = neighbors(state.map, h);
+      if (ns.length < 6) enclosed = false; // touches the edge of the map
+      for (const n of ns) {
+        const o = hexes[n].owner;
+        if (o) { if (o !== faction) enclosed = false; continue; }
+        if (!seen[n]) { seen[n] = 1; stack.push(n); }
+      }
+    }
+    if (!enclosed || pocket.length > MAX_ENCLOSED) continue;
+    for (const h of pocket) {
+      const x = hexes[h];
+      if (x.terrain === 'blackHole' || (x.system && x.system.development > 0) || othersAt(state, faction, h)) continue;
+      x.owner = faction;
+      x.pendingClaim = null;
+      claimed.push(h);
+    }
+  }
+  if (claimed.length) log(state, [faction], 'claim', `${claimed.length} hex${claimed.length > 1 ? 'es' : ''} of empty space surrounded by your territory joined your empire.`, claimed[0]);
   return claimed;
 }
 

@@ -10,7 +10,7 @@ import { pruneDispatches } from './dispatch';
 import { relaxMarket } from './market';
 import { advanceContracts, expireRentals, refreshOffers } from './mercenaries';
 import { runTradeRoutes } from './routes';
-import { applyHazards, continuePaths, markClaims, resetMovement, resolveClaims, surveyWithFleets } from './movement';
+import { applyHazards, claimEnclosed, continuePaths, markClaims, resetMovement, resolveClaims, surveyWithFleets } from './movement';
 import { activeFaction } from './query';
 import { advanceResearch } from './research';
 import type { FactionId, GameState } from './types';
@@ -27,6 +27,7 @@ export function startTurn(state: GameState): void {
     delete fs.flags.demobilizeAt;
   }
   resolveClaims(state, f);
+  claimEnclosed(state, f);
   runEconomy(state, f);
   runTradeRoutes(state, f);
   runDiplomacy(state, f);
