@@ -13,6 +13,7 @@ import { checkBuild } from '../../engine/economy';
 import { hexDistance } from '../../engine/hex';
 import { intelLevel } from '../../engine/intel';
 import { marketPane, type MarketTab } from './market';
+import { leaderInfo, portraitElement } from '../portraits';
 import { aiThread, aiUnread, chatPanel, groupThreads, threadName, threadUnread } from './messages';
 import type { GameUI } from '../game-ui';
 
@@ -162,9 +163,16 @@ function factionPane(ui: GameUI, o: FactionId, drafts: Map<string, string>, rere
   const r = relation(g, me, o);
   const op = opinionOf(g, o, me);
   const pane = h('div', { style: 'display:flex;flex-direction:column;gap:8px;min-width:0' });
-  pane.append(h('div', { class: 'row' }, h('b', { style: `font-size:16px;color:${def.color}` }, def.name), h('span', { class: 'grow' }),
-    h('span', { class: r.status === 'war' ? 'bad' : r.status === 'alliance' ? 'good' : 'dim' }, STATUS_LABEL[r.status])));
-  pane.append(h('div', { class: 'dim' }, `${def.government}${f.kind === 'minor' ? ' · minor power' : ''}${f.overlord ? ` · vassal of the ${factionDef(f.overlord).short}` : ''}${f.player ? ` · played by ${f.player}` : f.kind === 'major' ? ' · computer' : ''}`));
+  // Header: their leader's (or envoy's) portrait beside who they are and where you stand.
+  const leader = leaderInfo(g, o);
+  const head = h('div', { class: 'dip-head' });
+  head.append(portraitElement(o, leader.portrait, 104, leader.full), h('div', { class: 'grow', style: 'min-width:0' },
+    h('div', { class: 'row' }, h('b', { style: `font-size:16px;color:${def.color}` }, def.name), h('span', { class: 'grow' }),
+      h('span', { class: r.status === 'war' ? 'bad' : r.status === 'alliance' ? 'good' : 'dim' }, STATUS_LABEL[r.status])),
+    h('div', { style: 'margin:2px 0 4px' }, leader.full),
+    h('div', { class: 'dim' }, `${def.government}${f.kind === 'minor' ? ' · minor power' : ''}${f.overlord ? ` · vassal of the ${factionDef(f.overlord).short}` : ''}${f.player ? ` · played by ${f.player}` : f.kind === 'major' ? ' · computer' : ''}`),
+    h('div', { class: 'dim', style: 'font-size:12px;margin-top:4px' }, def.text)));
+  pane.append(head);
   pane.append(h('div', { class: 'kv' },
     h('span', { class: 'k' }, 'Their view of you'), h('span', { class: op >= 0 ? 'good' : 'bad' }, num(op)),
     h('span', { class: 'k' }, 'Agreements'), h('span', null, r.agreements.map((a) => AGREEMENTS[a as AgreementId]?.name ?? a).join(', ') || 'none'),

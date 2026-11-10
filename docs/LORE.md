@@ -221,8 +221,9 @@ colonies they once kept.
 Ten of the thirty appear in any one game. None of them has a single named leader; their portraits show a
 typical envoy.
 
-Three of them are humanoid species whose envoys are strikingly beautiful women, each for her own reasons: the
-Thessic Banking Houses, the Sylph Gardeners and the Ilyrian Courts.
+Six of them are humanoid species whose envoys are strikingly beautiful women, each for her own reasons: the
+Thessic Banking Houses, the Sylph Gardeners, the Ilyrian Courts, the Vesh Prophets, the Pelagic Union and the
+Tal Wanderers.
 
 ### Batch 1
 
@@ -344,11 +345,13 @@ caste of geniuses who keep their distance from everyone. They build the fastest 
 are quietly convinced that they are close to understanding how the Threadways work. They sell technology
 cheaply when it suits them. Above all they value being left alone, and being proven right.
 
-**Vesh Prophets.** The Vesh are graceful, soft-voiced beings with rosy patterned skin and a halo of slender
-tendrils around their heads. They preach that the Waking is the **Second Dawn**: the builders of the
-Threadways are coming home, and only the faithful will be ready to greet them. Their missionaries travel
-everywhere, and their message spreads faster than any fleet. Systems near Vesh space grow restless as the
-faith takes root, and governments learn the hard way that sermons are hard to shoot down.
+**Vesh Prophets.** The Vesh are a humanoid people with rosy skin traced in pale spiral markings, and a halo of
+slender glowing tendrils around their heads. Their faith is carried by its priestesses, who are radiant,
+soft-voiced and beautiful, and who know exactly how much that helps. They preach that the Waking is the
+**Second Dawn**: the builders of the Threadways are coming home, and only the faithful will be ready to greet
+them. Their missionaries travel everywhere, and their message spreads faster than any fleet. Systems near
+Vesh space grow restless as the faith takes root, and governments learn the hard way that a sermon is hard to
+shoot down, especially one delivered with that smile.
 
 **Haldane Free Traders.** The Haldane are humans, the descendants of colonists who refused to sign the
 Charter of the Long Table after the Severance. Their reply to any government is a polite no. They live aboard
@@ -364,9 +367,11 @@ against anyone except another Grendis legion. That is the one law they have neve
 
 ### Batch 3
 
-**Pelagic Union.** The Pelagic Union is a federation of aquatic peoples led by the Pelagi. They are
-intelligent cephalopods with soft, colour-shifting skin, who meet outsiders in water-filled helmets. They
-dream of a galaxy of oceans, and their colonies are always water worlds, deep and crowded. Their cities lie
+**Pelagic Union.** The Pelagic Union is a federation of aquatic peoples led by the Pelagi. They are sirens:
+humanoid ocean-dwellers with sea-blue, faintly iridescent skin, fin-like ears, gill markings along the neck and
+long hair that floats as if always underwater. Their envoys, almost always women, are famous for voices that
+carry farther than any sensible diplomat would like. They dream of a galaxy of oceans, and their colonies are
+always water worlds, deep and crowded. Their cities lie
 far below the waves, where bombardment barely reaches. Their politics is slow, consensual and fluid, and
 they change sides as easily as a current changes direction. To them, dry worlds are simply oceans that
 have not been finished yet.
@@ -410,8 +415,10 @@ quality of your work and on nothing else. The Forgeborn take no sides in other p
 build for both of them, and every great power's navy includes at least a few ships with a Forgeborn mark
 on the keel.
 
-**Tal Wanderers.** The Tal are slender, long-necked beings with small crested heads ringed in fine sensory
-fronds. Their faces are tattooed with glowing star maps. They kept travelling all through the Long Silence,
+**Tal Wanderers.** The Tal are a slender, elegant humanoid people with teal skin, a crest of fine sensory
+fronds in place of hair, and glowing star maps tattooed across their faces and shoulders. Their wanderers,
+mostly women, travel lightly and dress for nowhere in particular, and they are lovely in a remote,
+otherworldly way. They kept travelling all through the Long Silence,
 using the few Threadways that never quite closed, and they remember those routes as sacred. They are
 archivists who believe the Threadways are not roads but a **message**, written by their builders in the
 shape of the network. They pass through wormholes as easily as other peoples cross a street, and they know

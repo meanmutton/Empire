@@ -3,6 +3,7 @@ import { factionDef } from '../../data/factions';
 import { MAX_MESSAGE_LENGTH } from '../../net/protocol';
 import { relation } from '../../engine/query';
 import { button, h, toast } from '../dom';
+import { leaderInfo, portraitElement } from '../portraits';
 import type { GameUI } from '../game-ui';
 import { dispatchesWith, lastRead, markRead, threadKey, type Messaging } from '../messaging';
 import { STATEMENTS } from '../../engine/dispatch';
@@ -98,13 +99,16 @@ export function aiThread(ui: GameUI, power: string, rerender: () => void): HTMLE
     if (prev && prev.x.from === x.from && prev.x.text === x.text && !x.statement) { prev.times++; prev.last = x.turn; continue; }
     shown.push({ x, times: 1, last: x.turn });
   }
+  // Their words carry their leader's face and name.
+  const speaker = leaderInfo(g, power);
   for (const { x, times, last } of shown) {
     const mine = x.from === me;
-    const bubble = h('div', { style: `align-self:${mine ? 'flex-end' : 'flex-start'};max-width:80%;background:${mine ? '#26355f' : '#18203a'};border:1px solid ${mine ? 'var(--line)' : d.color};border-radius:10px;padding:6px 9px` },
-      h('div', { class: 'dim', style: 'font-size:11px' }, mine ? 'You' : d.name, times > 1 ? ` · turns ${x.turn}–${last} · said ${times} times` : ` · turn ${x.turn}`, mine && x.statement ? (x.answered ? ' · answered' : ' · they will answer on their turn') : ''),
+    const bubble = h('div', { style: `max-width:80%;background:${mine ? '#26355f' : '#18203a'};border:1px solid ${mine ? 'var(--line)' : d.color};border-radius:10px;padding:6px 9px;min-width:0` },
+      h('div', { class: 'dim', style: 'font-size:11px' }, mine ? 'You' : speaker.full, times > 1 ? ` · turns ${x.turn}–${last} · said ${times} times` : ` · turn ${x.turn}`, mine && x.statement ? (x.answered ? ' · answered' : ' · they will answer on their turn') : ''),
       h('div', { style: 'white-space:pre-wrap;word-break:break-word' }));
     (bubble.lastChild as HTMLElement).textContent = x.text;
-    log.append(bubble);
+    log.append(mine ? h('div', { style: 'align-self:flex-end;display:flex;max-width:100%' }, bubble)
+      : h('div', { class: 'row', style: 'align-self:flex-start;align-items:flex-start;gap:6px;max-width:100%;flex-wrap:nowrap' }, portraitElement(power, speaker.portrait, 'avatar', speaker.full), bubble));
   }
   const kind = h('select', null, ...Object.entries(STATEMENTS).map(([k, v]) => h('option', { value: k, title: v.text }, v.name)));
   const targets = Object.keys(g.factions).filter((f) => f !== me && f !== power && g.factions[f].alive && relation(g, me, f).contact);
@@ -118,9 +122,7 @@ export function aiThread(ui: GameUI, power: string, rerender: () => void): HTMLE
     const statement = (k === 'requestAid' || k === 'denounce' ? { kind: k, target: target.value } : { kind: k }) as Statement;
     if (ui.act({ type: 'statement', to: power, statement }, true)) rerender();
   };
-  const r = relation(g, me, power);
   return h('div', { style: 'display:flex;flex-direction:column;gap:8px;min-width:0' },
-    h('div', { class: 'row' }, h('b', { style: `color:${d.color}` }, d.name), h('span', { class: 'grow' }), h('span', { class: 'dim' }, `${r.status} · ${d.government}`)),
     log,
     h('div', { class: 'card' },
       h('div', { class: 'dim', style: 'font-size:12px;margin-bottom:4px' }, 'Computer powers do not read free text. Make a statement and they will answer, and act on it, at the start of their turn.'),

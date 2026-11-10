@@ -197,6 +197,8 @@ export interface FactionState {
   explored: string;
   /** Faction-specific counters for abilities (cooldowns, mobilization, etc.). */
   flags: Record<string, number>;
+  /** Great powers: who leads them, as a leader id from src/data/leaders.ts, or 'self' (the human player). */
+  leader?: string;
 }
 
 export interface Proposal {
@@ -354,6 +356,8 @@ export interface Dispatch {
 export interface HumanSeat {
   faction: FactionId;
   name: string;
+  /** A leader id from src/data/leaders.ts, or 'self' to lead as `name`. Omitted: the seed picks one. */
+  leader?: string;
 }
 
 export interface GameConfig {

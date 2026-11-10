@@ -8,6 +8,7 @@ import { button, clear, h, modal, toast } from './dom';
 import { GameUI, type GameHost } from './game-ui';
 import { LocalMessaging } from './messaging';
 import { openHelp } from './screens/help';
+import { openOptions } from './screens/options';
 import { openBriefing } from './screens/briefing';
 import { downloadSave, saveGame } from './storage';
 
@@ -72,6 +73,7 @@ export class LocalSession {
   private menu(ui: GameUI): void {
     const m = modal('Menu', h('div', { class: 'row wrap' },
       button('How to play', () => { m.close(); openHelp(); }),
+      button('Options', () => { m.close(); openOptions(() => ui.refresh()); }),
       button('Save', async () => { await this.save(); toast('Saved.'); m.close(); }),
       button('Download save file', () => { void downloadSave(this.game); }),
       button('Save and quit', async () => { await this.save(); m.close(); this.ui?.destroy(); this.onQuit(); }),

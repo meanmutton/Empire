@@ -60,6 +60,12 @@ every faction has every class or role) and an AI personality. Full numbers are i
 | 4 | **Krasnyr People's Union** | Mammalian humanoids; one-party collectivist state | Cold War USSR | Orange `#ff8c1a` |
 | 5 | **The Lattice** | Artificial beings; AI-run technocracy | none | Violet `#9b5de5` |
 
+**Leaders.** Each great power has three leaders (`src/data/leaders.ts`; lore in `docs/LORE.md`). A computer-run
+power gets one picked by the galaxy seed; a human player picks one at setup or leads under their own name. Their
+portraits appear in Diplomacy and beside their words; minor factions show an envoy. Leaders are flavour only.
+A portrait with a modest version (`<name>-sfw`) shows that one unless the player turns on **Show revealing
+portraits** in Options (title screen or in-game Menu; off by default, saved per browser).
+
 #### Terran Concord
 *Explorers, scientists and negotiators who would rather talk than fight.*
 - Attributes: Science +20%, Diplomacy +25%, ship attack −10%, army strength −10%.

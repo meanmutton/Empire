@@ -8,7 +8,10 @@ import { VERSION } from '../../version';
 import { button, clear, h } from '../dom';
 import { rosterStrip } from '../gallery';
 import { injectStyles } from '../styles';
+import { LEADER_TITLES, LEADERS, SELF_LEADER } from '../../data/leaders';
+import { leaderById, portraitElement } from '../portraits';
 import { openHelp } from './help';
+import { openOptions } from './options';
 
 export interface SetupChoice extends NewGameOptions {
   online: boolean;
@@ -33,7 +36,7 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
   injectStyles();
   const screen = h('div', { class: 'screen' });
   clear(root).append(screen);
-  const seats: { faction: string; name: string }[] = [{ faction: 'concord', name: 'Player 1' }];
+  const seats: { faction: string; name: string; leader?: string }[] = [{ faction: 'concord', name: 'Player 1' }];
   let size: keyof typeof MAP_SIZES = 'standard';
   let seed = randomSeed();
   let turnLimit = String(DEFAULT_TURN_LIMIT);
@@ -46,7 +49,8 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
   const render = () => {
     clear(screen);
     screen.append(h('div', { class: 'title' }, 'EMPIRE'), h('div', { class: 'subtitle' }, `A game of galactic conquest · v${VERSION} · `,
-      h('a', { href: '#', style: 'color:var(--accent)', onclick: (e: Event) => { e.preventDefault(); openHelp(); } }, 'How to play')));
+      h('a', { href: '#', style: 'color:var(--accent)', onclick: (e: Event) => { e.preventDefault(); openHelp(); } }, 'How to play'), ' · ',
+      h('a', { href: '#', style: 'color:var(--accent)', onclick: (e: Event) => { e.preventDefault(); openOptions(render); } }, 'Options')));
     const cols = h('div', { class: 'setup-cols' });
     const left = h('div');
     const saves = actions.saves();
@@ -77,10 +81,15 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
     }
     seats.forEach((s, i) => {
       const taken = new Set(seats.filter((_, j) => j !== i).map((x) => x.faction));
-      const sel = h('select', { onchange: (e: Event) => { s.faction = (e.target as HTMLSelectElement).value; render(); } },
+      const sel = h('select', { onchange: (e: Event) => { s.faction = (e.target as HTMLSelectElement).value; s.leader = undefined; render(); } },
         ...majors().filter((m) => !taken.has(m)).map((m) => h('option', { value: m, selected: m === s.faction }, factionDef(m).name)));
+      // Who leads: one of the power's three leaders, the player themselves, or (by default) whoever the seed picks.
+      const leader = h('select', { title: 'Your leader', onchange: (e: Event) => { s.leader = (e.target as HTMLSelectElement).value || undefined; render(); } },
+        h('option', { value: '', selected: !s.leader }, 'Random leader'),
+        ...(LEADERS[s.faction] ?? []).map((l) => h('option', { value: l.id, selected: s.leader === l.id }, `${LEADER_TITLES[s.faction]} ${l.name}`)),
+        h('option', { value: SELF_LEADER, selected: s.leader === SELF_LEADER }, 'Lead as yourself'));
       const name = h('input', { value: s.name, style: 'width:120px', oninput: (e: Event) => { s.name = (e.target as HTMLInputElement).value; } });
-      left.append(h('div', { class: 'row', style: 'margin:4px 0' }, name, sel,
+      left.append(h('div', { class: 'row wrap', style: 'margin:4px 0' }, name, sel, leader,
         seats.length > 1 ? button('✕', () => { seats.splice(i, 1); render(); }, { cls: 'small ghost' }) : null));
     });
     if (!online && seats.length < majors().length) {
@@ -135,6 +144,7 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
           picked ? h('span', { class: 'good' }, picked.name) : h('span', { class: 'dim' }, 'computer')),
         h('div', { class: 'dim' }, `${d.species} · ${d.government}${d.inspiration ? ` · inspired by ${d.inspiration}` : ''}`),
         h('div', null, d.text),
+        leaderStrip(id, picked, render),
         ...d.abilities.map((a) => h('div', { style: 'margin-top:3px' }, h('b', null, ABILITIES[a].name), ': ', h('span', { class: 'dim' }, ABILITIES[a].text))),
         h('div', { style: 'margin-top:4px' }, h('b', null, 'Ways to win: '),
           ...paths.map((v, i) => h('span', { title: VICTORIES[v].text, style: VICTORIES[v].unique ? 'color:var(--accent)' : '' }, `${i ? ', ' : ''}${VICTORIES[v].name}${VICTORIES[v].unique ? ' ★' : ''}`))),
@@ -146,6 +156,20 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
     screen.append(cols);
   };
   render();
+}
+
+/** A power's three leaders with their portraits; a player's pick is highlighted, and clicking one picks it. */
+function leaderStrip(faction: string, seat: { leader?: string } | undefined, rerender: () => void): HTMLElement {
+  const strip = h('div', { class: 'leader-strip' });
+  for (const l of LEADERS[faction] ?? []) {
+    const info = leaderById(faction, l.id);
+    const on = seat?.leader === l.id;
+    const item = h('div', { class: `leader-pick ${on ? 'on' : ''} ${seat ? 'can' : ''}`, title: `${info.full}: ${l.text}` },
+      portraitElement(faction, info.portrait, 52, info.full), h('div', { class: 'leader-name' }, l.name));
+    if (seat) item.addEventListener('click', () => { seat.leader = on ? undefined : l.id; rerender(); });
+    strip.append(item);
+  }
+  return strip;
 }
 
 export function randomSeed(): string {

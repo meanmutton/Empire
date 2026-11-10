@@ -79,6 +79,20 @@ h3 { margin:12px 0 6px; font-size:12px; letter-spacing:.08em; text-transform:upp
   table.manage td { padding-top:10px; padding-bottom:10px; }
   #topbar .btn { min-height:36px; }
 }
+.portrait { flex:none; display:flex; align-items:center; justify-content:center; overflow:hidden; border:1px solid; border-radius:6px;
+  background:radial-gradient(circle at 50% 40%, #1b2542, #0a0f1e); box-shadow:0 2px 10px #0008; }
+.portrait img { width:100%; height:100%; object-fit:cover; display:block; }
+.portrait.avatar { border-radius:50%; position:relative; }
+.portrait.avatar img { position:absolute; width:170%; height:212%; max-width:none; left:-35%; top:-32%; }
+.leader-strip { display:flex; gap:10px; margin:6px 0 2px; }
+.leader-pick { display:flex; flex-direction:column; align-items:center; gap:3px; width:72px; padding:4px; border-radius:6px; border:1px solid transparent; }
+.leader-pick.can { cursor:pointer; }
+.leader-pick.can:hover { background:#141e3a; }
+.leader-pick.on { border-color:var(--accent); background:#1a2442; }
+.leader-name { font-size:11px; text-align:center; line-height:1.2; color:var(--dim); }
+.leader-pick.on .leader-name { color:var(--accent); }
+.dip-head { display:flex; gap:12px; align-items:flex-start; }
+@media (max-width: 760px) { .dip-head .portrait { width:72px !important; height:90px !important; } }
 .card { background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:8px 10px; margin-bottom:8px; }
 .card.sel { border-color:var(--accent); }
 .kv { display:grid; grid-template-columns:auto 1fr; gap:2px 10px; }
