@@ -151,7 +151,7 @@ major (§9.5). Each has 1–2 special abilities and a small roster (2–4 classe
 | 21 | Pelagic Union | Aquatic federation | Population | **Ocean Worlds** (+50% population on habitable worlds); **Deep Shelters** (systems can't be bombarded below 1 population) |
 | 22 | Zenith Observatory | Scholar-astronomers | Sensors | **Long-Range Sensors** (sensor range +3); **Star Charts** (sell copies of their charts) |
 | 23 | Morrow Bloom | Biological horror fleet | Bio-weapons | **Spore Payload** (attacks reduce a system's population); **Living Hulls** (ships regenerate 20% hull per turn) |
-| 24 | Kethran Lattice-Minds | Silicon crystalline consensus | Durability | **Crystalline Hulls** (hull +40%); **Slow Thought** (−1 movement) |
+| 24 | Kethran Crystal-Minds | Silicon crystalline consensus | Durability | **Crystalline Hulls** (hull +40%); **Slow Thought** (−1 movement) |
 | 25 | Skarn Hunters | Apex predator packs | Aggression | **Hunter's Instinct** (+30% damage against already-damaged ships); **Tracking** (cloaked ships within 2 hexes revealed) |
 | 26 | Ilyrian Courts | Dynastic monarchy | Diplomacy | **Royal Marriage** (vassalage offers +50% likely accepted); **Court Intrigue** (+20% spy defense) |
 | 27 | Forgeborn Anvil | Industrial guild-state | Shipbuilding | **Master Shipwrights** (ships −20% cost; build ships to order for anyone at peace with them) |
