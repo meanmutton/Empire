@@ -13,6 +13,7 @@ import { refreshOffers } from './mercenaries';
 import { grantTech } from './research';
 import { TECHS } from '../data/techs';
 import { Rng, seedRng } from './rng';
+import { defaultLeader } from '../data/leaders';
 import {
   STATE_SCHEMA_VERSION, type FactionId, type FactionState, type GameConfig, type GameState, type HumanSeat,
 } from './types';
@@ -113,6 +114,7 @@ export function createGame(opts: NewGameOptions): GameState {
       explored,
       flags: {},
     };
+    if (def.kind === 'major') f.leader = seat?.leader ?? defaultLeader(opts.seed, id);
     state.factions[id] = f;
   }
 

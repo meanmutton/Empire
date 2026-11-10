@@ -2,7 +2,7 @@
 
 Masters live in art/portraits/ (600x750 JPEG, named as in docs/art/PORTRAIT_PROMPTS.md, e.g.
 concord-sutton.jpg). Adding a new image: `python3 scripts/portraits.py --add path/to/source.png name`
-crops it to 4:5 and saves the master. Every run rebuilds the game copies in src/assets/portraits/
+crops it to 4:5 and saves the master. Every run rebuilds the game copies in src/ui/assets/portraits/
 (240x300 WebP, about 5 KB each). Needs Pillow.
 """
 import glob
@@ -13,7 +13,7 @@ from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MASTERS = os.path.join(ROOT, 'art', 'portraits')
-GAME = os.path.join(ROOT, 'src', 'assets', 'portraits')
+GAME = os.path.join(ROOT, 'src', 'ui', 'assets', 'portraits')
 
 
 def crop45(im):
