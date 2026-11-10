@@ -188,6 +188,15 @@ export class MapView {
     return pixelToHex(this.state.map, sx / this.zoom + this.camX, sy / this.zoom + this.camY, HEX);
   }
 
+  /** Moves the camera by screen pixels (keyboard panning). */
+  panBy(dx: number, dy: number): void {
+    this.camX += dx / this.zoom;
+    this.camY += dy / this.zoom;
+    this.clampCamera();
+    this.dirty = true;
+    this.onCamera();
+  }
+
   zoomAt(sx: number, sy: number, factor: number): void {
     const wx = sx / this.zoom + this.camX, wy = sy / this.zoom + this.camY;
     this.zoom = Math.max(0.25, Math.min(3, this.zoom * factor));

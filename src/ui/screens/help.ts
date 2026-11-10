@@ -40,6 +40,11 @@ const SECTIONS: [string, string[]][] = [
     'Everything about other powers is in Diplomacy: relations, embassies (send a diplomat from there), proposals, and conversations. Pick a power on the left. Computer-run great powers talk to you there, and you can make statements to them (demand they withdraw, ask for help, threaten, reassure, ask their intentions, denounce a rival), and they answer on their turn.',
     'Spies sneak into enemy systems to steal technology, sabotage, incite unrest or map territory.',
   ]],
+  ['Keyboard shortcuts', [
+    'W A S D: scroll the map (hold to keep scrolling). + and − (or E and Q): zoom. H: centre on your capital.',
+    '← and →: select your previous or next fleet. ↑ and ↓: select your previous or next colony. N: the next fleet still waiting for orders.',
+    'M: move the selected fleet or agent. Enter: end your turn. Esc: cancel a move, close a dialog, or clear the selection.',
+  ]],
   ['Winning', [
     'Each great power wins in its own ways (see the Victory screen and the faction cards), and each has one victory of its own: Ascendance (Concord), Glorious Campaign (Ryn’kai), Hegemony (Varrhen), World Revolution (Krasnyr), Singularity (Lattice).',
     'Shared paths include Conquest, Economic Supremacy, Grand Alliance and the Galactic Council. If nobody wins by the turn limit (200 rounds by default), the highest score wins.',
