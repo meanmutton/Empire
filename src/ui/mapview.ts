@@ -11,6 +11,7 @@ import type { FactionId, Fleet, GameState, StarKind } from '../engine/types';
 import { canSeeFleet, visibleHexes } from '../engine/visibility';
 import { connectedHexes, relation } from '../engine/query';
 import { drawGlyph } from './glyphs';
+import { crestImage } from './crests';
 import { shade, tokenImage } from './tokens';
 
 export const HEX = 30;
@@ -327,7 +328,7 @@ export class MapView {
     if (this.zoom <= 0.7) this.drawRegionNames(dpr);
   }
 
-  /** Zoomed out, each power's name (and glyph) over the middle of its territory, like an atlas. */
+  /** Zoomed out, each power's name (and crest or glyph) over the middle of its territory, like an atlas. */
   private drawRegionNames(dpr: number): void {
     const ctx = this.ctx;
     ctx.save();
@@ -351,7 +352,10 @@ export class MapView {
       ctx.strokeText(spaced, x + 8, y);
       ctx.fillStyle = shade(def.color, 0.35);
       ctx.fillText(spaced, x + 8, y);
-      drawGlyph(ctx, r.faction, x + 8 - w / 2 - 10, y, size, def.color);
+      // The crest beside a great power's name (its glyph until the crest has loaded); minors keep their glyph.
+      const crest = major ? crestImage(r.faction, () => { this.dirty = true; }) : null;
+      if (crest) ctx.drawImage(crest, x + 8 - w / 2 - 30, y - 13, 26, 26);
+      else drawGlyph(ctx, r.faction, x + 8 - w / 2 - 10, y, size, def.color);
     }
     ctx.restore();
   }

@@ -10,6 +10,7 @@ import { rosterStrip } from '../gallery';
 import { injectStyles } from '../styles';
 import { LEADER_TITLES, LEADERS, SELF_LEADER } from '../../data/leaders';
 import { leaderById, portraitElement } from '../portraits';
+import { crestElement } from '../crests';
 import { openHelp } from './help';
 import { openOptions } from './options';
 import { openGuide } from './guide';
@@ -142,7 +143,7 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
       const picked = seats.find((s) => s.faction === id);
       const paths = [...new Set([...AVAILABILITY[id], ...(PRESETS[preset].extra?.[id] ?? [])])].filter((v) => PRESETS[preset].victories.includes(v));
       right.append(h('div', { class: `faction-card ${picked ? 'taken' : ''}` },
-        h('div', { class: 'row' }, h('b', { style: `color:${d.color};font-size:15px` }, d.name), h('span', { class: 'grow' }),
+        h('div', { class: 'row' }, crestElement(id, 40, `Crest of the ${d.short}`), h('b', { style: `color:${d.color};font-size:15px` }, d.name), h('span', { class: 'grow' }),
           picked ? h('span', { class: 'good' }, picked.name) : h('span', { class: 'dim' }, 'computer'),
           button('Lore ›', () => openGuide(id), { cls: 'small ghost', title: `The story of the ${d.short}, their leaders and how they see the others` })),
         h('div', { class: 'dim' }, `${d.species} · ${d.government}${d.inspiration ? ` · inspired by ${d.inspiration}` : ''}`),

@@ -14,6 +14,7 @@ import { factionChip } from '../format';
 import { rosterStrip } from '../gallery';
 import { lore, type LoreBlock, type LoreItem } from '../lore';
 import { leaderById, portraitElement } from '../portraits';
+import { crestElement } from '../crests';
 
 const REACH = 'reach';
 
@@ -93,8 +94,10 @@ function factionPane(id: string, game?: GameState): HTMLElement[] {
   const status = game ? (game.factions[id] ? (game.factions[id].alive ? 'In this galaxy' : 'In this galaxy (fallen)') : 'Not in this galaxy') : '';
   const head = h('div', { class: 'guide-top' });
   if (def.kind === 'minor') head.append(portraitElement(id, `minor-${id}`, 120, `${def.short} envoy`));
+  else head.append(crestElement(id, 96, `Crest of the ${def.short}`));
   head.append(h('div', { class: 'grow', style: 'min-width:0' },
-    h('h2', { class: 'guide-title', style: `color:${def.color}` }, def.name),
+    h('div', { class: 'row', style: 'gap:8px' }, def.kind === 'minor' ? crestElement(id, 34, `Seal of the ${def.short}`) : null,
+      h('h2', { class: 'guide-title', style: `color:${def.color}` }, def.name)),
     h('div', { class: 'dim' }, `${def.kind === 'major' ? 'Great power' : `Minor faction · ${def.strength}`} · ${def.government}${status ? ` · ${status}` : ''}`),
     def.kind === 'major' && l.majors[id]?.tagline ? h('div', { style: 'margin-top:4px' }, h('i', null, ...inline(l.majors[id].tagline))) : null,
     h('div', { style: 'margin-top:4px' }, def.text)));

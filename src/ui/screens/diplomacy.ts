@@ -14,6 +14,7 @@ import { hexDistance } from '../../engine/hex';
 import { intelLevel } from '../../engine/intel';
 import { marketPane, type MarketTab } from './market';
 import { leaderInfo, portraitElement } from '../portraits';
+import { crestElement } from '../crests';
 import { openGuide } from './guide';
 import { aiThread, aiUnread, chatPanel, groupThreads, threadName, threadUnread } from './messages';
 import type { GameUI } from '../game-ui';
@@ -168,7 +169,7 @@ function factionPane(ui: GameUI, o: FactionId, drafts: Map<string, string>, rere
   const leader = leaderInfo(g, o);
   const head = h('div', { class: 'dip-head' });
   head.append(portraitElement(o, leader.portrait, 104, leader.full), h('div', { class: 'grow', style: 'min-width:0' },
-    h('div', { class: 'row' }, h('b', { style: `font-size:16px;color:${def.color}` }, def.name), h('span', { class: 'grow' }),
+    h('div', { class: 'row' }, crestElement(o, 28, `${def.kind === 'major' ? 'Crest' : 'Seal'} of the ${def.short}`), h('b', { style: `font-size:16px;color:${def.color}` }, def.name), h('span', { class: 'grow' }),
       h('span', { class: r.status === 'war' ? 'bad' : r.status === 'alliance' ? 'good' : 'dim' }, STATUS_LABEL[r.status])),
     h('div', { style: 'margin:2px 0 4px' }, leader.full),
     h('div', { class: 'dim' }, `${def.government}${f.kind === 'minor' ? ' · minor power' : ''}${f.overlord ? ` · vassal of the ${factionDef(f.overlord).short}` : ''}${f.player ? ` · played by ${f.player}` : f.kind === 'major' ? ' · computer' : ''}`),

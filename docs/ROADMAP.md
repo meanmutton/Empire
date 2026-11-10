@@ -81,8 +81,9 @@ Ordered roughly by value. Open a PR per item or small group.
 These come last, once the game is settled. The owner wants to collaborate on both.
 - [x] **Faction lore and history** (`docs/LORE.md`), leaders and portraits, and the in-game **faction guide**
   built from it.
-- **Still to come from the lore**: the computer powers' voices rewritten in their leaders' words, and detailed
-  faction emblems.
+- [x] **Faction emblems**: a glyph for every faction drawn from its lore (`src/ui/glyphs.ts`), and detailed
+  crests for the great powers and seals for the minor factions (`src/ui/crests.ts`).
+- **Still to come from the lore**: the computer powers' voices rewritten in their leaders' words.
 - **Instruction manual with screenshots**: how to play, every screen explained with real screenshots, plus the
   **faction guide** (lore, abilities, ships and victory paths for each faction). Built after the UI and
   rules stop changing.
