@@ -7,7 +7,9 @@ Online asynchronous turn-based 4X space strategy game for the browser (TypeScrip
 - Layout: `src/engine` (pure deterministic rules), `src/data` (factions, ships, techs, balance), `src/ai`,
   `src/ui` (canvas + DOM client), `src/net` (relay client), `relay/` (AWS backend and local dev relay),
   `test/` (Vitest).
-- Commands: `npm test`, `npm run typecheck`, `npm run build` (single-file `dist/index.html`), `npm run dev`.
+- Commands: `npm test`, `npm run typecheck`, `npm run build` (single-file `dist/index.html`), `npm run dev`,
+  `npm run release` (rebuilds `release/Empire.html`, the downloadable, with the live relay from `.env`).
+- Release: any PR that changes the game runs `npm run release` and commits the new `release/Empire.html`.
 - Engine rule: no `Math.random`, `Date.now`, DOM or network calls inside `src/engine`, `src/data` or `src/ai`;
   use the RNG in the game state, so every client computes identical results.
 - Workflow: one PR per roadmap phase on a `claude/NN-name` branch. Never push to or merge into `main`;
