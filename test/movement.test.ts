@@ -1,6 +1,7 @@
+import { DESIGNS } from '../src/data/designs';
 import { neighbors, ring } from '../src/engine/hex';
 import {
-  buildOutpost, colonize, continuePaths, markClaims, mergeFleets, moveFleet, resetMovement, resolveClaims, splitFleet,
+  buildOutpost, colonize, combineFleets, continuePaths, markClaims, mergeFleets, moveFleet, resetMovement, resolveClaims, splitFleet, transferShips,
 } from '../src/engine/movement';
 import { canSeeFleet, isExplored } from '../src/engine/visibility';
 import { invade } from '../src/engine/ground';
@@ -197,5 +198,48 @@ describe('visibility', () => {
     expect(canSeeFleet(g, 'concord', g.fleets[cloaked])).toBe(false);
     fleetOf(g, 'concord', firstDesign('concord', (d) => d.role === 'science'), g.fleets[watcher].hex);
     expect(canSeeFleet(g, 'concord', g.fleets[cloaked])).toBe(true);
+  });
+});
+
+describe('forming fleets', () => {
+  it('moves single ships between fleets and packs a hex into full battle groups', () => {
+    const g = newGame('form');
+    const hex = emptyHex(g);
+    const d = DESIGNS['lattice:tensor'];
+    const a = fleetOf(g, 'concord', d, hex, 2);
+    const b = fleetOf(g, 'concord', d, hex, 3);
+    const ship = g.fleets[b].ships[0];
+    expect(transferShips(g, b, a, [ship]).ok).toBe(true);
+    expect(g.fleets[a].ships).toContain(ship);
+    expect(g.fleets[b].ships).toHaveLength(2);
+    // Moving every ship merges the fleets.
+    expect(transferShips(g, b, a, [...g.fleets[b].ships]).ok).toBe(true);
+    expect(g.fleets[b]).toBeUndefined();
+    expect(g.fleets[a].ships).toHaveLength(5);
+    // Never more than 6.
+    const c = fleetOf(g, 'concord', d, hex, 2);
+    expect(transferShips(g, c, a, [...g.fleets[c].ships]).ok).toBe(false);
+    // Nine single ships and the 5 + 2 above: 16 ships pack into 3 groups.
+    for (let i = 0; i < 9; i++) fleetOf(g, 'concord', d, hex, 1);
+    combineFleets(g, 'concord', hex);
+    const here = Object.values(g.fleets).filter((f) => f.owner === 'concord' && f.hex === hex);
+    expect(here).toHaveLength(3);
+    expect(here.every((f) => f.ships.length <= 6)).toBe(true);
+    expect(here.reduce((n, f) => n + f.ships.length, 0)).toBe(16);
+  });
+});
+
+describe('combining fleets', () => {
+  it('keeps warships and support ships apart', () => {
+    const g = newGame('comb');
+    const hex = emptyHex(g);
+    fleetOf(g, 'concord', DESIGNS['lattice:tensor'], hex, 2);
+    fleetOf(g, 'concord', DESIGNS['lattice:tensor'], hex, 1);
+    fleetOf(g, 'concord', firstDesign('concord', (d) => d.role === 'scout'), hex, 1);
+    fleetOf(g, 'concord', firstDesign('concord', (d) => d.role === 'colony'), hex, 1);
+    combineFleets(g, 'concord', hex);
+    const here = Object.values(g.fleets).filter((f) => f.owner === 'concord' && f.hex === hex);
+    expect(here).toHaveLength(2);
+    expect(here.map((f) => f.ships.length).sort()).toEqual([2, 3]);
   });
 });

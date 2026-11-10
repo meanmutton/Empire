@@ -16,7 +16,7 @@ import { cargoFree } from '../engine/ground';
 import { blockadersAt } from '../engine/blockade';
 import { checkBuild, factionIncome, popCapOf, productionOf, REPEAT_FALLOFF, rushCost, slotsOf, systemYield } from '../engine/economy';
 import { MISSIONS, type MissionId } from '../engine/espionage';
-import { planPath, reachableThisTurn } from '../engine/movement';
+import { groupSize, planPath, reachableThisTurn } from '../engine/movement';
 import { activeFaction, relation } from '../engine/query';
 import { availableTechs, techCost } from '../engine/research';
 import type { Fleet, GameState } from '../engine/types';
@@ -33,7 +33,7 @@ import { unreadCount, type Messaging } from './messaging';
 import { openMarket } from './screens/market';
 import { openVictory } from './screens/victory';
 import { routeCapacity, routeIncome, routesOf } from '../engine/routes';
-import { tokenImage } from './tokens';
+import { tokenElement } from './tokens';
 
 export interface GameHost {
   /** The viewer pressed End Turn (after the engine processed it). */
@@ -49,6 +49,9 @@ export interface GameHost {
 }
 
 export const DEV_NAMES = ['Unsettled', 'Outpost', 'Colony', 'Settlement', 'Industrial World', 'Core World'];
+
+/** A fleet, or one ship of a fleet, being dragged onto another fleet. */
+type FleetDrag = { kind: 'fleet'; fleet: string } | { kind: 'ship'; fleet: string; ship: string };
 
 export class GameUI {
   readonly root: HTMLElement;
@@ -139,6 +142,41 @@ export class GameUI {
 
   private runHooks(): void {
     for (const fn of [...this.refreshHooks]) fn();
+  }
+
+  /** Fleet whose "Add fleet…" menu is open. */
+  private addMenuFor: string | null = null;
+  /** What is being dragged in the side panel. */
+  private dragging: FleetDrag | null = null;
+
+  private startDrag(e: DragEvent, d: FleetDrag): void {
+    this.dragging = d;
+    e.dataTransfer?.setData('text/plain', d.kind === 'ship' ? d.ship : d.fleet);
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+    this.side.classList.add('dragging');
+  }
+
+  private endDrag(): void {
+    this.dragging = null;
+    this.side.classList.remove('dragging');
+    for (const el of this.side.querySelectorAll('.drop-ok')) el.classList.remove('drop-ok');
+  }
+
+  /** Makes `el` accept dropped fleets or ships that pass `accepts`. */
+  private dropTarget(el: HTMLElement, accepts: (d: FleetDrag) => boolean, drop: (d: FleetDrag) => void): void {
+    el.addEventListener('dragover', (e) => {
+      if (!this.dragging || !accepts(this.dragging)) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      el.classList.add('drop-ok');
+    });
+    el.addEventListener('dragleave', (e) => { if (!el.contains(e.relatedTarget as Node)) el.classList.remove('drop-ok'); });
+    el.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const d = this.dragging;
+      this.endDrag();
+      if (d && accepts(d)) drop(d);
+    });
   }
 
   /** Redraws the side panel and anything else showing the same controls (the management screens). */
@@ -391,7 +429,10 @@ export class GameUI {
       button('✕', () => this.select(null), { cls: 'ghost small' })));
     if (hx.terrain !== 'space') s.append(h('div', { class: 'dim' }, `${TERRAIN_INFO[hx.terrain].name}. ${TERRAIN_INFO[hx.terrain].text}`));
     if (hx.pendingClaim) s.append(h('div', null, factionChip(hx.pendingClaim, true), ' will claim this hex at the start of its next turn.'));
-    if (hx.system) s.append(this.systemPanel(hex));
+    // With a fleet selected, fleets come first (the system and its build menu follow); otherwise the system.
+    const systemPart = hx.system ? this.systemPanel(hex) : null;
+    const fleetsFirst = !!this.selFleet && !!systemPart;
+    if (systemPart && !fleetsFirst) s.append(systemPart);
     const base = Object.values(g.starbases).find((b) => b.hex === hex);
     if (base) {
       const spec = BALANCE.starbase[base.tier as 1 | 2 | 3]!;
@@ -401,8 +442,24 @@ export class GameUI {
     const fleets = this.fleetsAt(hex);
     const forecast = this.forecastCard(hex);
     if (forecast) s.append(forecast);
-    if (fleets.length) s.append(h('h3', null, 'Fleets'));
+    const myFleets = fleets.filter((f) => f.owner === this.viewer);
+    if (fleets.length) {
+      s.append(h('div', { class: 'row', style: 'margin-top:12px' }, h('h3', { style: 'margin:0' }, 'Fleets'), h('span', { class: 'grow' }),
+        myFleets.length > 1 && this.myTurn ? button('Combine all', () => this.act({ type: 'combine', hex }), {
+          cls: 'small', title: 'Pack your fleets here into as few battle groups (up to 6 ships) as possible: warships with warships, support ships with support ships',
+        }) : null));
+      if (myFleets.length > 1 && this.myTurn) {
+        s.append(h('div', { class: 'dim', style: 'font-size:11px;margin-bottom:4px' }, 'Drag a fleet, or a single ship, onto another fleet to join them. Or select a fleet and press Add fleet.'));
+      }
+    }
     for (const f of fleets) s.append(this.fleetCard(f));
+    // While dragging a ship, a place to drop it into a fleet of its own.
+    if (myFleets.some((f) => f.ships.length > 1) && this.myTurn) {
+      const zone = h('div', { class: 'drop-new' }, 'Drop a ship here to make it a fleet of its own');
+      this.dropTarget(zone, (d) => d.kind === 'ship', (d) => { if (d.kind === 'ship') this.act({ type: 'split', fleet: d.fleet, ships: [d.ship] }); });
+      s.append(zone);
+    }
+    if (systemPart && fleetsFirst) s.append(h('h3', null, hx.system!.name), systemPart);
     const agents = Object.values(g.agents).filter((a) => a.hex === hex && a.owner === this.viewer && !a.ship && !a.capturedBy);
     if (agents.length) s.append(h('h3', null, 'Agents'));
     for (const a of agents) s.append(this.agentCard(a.id));
@@ -563,7 +620,7 @@ export class GameUI {
     for (const sid of f.ships) {
       const s = g.ships[sid];
       const d = design(s.design);
-      const img = tokenImage(d.id, 56);
+      const img = tokenElement(d.id, 56);
       const row = h('div', { class: `ship-row ${this.splitSet.has(sid) ? 'sel' : ''}`, onclick: (e: Event) => {
         if (!sel) return;
         e.stopPropagation();
@@ -572,7 +629,21 @@ export class GameUI {
       } }, img, h('div', { class: 'grow' }, h('div', null, `${d.name} `, h('span', { class: 'dim' }, `${CLASSES[d.cls].name} ${ROLES[d.role].name}`)),
         h('div', { class: 'row' }, bar(s.hull / d.stats.hull, s.hull / d.stats.hull > 0.5 ? '#7cfc9a' : '#ff6b6b'),
           h('span', { class: 'dim', style: 'font-size:11px' }, `${s.hull}/${d.stats.hull}${isCrippled(s.hull, d.stats.hull) ? ' · crippled' : s.hull < d.stats.hull * BALANCE.combat.damagedAt ? ' · damaged' : ''}${s.xp ? ` · ${['', 'regular', 'veteran', 'elite'][s.xp]}` : ''}${d.stats.hangar ? ` · ${s.fighters} fighters` : ''}${s.cargo.length ? ` · ${s.cargo.length} aboard` : ''}`))));
+      if (mine && this.myTurn && f.ships.length > 1) {
+        row.draggable = true;
+        row.title = 'Drag onto another fleet to move this ship there';
+        row.addEventListener('dragstart', (e) => { e.stopPropagation(); this.startDrag(e, { kind: 'ship', fleet: f.id, ship: sid }); });
+        row.addEventListener('dragend', () => this.endDrag());
+      }
       card.append(row);
+    }
+    if (mine && this.myTurn) {
+      // The whole card drags as a fleet, and takes other fleets or ships dropped on it.
+      card.draggable = true;
+      card.addEventListener('dragstart', (e) => this.startDrag(e, { kind: 'fleet', fleet: f.id }));
+      card.addEventListener('dragend', () => this.endDrag());
+      this.dropTarget(card, (d) => d.fleet !== f.id && this.game.fleets[d.fleet]?.hex === f.hex,
+        (d) => this.act(d.kind === 'fleet' ? { type: 'merge', into: f.id, from: d.fleet } : { type: 'transfer', from: d.fleet, to: f.id, ships: [d.ship] }));
     }
     if (!sel || !this.myTurn) return card;
     const hx = g.map.hexes[f.hex];
@@ -597,10 +668,24 @@ export class GameUI {
         if (this.act({ type: 'split', fleet: f.id, ships })) this.splitSet.clear();
       }, { cls: 'small' }));
     }
-    for (const other of this.fleetsAt(f.hex).filter((x) => x.owner === this.viewer && x.id !== f.id)) {
-      A(`Merge ${other.name}`, { type: 'merge', into: f.id, from: other.id });
+    const others = this.fleetsAt(f.hex).filter((x) => x.owner === this.viewer && x.id !== f.id);
+    if (others.length) {
+      acts.append(button(this.addMenuFor === f.id ? 'Close' : 'Add fleet…', () => { this.addMenuFor = this.addMenuFor === f.id ? null : f.id; this.rerender(); },
+        { cls: 'small', title: 'Add one of your other fleets here to this one' }));
     }
     card.append(acts);
+    if (this.addMenuFor === f.id && others.length) {
+      const room = BALANCE.maxShipsPerFleet - groupSize(g, f);
+      const menu = h('div', { class: 'card', style: 'margin-top:6px' }, h('div', { class: 'dim', style: 'font-size:12px' }, `Add to ${f.name} (room for ${room} more):`));
+      for (const o of others) {
+        const n = groupSize(g, o);
+        const kinds = [...new Set(o.ships.map((sid) => { const d = design(g.ships[sid].design); return `${CLASSES[d.cls].name} ${ROLES[d.role].name}`; }))].join(', ');
+        menu.append(h('div', { class: 'row' }, h('span', { class: 'grow' }, h('b', null, o.name), ` · ${o.ships.length} ship${o.ships.length > 1 ? 's' : ''}`, h('div', { class: 'dim', style: 'font-size:11px' }, kinds)),
+          button(n <= room ? 'Add' : 'Too big', () => { this.addMenuFor = null; this.act({ type: 'merge', into: f.id, from: o.id }); }, { cls: 'small primary', disabled: n > room })));
+      }
+      card.append(menu);
+    }
+    if (this.splitSet.size === 0 && f.ships.length > 1) card.append(h('div', { class: 'dim', style: 'font-size:11px;margin-top:4px' }, 'Tap ships to pick some, then Split them into a new fleet.'));
     const rynkai = hasAbility(f.owner, 'wayOfTheBlade');
     const doctrine = h('select', {
       title: DOCTRINES[f.doctrine].text,

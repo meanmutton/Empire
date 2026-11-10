@@ -76,6 +76,11 @@ h3 { margin:12px 0 6px; font-size:12px; letter-spacing:.08em; text-transform:upp
 table.t { border-collapse:collapse; width:100%; }
 table.t td, table.t th { padding:4px 6px; border-bottom:1px solid #1c2440; text-align:left; }
 table.manage tr.sel td { background:#1b2a52; }
+.card.drop-ok { outline:2px dashed var(--accent); outline-offset:2px; background:#1b2a52; }
+.ship-row[draggable=true], .card[draggable=true] { cursor:grab; }
+.drop-new { display:none; margin-top:6px; padding:10px; border:2px dashed var(--line); border-radius:8px; text-align:center; color:var(--dim); font-size:12px; }
+#side.dragging .drop-new { display:block; }
+.drop-new.drop-ok { border-color:var(--accent); color:var(--text); }
 table.manage tbody tr:hover td { background:#141e3a; }
 table.manage td { white-space:nowrap; }
 .manage-grid { display:grid; grid-template-columns:minmax(0, 1.7fr) minmax(300px, 1fr); gap:12px; align-items:start; }

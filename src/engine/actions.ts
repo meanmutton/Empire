@@ -11,7 +11,7 @@ import { acceptProposal, cancelTreaty, declareWar, propose, rejectProposal } fro
 import { cancelBuild, queueBuild, rushBuild } from './economy';
 import { startMission, type MissionId } from './espionage';
 import { invade, loadArmy, unloadArmy } from './ground';
-import { buildOutpost, buildStarbase, colonize, mergeFleets, moveFleet, splitFleet } from './movement';
+import { buildOutpost, buildStarbase, colonize, combineFleets, mergeFleets, moveFleet, splitFleet, transferShips } from './movement';
 import { activeFaction } from './query';
 import { setResearch } from './research';
 import { endTurn } from './turn';
@@ -28,6 +28,10 @@ export type Action =
   | { type: 'stop'; fleet: string }
   | { type: 'merge'; into: string; from: string }
   | { type: 'split'; fleet: string; ships: string[] }
+  /** Move some ships of one fleet into another in the same hex. */
+  | { type: 'transfer'; from: string; to: string; ships: string[] }
+  /** Pack all your fleets in a hex into as few battle groups as possible. */
+  | { type: 'combine'; hex: number }
   | { type: 'rename'; fleet: string; name: string }
   | { type: 'doctrine'; fleet: string; doctrine: DoctrineId }
   | { type: 'colonize'; fleet: string }
@@ -82,6 +86,13 @@ export function applyAction(state: GameState, faction: FactionId, action: Action
       return { ok: true };
     case 'merge':
       return ownFleet(action.into) && ownFleet(action.from) ? mergeFleets(state, action.into, action.from) : no('Not your fleets.');
+    case 'transfer':
+      return ownFleet(action.from) && ownFleet(action.to) ? transferShips(state, action.from, action.to, action.ships) : no('Not your fleets.');
+    case 'combine': {
+      const n = combineFleets(state, faction, action.hex);
+      const left = Object.values(state.fleets).filter((f) => f.owner === faction && f.hex === action.hex).length;
+      return n > 0 ? { ok: true, text: `Combined into ${left} battle group${left > 1 ? 's' : ''}.` } : no('Nothing to combine: the groups here are full.');
+    }
     case 'split': {
       if (!ownFleet(action.fleet)) return no('Not your fleet.');
       const id = splitFleet(state, action.fleet, action.ships);

@@ -8,7 +8,7 @@ import type { BattleRecord, BattleSide } from '../../engine/types';
 import { bar, h, modal } from '../dom';
 import { factionChip, num } from '../format';
 import type { GameUI } from '../game-ui';
-import { tokenImage } from '../tokens';
+import { tokenElement } from '../tokens';
 
 const INDEPENDENT = '@independent';
 
@@ -87,7 +87,7 @@ function sideCard(ui: GameUI, s: BattleSide): HTMLElement {
       + `${s.valueLost !== undefined ? ` Lost ${num(s.valueLost)} in value.` : ''}`));
   for (const r of s.ships) {
     const d = design(r.design);
-    const img = tokenImage(d.id, 56);
+    const img = tokenElement(d.id, 56);
     img.style.cssText = 'width:28px;height:28px';
     const survived = r.before - r.destroyed - r.captured;
     const fate: string[] = [];
