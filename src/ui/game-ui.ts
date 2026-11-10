@@ -26,7 +26,7 @@ import { bar, button, clear, h, isTouch, modal, toast } from './dom';
 import { costText, factionChip, ICON, num, signed } from './format';
 import { MapView, Minimap } from './mapview';
 import { openDiplomacy } from './screens/diplomacy';
-import { openReport } from './screens/report';
+import { closeBriefing, openBriefing } from './screens/briefing';
 import { openResearch } from './screens/research';
 import { injectStyles } from './styles';
 import { isGameOver } from '../engine/victory';
@@ -47,6 +47,8 @@ export interface GameHost {
   waitingText?(ui: GameUI): string;
   /** Chat between human players, when the game has more than one. */
   messaging?: Messaging;
+  /** A key unique to this game on this device (save id, or online game code), for its local history. */
+  gameKey?: string;
 }
 
 export const DEV_NAMES = ['Unsettled', 'Outpost', 'Colony', 'Settlement', 'Industrial World', 'Core World'];
@@ -70,6 +72,9 @@ export class GameUI {
   private pendingDest: number | null = null;
   private buildTab: 'ships' | 'improvements' | 'other' = 'ships';
 
+  /** Where panels that sit over the map (the turn briefing) are attached. */
+  overlayRoot: HTMLElement;
+
   constructor(root: HTMLElement, private host: GameHost) {
     injectStyles();
     this.root = root;
@@ -80,6 +85,7 @@ export class GameUI {
     this.hint = h('div', { id: 'hint' });
     const miniCanvas = h('canvas', { id: 'mini' });
     root.append(canvas, this.top, this.side, this.hint, miniCanvas);
+    this.overlayRoot = root;
     this.view = new MapView(canvas);
     this.mini = new Minimap(miniCanvas, this.view);
     this.view.onCamera = () => this.mini.draw();
@@ -101,6 +107,7 @@ export class GameUI {
   private unsubscribe: (() => void) | null = null;
 
   destroy(): void {
+    closeBriefing();
     this.unsubscribe?.();
     this.listeners.abort();
     this.view.destroy();
@@ -188,6 +195,11 @@ export class GameUI {
     this.runHooks();
   }
 
+  /** A key unique to this game on this device. */
+  get gameKey(): string {
+    return this.host.gameKey ?? this.game.id;
+  }
+
   /** Chat between human players, when this game has it. */
   get messaging(): Messaging | undefined {
     return this.host.messaging;
@@ -229,6 +241,7 @@ export class GameUI {
     }
     const r = applyAction(this.game, this.viewer, { type: 'endTurn' });
     if (!r.ok) { toast(r.reason, 'error'); return; }
+    closeBriefing();
     this.select(null);
     this.host.afterEndTurn(this);
   }
@@ -454,7 +467,7 @@ export class GameUI {
       })(),
       button('Victory', () => openVictory(this)),
       button('Market', () => openMarket(this)),
-      button('Report', () => openReport(this)),
+      button('Briefing', () => openBriefing(this), { title: 'What happened since your last turn, and the history of the game so far' }),
       button('Next fleet', () => this.nextIdle(), { title: 'Shortcut: N' }),
     ].filter((x): x is HTMLElement => x !== null));
     fixed.append(...[

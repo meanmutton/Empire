@@ -15,7 +15,7 @@ import { button, clear, h, modal, toast } from './dom';
 import { rosterStrip } from './gallery';
 import { GameUI } from './game-ui';
 import { openHelp } from './screens/help';
-import { openReport } from './screens/report';
+import { openBriefing } from './screens/briefing';
 import { injectStyles } from './styles';
 
 export interface OnlineEntry { code: string; token: string; name: string; faction: string | null; label: string; updated: number; }
@@ -134,6 +134,7 @@ export class OnlineSession {
     if (first) void this.chat.refresh();
     if (!this.ui) this.ui = new GameUI(this.root, {
       messaging: this.chat,
+      gameKey: `online-${this.entry.code}`,
       canAct: () => !this.busy && !!this.lobby && this.lobby.version === this.version && this.lobby.active === this.you,
       afterEndTurn: () => void this.afterEndTurn(),
       openMenu: (ui) => this.menu(ui),
@@ -142,7 +143,7 @@ export class OnlineSession {
     this.ui.setGame(this.game, this.you, first);
     this.ui.refresh();
     if (this.lobby.active === this.you) {
-      openReport(this.ui, this.game.turn - 1);
+      openBriefing(this.ui, { auto: true });
       document.title = '★ Your turn · Empire';
     } else {
       document.title = 'Empire';

@@ -54,6 +54,11 @@ export async function loadGame(id: string): Promise<GameState | null> {
 export function deleteSave(id: string): void {
   try {
     localStorage.removeItem(`empire.save.${id}`);
+    // Its turn-briefing history (one per player), too.
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k?.startsWith(`empire.brief.${id}.`)) localStorage.removeItem(k);
+    }
   } catch { /* ignore */ }
   write(INDEX, listSaves().filter((s) => s.id !== id));
 }

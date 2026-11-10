@@ -8,7 +8,7 @@ import { button, clear, h, modal, toast } from './dom';
 import { GameUI, type GameHost } from './game-ui';
 import { LocalMessaging } from './messaging';
 import { openHelp } from './screens/help';
-import { openReport } from './screens/report';
+import { openBriefing } from './screens/briefing';
 import { downloadSave, saveGame } from './storage';
 
 export class LocalSession {
@@ -29,6 +29,7 @@ export class LocalSession {
       afterEndTurn: () => this.afterEndTurn(),
       openMenu: (ui) => this.menu(ui),
       messaging: this.messaging,
+      gameKey: this.saveId,
     };
   }
 
@@ -50,7 +51,7 @@ export class LocalSession {
       if (!this.ui) this.ui = new GameUI(this.root, this.host());
       this.ui.setGame(g, who, true);
       this.ui.refresh();
-      if (!first || this.hotseat) openReport(this.ui, g.turn - 1);
+      if (!first || this.hotseat) openBriefing(this.ui, { auto: true });
       if (g.winner) toast(`${factionDef(g.winner).name} won the game!`);
       else if (g.over) toast(`The game is over: ${g.over.reason}.`);
       else if (!g.factions[who].research.current) toast('Pick a research project.');
