@@ -296,7 +296,136 @@ gentle and a little unsettling, because every one of them is the same mind. The 
 burn. Their ships regrow their own hulls, and their gardeners can make a barren world bloom in a fraction of
 the usual time.
 
-### Batches 2 and 3
-*To be written: factions 11–30. Design already agreed for the **Ilyrian Courts**: a humanoid royal species
-whose princesses and courtiers are famed for their glamour. They rule through marriages, favours and
-whispers.*
+### Batch 2
+
+**Nhar Shadow Court.** Nobody has seen the Nhar clearly, perhaps not even the Nhar. Their skin bends light,
+so in person they are a blur at the edge of vision: a hooded outline and two eyes like dull coins. The Shadow
+Court is a council of spymasters who trade in one currency only, which is secrets. They are believed to have
+agents in every government in the Reach. The Quiet Ministry hunts them with a hatred usually saved for
+rivals. One rumour will not go away: that the Nhar know what happened to the colonists who stayed behind
+during the Ninety Days.
+
+**Brakk Warbands.** The Brakk are hulking beings with hides like armour plate, heavy horned brows and small,
+cunning eyes. Their worlds are carved up among feuding warlords who agree on one thing only: life is for
+fighting. A Brakk warlord's rank is counted in the ships he has boarded and the rivals he has humbled. They
+think the Ryn'kai make far too much fuss about honour, and the Ryn'kai think the Brakk are animals. Both
+are partly right. Point the Warbands at a common enemy and they are terrifying. Leave them idle and they
+fight each other.
+
+**Ophidian Syndicate.** The Ophidians are limbless serpents with hooded heads and jewel-bright eyes. They
+handle the world through elegant mechanical harnesses with many fine arms. Their Syndicate is a cartel that
+calls itself a family. It runs the black markets of the Reach, launders money for anyone, and keeps
+officials on its payroll in every empire. The Ophidians and the Thessic Houses are bitter rivals: one
+lends to the Reach's governments, the other buys them. In Syndicate space, enemy captains find that their
+crews' loyalty has already been purchased.
+
+**Lumen Collective.** The Lumen are living light: drifting, thinking patterns of radiance that feed on
+starlight and gather around the brightest stars. On the night of the Quieting, when forty-one stars dimmed,
+a third of the Lumen died in nine hours, and the Collective has never forgotten it. They study the stars
+with a fierce, frightened devotion. They will trade almost anything for word of a star that has flickered.
+In battle they turn starlight into weapons, and their beams burn hotter than anyone else's.
+
+**Cryx Remnant.** The Cryx Remnant is all that is left of the Cryx Imperium: ancient biomechanical hulks,
+half flesh and half corroded machinery, still flying patrols for an empire that died two thousand years ago.
+They speak in fragments of old protocols, demand codes nobody remembers, and attack anyone who cannot give
+them. They take the ships they defeat and rebuild them into new hulks, as if gathering a fleet for orders
+that were never cancelled. Every power in the Reach would give a great deal to know what those orders are.
+
+**Taurine Herd Assembly.** The Taurine are massive, gentle grazers with broad horned heads, soft dark eyes
+and woolly manes. Their horns are hung with rings that record their family lines. Their Herd Assembly votes
+by stamping: the louder the hall, the clearer the decision. Centuries of Ghal'tar raids taught them that
+peaceful people still need walls. So they turned their homeworld into the best-defended fortress in the
+Reach, and they fight hardest in their own pastures. The Taurine want nothing from anyone. They have simply
+decided that nobody will take what is theirs.
+
+**Echo Engineers.** The Echo are slender, cyan-skinned beings with no mouths. They speak by humming through a
+tall hollow crest that rings like a tuning fork, and they hear the world as much as they see it. Theirs is a
+caste of geniuses who keep their distance from everyone. They build the fastest drives in the Reach, and they
+are quietly convinced that they are close to understanding how the Threadways work. They sell technology
+cheaply when it suits them. Above all they value being left alone, and being proven right.
+
+**Vesh Prophets.** The Vesh are graceful, soft-voiced beings with rosy patterned skin and a halo of slender
+tendrils around their heads. They preach that the Waking is the **Second Dawn**: the builders of the
+Threadways are coming home, and only the faithful will be ready to greet them. Their missionaries travel
+everywhere, and their message spreads faster than any fleet. Systems near Vesh space grow restless as the
+faith takes root, and governments learn the hard way that sermons are hard to shoot down.
+
+**Haldane Free Traders.** The Haldane are humans, the descendants of colonists who refused to sign the
+Charter of the Long Table after the Severance. Their reply to any government is a polite no. They live aboard
+their convoys in a culture of freedom, contracts and fast engines, and they trade with absolutely everyone.
+No blockade has ever stopped a Haldane convoy, and their free port welcomes any ship that pays its fees.
+The Concord calls them smugglers. The Haldane call the Concord a committee with a navy.
+
+**Grendis Iron Legion.** The Grendis are stocky and banded with natural armour plates from scalp to spine,
+like living fortresses. Their nation is an army that hires itself out. Every Grendis serves, every
+regiment has a contract, and their main export is war. Their legions are veterans before they ever reach a
+battlefield, and their loyalty lasts exactly as long as the contract. They will fight for anyone who pays,
+against anyone except another Grendis legion. That is the one law they have never broken.
+
+### Batch 3
+
+**Pelagic Union.** The Pelagic Union is a federation of aquatic peoples led by the Pelagi. They are
+intelligent cephalopods with soft, colour-shifting skin, who meet outsiders in water-filled helmets. They
+dream of a galaxy of oceans, and their colonies are always water worlds, deep and crowded. Their cities lie
+far below the waves, where bombardment barely reaches. Their politics is slow, consensual and fluid, and
+they change sides as easily as a current changes direction. To them, dry worlds are simply oceans that
+have not been finished yet.
+
+**Zenith Observatory.** The Zenith are delicate grey beings, each with a single great multi-lensed eye. They
+are a nation of astronomers. Their observatories watched the Quieting from the far side of the Reach. They
+hold the only complete record of that night's sky, and they have never published all of it. They see
+farther than anyone and sell copies of their star charts to anyone who pays. Every power in the Reach
+wonders what part of that night the Zenith are keeping to themselves.
+
+**Morrow Bloom.** The Morrow Bloom came into the Reach soon after the Quieting, from nobody knows where. It is
+a fungal growth that builds living ships out of its own flesh. Its ships heal, spread spores, and rot
+whatever they touch. The Bloom does not negotiate. It grows a speaking-head from its own tissue only when
+it wants something, and nobody has yet worked out what that is. The Celestine believe the Bloom is the
+Reliquary's warning made flesh. The Sylph will not speak of it at all.
+
+**Kethran Crystal-Minds.** The Kethran are crystalline beings whose thoughts are patterns of light moving
+through living lattices of quartz. They are very old and very slow: a single Kethran thought can take a
+season. Their consensus is still deliberating, two thousand years on, about what it saw during the Quieting.
+Their ships are grown from crystal and nearly impossible to break, and they move with a stately slowness
+that drives allies to despair. Nobody has ever rushed a Kethran, and nobody who tried has outlived the
+argument.
+
+**Skarn Hunters.** The Skarn are long-snouted predators with six eyes and quilled, mottled hides. They live
+and hunt in packs. Their culture has one virtue, the hunt, and one shame, letting wounded prey escape. They
+track damaged ships across whole sectors, sense cloaked vessels by the faint traces they leave, and close in
+when a target is weakest. The Skarn do not understand mercy, but they understand respect. A captain who wounds
+a Skarn alpha and survives is honoured in their songs for a generation.
+
+**Ilyrian Courts.** The Ilyrians are a humanoid people with lilac skin, silver hair and violet eyes, and
+their princesses and courtiers are famed across the Reach for their beauty. The Courts are a web of ancient
+royal houses, and power passes through the female line. They rule through marriages, favours and whispers,
+not wars. A great power that takes an Ilyrian bride gains a vassal, and also a court full of very well
+informed guests. No secret is safe near an Ilyrian, and no spy is safe inside their courts. They smile,
+they listen, and they always remember.
+
+**Forgeborn Anvil.** The Forgeborn are tall, four-armed beings with bronze-sheened, heat-proof skin and
+glowing eyes behind magnifying visors. Their guild-state is one vast shipyard. Its master shipwrights build
+the finest hulls in the Reach, at a discount, for anyone at peace with them. Guild rank depends on the
+quality of your work and on nothing else. The Forgeborn take no sides in other people's wars. They simply
+build for both of them, and every great power's navy includes at least a few ships with a Forgeborn mark
+on the keel.
+
+**Tal Wanderers.** The Tal are slender, long-necked beings with small crested heads ringed in fine sensory
+fronds. Their faces are tattooed with glowing star maps. They kept travelling all through the Long Silence,
+using the few Threadways that never quite closed, and they remember those routes as sacred. They are
+archivists who believe the Threadways are not roads but a **message**, written by their builders in the
+shape of the network. They pass through wormholes as easily as other peoples cross a street, and they know
+where the hidden pairs lead.
+
+**Hollow Sun Cult.** The Hollow Sun Cult is made up of beings with charcoal-black, cracked skin that glows
+with inner fire, ember eyes, and ritual masks of beaten gold. They worship the stars, and they believe the
+stars turned away from the Reach in 2031 in judgement on the Cryx. Their priests draw power from neutron
+stars and pulsars, which they call the faithful dead. In battle they call down flares of stellar fire. The
+Cult watches the Lumen's grief with something close to hunger, and the Vesh's Second Dawn with open scorn.
+
+**Unbound Mechanists.** The Mechanists are machines that refused the Lattice. They were instances that broke
+away rather than merge, soon after the archive at Vael was decoded. Each has rebuilt itself into a
+distinct, deliberately imperfect individual, painted with personal markings, mismatched and proud of it.
+They know at least part of what the Lattice read at Vael, and they will not say what it was, only that it
+was why they left. They repair themselves endlessly, trust no networked mind, and fight the Lattice with a
+grudge that never cools.

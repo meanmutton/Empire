@@ -162,3 +162,111 @@ Early-2000s PC space strategy game character portrait, painted digital art typic
 ```
 Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft jade-green rim light from behind. Subject: a beautiful plant-woman, a speaking-bloom grown by the Sylph, a vast plant-mind, to talk to animal species: a graceful humanoid female figure formed from smooth pale bark, curling vines and soft flower petals, with leaf-green skin, petal-like hair of pink and white blossoms, and large calm amber eyes. She is lovely in a classic pin-up glamour style, tasteful, her body modestly wrapped in leaves and flowering vines. A gentle, charming smile that is just slightly unsettling, as if many minds look out through her eyes. No text, no logos, no border, no watermark.
 ```
+
+---
+
+## Minor factions, batch 2
+
+**`minor-nhar.png`**: Nhar Shadow Court envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft deep indigo rim light from behind. Subject: a truly alien spymaster of the Nhar Shadow Court: a hooded figure whose skin bends light so that its body is a shimmering blur of distortion, like heat haze, with only a vague outline of a narrow head visible inside the hood and two flat, dull metallic eyes like old coins. Fine indigo-black robes edged with faint embroidery. It feels secretive, patient and impossible to read. No text, no logos, no border, no watermark.
+```
+
+**`minor-brakk.png`**: Brakk Warbands envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft burnt sienna rim light from behind. Subject: a truly alien warlord of the Brakk Warbands: a hulking being with thick rust-brown hide like armour plate, a massive horned brow ridge with several curving horns, small cunning eyes, and heavy tusked jaws hung with iron rings, wearing crude spiked armour plates bolted together from boarded starships and a trophy chain of captured ship insignia. Expression savage, grinning, spoiling for a fight. No text, no logos, no border, no watermark.
+```
+
+**`minor-ophidian.png`**: Ophidian Syndicate envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft sea-green rim light from behind. Subject: a truly alien crime boss of the Ophidian Syndicate: a limbless serpent with a broad hood like a cobra's, glossy emerald and black scales, and jewel-bright amber eyes, wearing an elegant mechanical harness around its upper body with several fine brass robotic arms, one holding a small glowing credit chip, and gold rings piercing its hood. Expression smooth, amused and quietly menacing. No text, no logos, no border, no watermark.
+```
+
+**`minor-lumen.png`**: Lumen Collective envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft pale yellow rim light from behind. Subject: a truly alien being of pure energy from the Lumen Collective: a drifting, roughly head-shaped pattern of radiant golden-white light, made of slowly turning rings and filaments of brilliance, with two deeper points of light suggesting eyes and soft flares rippling off its edges. It has no physical body. It feels luminous, curious and haunted by grief. No text, no logos, no border, no watermark.
+```
+
+**`minor-cryx.png`**: Cryx Remnant envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft dull grey-green rim light from behind. Subject: a truly alien biomechanical remnant of a fallen empire, the Cryx: an ancient husk that is half withered grey flesh and half corroded dark machinery, the remains of a once noble, elongated alien face partly replaced by a cracked metal mask, with cold green glowing optics, trailing cables, and verdigris and ancient engraved patterns on its plating. Expression empty, relentless and unsettling, like a ghost following orders. No text, no logos, no border, no watermark.
+```
+
+**`minor-taurine.png`**: Taurine Herd Assembly envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft warm tan rim light from behind. Subject: a truly alien gentle giant of the Taurine Herd Assembly: a massive grazing creature with a broad heavy head, two pairs of sweeping horns hung with carved family rings, soft dark wet eyes, a wide flat muzzle, and a thick woolly mane of tan and cream, wearing a simple woven sash of office over sturdy plated armour. Expression calm, kind and immovable. No text, no logos, no border, no watermark.
+```
+
+**`minor-echo.png`**: Echo Engineers envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft cyan rim light from behind. Subject: a truly alien genius engineer of the Echo: a slender being with smooth hairless cyan skin, large reflective dark eyes, no mouth at all, and a tall hollow forked crest rising from its head like a tuning fork, faintly vibrating with visible sound ripples in the air, wearing a fitted pale technical coat with precise instruments clipped at the collar. Expression aloof, brilliant and slightly impatient. No text, no logos, no border, no watermark.
+```
+
+**`minor-vesh.png`**: Vesh Prophets envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft soft pink rim light from behind. Subject: a truly alien missionary of the Vesh Prophets: a graceful being with rosy pink skin patterned with pale spiral markings, large gentle violet eyes, no visible ears, and a halo of slender, softly glowing tendrils rising around its head, wearing flowing white and rose vestments with a radiant sunrise sigil. Expression serene, rapturous and utterly convinced. No text, no logos, no border, no watermark.
+```
+
+**`minor-haldane.png`**: Haldane Free Traders envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft peach-orange rim light from behind. Subject: a human free trader captain of the year 4026, a weathered woman in her forties with sun-darkened skin, sharp grey eyes, and long braided hair threaded with brass beads, wearing a patched leather flight jacket covered in trade-guild patches, goggles pushed up on her forehead, and a pilot's headset around her neck. Expression wry, independent and ready to make a deal. No text, no logos, no border, no watermark.
+```
+
+**`minor-grendis.png`**: Grendis Iron Legion envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft slate grey rim light from behind. Subject: a truly alien mercenary soldier of the Grendis Iron Legion: a stocky being with tough grey hide banded with overlapping natural armour plates from the scalp down the back of the neck, like an armadillo's, small deep-set yellow eyes and a heavy jaw, wearing battered military armour with a regiment number, contract seals and veteran's ribbons. Expression professional, unimpressed and battle-hardened. No text, no logos, no border, no watermark.
+```
+
+---
+
+## Minor factions, batch 3
+
+**`minor-pelagic.png`**: Pelagic Union envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft ocean-blue rim light from behind. Subject: a truly alien aquatic diplomat of the Pelagic Union: an intelligent cephalopod with soft colour-shifting blue and violet skin, large wise golden eyes with horizontal pupils, and graceful tentacles curling below its head, floating inside a clear water-filled dome helmet attached to an ornate diving collar, with tiny bubbles rising around it. Expression thoughtful, calm and fluid. No text, no logos, no border, no watermark.
+```
+
+**`minor-zenith.png`**: Zenith Observatory envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft pale steel-blue rim light from behind. Subject: a truly alien astronomer of the Zenith Observatory: a delicate grey-skinned being with a narrow head dominated by a single enormous central eye made of several concentric lenses, like a telescope, fine feathery sensory filaments where ears would be, wearing scholar's robes in pale blue embroidered with star charts and a brass astrolabe pendant. Expression intent, curious and secretive. No text, no logos, no border, no watermark.
+```
+
+**`minor-morrow.png`**: Morrow Bloom envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft sickly lime-green rim light from behind. Subject: a truly alien biological horror, a speaking-head grown by the Morrow Bloom: a vaguely head-shaped mass of fungal flesh, layered gills and pale mycelium threads, pocked with softly glowing green spore sacs, with something like a face half-formed in it, hollow dark eye pits and a wet mouth that was never meant to speak. Faint spores drift in the air. It feels wrong, organic and deeply unsettling, horror but not gory. No text, no logos, no border, no watermark.
+```
+
+**`minor-kethran.png`**: Kethran Crystal-Minds envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft pale ice-cyan rim light from behind. Subject: a truly alien crystalline being of the Kethran Crystal-Minds: a head and shoulders formed entirely of translucent quartz-like crystal facets, with slow patterns of soft white and cyan light moving through its interior like thoughts, no face but a cluster of faintly brighter facets where eyes would be. It feels ancient, patient and impossibly slow. No text, no logos, no border, no watermark.
+```
+
+**`minor-skarn.png`**: Skarn Hunters envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft hot pink rim light from behind. Subject: a truly alien apex predator of the Skarn Hunters: a long-snouted, lean predator with six glossy black eyes arranged in two rows, a mouth lined with hooked teeth, mottled grey and pink hide, and a crest of stiff quills raised along its skull, wearing a hunter's harness hung with trophies of hull plates and teeth. Expression hungry, focused and fearless. No text, no logos, no border, no watermark.
+```
+
+**`minor-ilyrian.png`**: Ilyrian Courts envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft magenta rim light from behind. Subject: a strikingly beautiful humanoid alien princess of the Ilyrian royal courts, with smooth lilac skin, long flowing silver hair, large violet eyes with long lashes, and delicate pointed features, wearing a glamorous jewelled gown of deep magenta silk with a plunging neckline and a slender silver tiara set with amethysts, in classic pin-up glamour style, tasteful and fully clothed. A knowing, seductive smile: she is listening to everything. No text, no logos, no border, no watermark.
+```
+
+**`minor-forgeborn.png`**: Forgeborn Anvil envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft dusty rose rim light from behind. Subject: a truly alien master shipwright of the Forgeborn Anvil: a tall, four-armed being with bronze-sheened, heat-proof skin, glowing orange eyes behind a brass magnifying visor with several flip-down lenses, soot on its cheeks, wearing a heavy leather forge apron over a guild-master's coat with a glowing hammer sigil. Two of its hands hold delicate tools. Expression proud, exacting and businesslike. No text, no logos, no border, no watermark.
+```
+
+**`minor-tal.png`**: Tal Wanderers envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft teal rim light from behind. Subject: a truly alien archivist of the Tal Wanderers: a slender being with a long elegant neck and a small crested head ringed with fine, softly waving sensory fronds, smooth teal skin tattooed with glowing star-map lines and constellations, and calm silver eyes, wearing layered travelling robes and a hooded mantle with a satchel of data-scrolls. Expression wise, gentle and far away. No text, no logos, no border, no watermark.
+```
+
+**`minor-hollowsun.png`**: Hollow Sun Cult envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft bright yellow-gold rim light from behind. Subject: a truly alien priest of the Hollow Sun Cult: a being with charcoal-black cracked skin glowing from within with molten orange light through the cracks, burning ember eyes, and a ritual mask of beaten gold covering the upper half of its face, shaped like a sun with its rays pointing inward, wearing ash-grey robes with smouldering edges. Expression fervent, severe and dangerous. No text, no logos, no border, no watermark.
+```
+
+**`minor-mechanist.png`**: Unbound Mechanists envoy
+```
+Early-2000s PC space strategy game character portrait, painted digital art typical of that era's character art: slightly soft detail, rich dramatic lighting, subtle film grain. Head and shoulders, centered, facing the viewer at a slight three-quarter angle, vertical 4:5 format. Plain very dark background with a soft neutral silver-grey rim light from behind. Subject: a robot of the Unbound Mechanists, machines that broke free of a hive AI to become individuals: a deliberately imperfect, hand-modified mechanical head with a mismatched pair of optics (one round blue, one narrow amber), a battered faceplate painted with bold personal markings and symbols, exposed repaired wiring, and an antenna bent at a jaunty angle. Expression defiant, proud and individual. No text, no logos, no border, no watermark.
+```
