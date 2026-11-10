@@ -227,6 +227,8 @@ export class MapView {
       if (this.pointers.size === 0) this.dragStart = null;
     };
     c.addEventListener('pointerup', up);
+    // Right-click is an order (move there), not the browser menu.
+    c.addEventListener('contextmenu', (e) => e.preventDefault());
     c.addEventListener('pointercancel', (e) => { this.pointers.delete(e.pointerId); this.dragStart = null; this.pinch = null; });
     c.addEventListener('wheel', (e) => {
       e.preventDefault();

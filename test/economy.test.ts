@@ -102,6 +102,31 @@ describe('economy', () => {
     expect(g.factions.concord.stock.metals).toBeGreaterThan(m);
   });
 
+  it('refunds everything until work begins, then half, for every kind of build', () => {
+    const g = game();
+    const home = g.factions.concord.home;
+    const sys = g.map.hexes[home].system!;
+    const st = g.factions.concord.stock;
+    st.metals = 1000; st.energy = 1000;
+    sys.queue = [];
+    const pop0 = sys.population;
+    expect(queueBuild(g, 'concord', home, 'army', '').ok).toBe(true);
+    expect(queueBuild(g, 'concord', home, 'spy', '').ok).toBe(true);
+    const before = { metals: st.metals, energy: st.energy };
+    // The spy, second in line, hasn't started: all back.
+    const spyCost = sys.queue[1].paid!;
+    expect(cancelBuild(g, 'concord', home, 1)).toBe(true);
+    expect(st.energy).toBeCloseTo(before.energy + spyCost.energy);
+    // The army starts building this turn: half back, and half the population it took.
+    const armyCost = sys.queue[0].paid!;
+    sys.queue[0].remaining -= 1;
+    const m = st.metals, pop = sys.population;
+    expect(cancelBuild(g, 'concord', home, 0)).toBe(true);
+    expect(st.metals).toBeCloseTo(m + armyCost.metals / 2);
+    expect(sys.population).toBeCloseTo(pop + armyCost.population / 2);
+    expect(sys.population).toBeLessThan(pop0);
+  });
+
   it('rush-buys with energy', () => {
     const g = game();
     const home = g.factions.concord.home;
