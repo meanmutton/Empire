@@ -28,6 +28,8 @@ const SECTIONS: [string, string[]][] = [
     'Battles are uncertain: every shot can miss or land a critical hit, each side has its fortunes of war, and rare events can swing a fight. A side with 1.5× the force still loses about a quarter of the time. Damaged ships fire less; crippled ones (under a quarter hull) also move a hex slower until repaired.',
     'Select a hex where your forces meet enemies, or tap an enemy hex once with a fleet selected, to see the battle forecast, from Overwhelming victory to Hopeless cause. It only counts what you can see: scouts nearby reveal their real designs, and a spy at their capital reveals their technology.',
     'Shields stop beams, point defense stops missiles and fighters, and escorts draw fire.',
+    'Reading the map: each hex shows one token per power (the biggest ship, and how many ships are there; a green dot means some still need orders). Select the hex, or zoom in, to see each fleet. Hatched hexes with dashed borders are cut off from their owner’s home and yield half. Zoomed out, each power’s name is written over its territory, and every power has its own emblem as well as its colour.',
+    'Map buttons (bottom left, or top right on phones): zoom in and out (+ and − keys), centre on your capital (H), and 🤝 to colour borders by how each power stands with you: red for war, green for allies. On a computer, rest the pointer on a hex for a summary of what is there.',
     'Enemy warships sitting on one of your systems, with none of yours there to contest them, blockade it: half output, and its shipyard can’t finish ships or armies.',
     'Grind a system’s planetary defense to 0, then invade with armies carried by transports.',
   ]],

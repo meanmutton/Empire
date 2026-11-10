@@ -17,6 +17,7 @@ html, body { margin:0; height:100%; overflow:hidden; background:var(--bg); color
 .btn.small { padding:2px 7px; font-size:12px; }
 .chip { display:inline-flex; align-items:center; gap:5px; }
 .chip .dot { width:9px; height:9px; border-radius:50%; background:var(--c); box-shadow:0 0 6px var(--c); }
+.chip .glyph { flex:none; filter:drop-shadow(0 0 3px var(--c)); }
 .dim { color:var(--dim); }
 .good { color:var(--good); } .bad { color:var(--bad); }
 .row { display:flex; align-items:center; gap:8px; }
@@ -47,6 +48,12 @@ h3 { margin:12px 0 6px; font-size:12px; letter-spacing:.08em; text-transform:upp
   overflow-y:auto; padding:10px 12px 90px; z-index:4; backdrop-filter:blur(6px); }
 #side.collapsed { transform:translateX(100%); }
 #mini { position:absolute; left:10px; bottom:10px; width:210px; height:126px; border:1px solid var(--line); border-radius:6px; z-index:4; }
+#map-tools { position:absolute; left:10px; bottom:144px; z-index:4; display:flex; gap:4px; align-items:flex-end; }
+#map-tools .btn { width:32px; padding:4px 0; font-size:15px; background:#0b1122e6; }
+#map-tools .btn.on { border-color:var(--accent); color:var(--accent); }
+.map-legend { margin-left:6px; padding:6px 8px; background:#0b1122ee; border:1px solid var(--line); border-radius:6px; font-size:11px; display:grid; gap:2px; }
+.hover-card { position:fixed; z-index:9; width:240px; padding:8px 10px; background:#0d1428f2; border:1px solid var(--line); border-radius:8px; box-shadow:0 6px 20px #000a;
+  font-size:12px; pointer-events:none; display:grid; gap:3px; }
 #hint { position:absolute; left:50%; transform:translateX(-50%); top:56px; background:#000a; border:1px solid var(--line); padding:4px 10px;
   border-radius:12px; z-index:4; pointer-events:none; font-size:12px; }
 #hint:empty { display:none; }
@@ -156,6 +163,8 @@ input, select { background:#0a1022; color:var(--text); border:1px solid #33416b;
   #side { width:100%; top:auto; height:46%; border-left:none; border-top:1px solid var(--line); padding-bottom:20px; }
   #side.empty { display:none; }
   #mini { display:none; }
+  #map-tools { top:56px; bottom:auto; left:auto; right:10px; flex-direction:column; align-items:flex-end; }
+  #side:not(.empty) ~ #map-tools { display:none; }
   .mobile-only { display:inline-block; }
   #topbar .top-fixed { padding:0 8px; gap:6px; }
   #topbar .top-fixed .dim { max-width:84px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }

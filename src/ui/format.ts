@@ -1,4 +1,5 @@
 import { factionDef } from '../data/factions';
+import { glyphElement } from './glyphs';
 import type { FactionId } from '../engine/types';
 import { h } from './dom';
 
@@ -16,7 +17,8 @@ export function signed(x: number): string {
 
 export function factionChip(id: FactionId, short = false): HTMLElement {
   const d = factionDef(id);
-  return h('span', { class: 'chip', style: `--c:${d.color}` }, h('span', { class: 'dot' }), short ? d.short : d.name);
+  // A glyph as well as the colour, so factions are told apart by shape too.
+  return h('span', { class: 'chip', style: `--c:${d.color}` }, glyphElement(id, d.color), short ? d.short : d.name);
 }
 
 export function costText(c: { metals?: number; energy?: number; exotics?: number; population?: number }): string {
