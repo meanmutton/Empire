@@ -48,16 +48,26 @@ export function toast(text: string, kind: 'info' | 'error' = 'info'): void {
 const openModals: (() => void)[] = [];
 let escBound = false;
 
+/** Lets Esc close a non-modal panel (newest first, together with dialogs). Returns an unregister. */
+export function onEscape(close: () => void): () => void {
+  ensureEscape();
+  openModals.push(close);
+  return () => { const i = openModals.indexOf(close); if (i >= 0) openModals.splice(i, 1); };
+}
+
+function ensureEscape(): void {
+  if (escBound) return;
+  escBound = true;
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !openModals.length) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    openModals[openModals.length - 1]();
+  }, true);
+}
+
 export function modal(title: string, body: HTMLElement, opts: { wide?: boolean; onClose?: () => void } = {}): { close: () => void; root: HTMLElement } {
-  if (!escBound) {
-    escBound = true;
-    window.addEventListener('keydown', (e) => {
-      if (e.key !== 'Escape' || !openModals.length) return;
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      openModals[openModals.length - 1]();
-    }, true);
-  }
+  ensureEscape();
   let closed = false;
   const close = () => {
     if (closed) return;

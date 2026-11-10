@@ -50,6 +50,19 @@ h3 { margin:12px 0 6px; font-size:12px; letter-spacing:.08em; text-transform:upp
 #hint { position:absolute; left:50%; transform:translateX(-50%); top:56px; background:#000a; border:1px solid var(--line); padding:4px 10px;
   border-radius:12px; z-index:4; pointer-events:none; font-size:12px; }
 #hint:empty { display:none; }
+.briefing { position:absolute; right:0; top:46px; bottom:0; width:min(420px, 100%); z-index:8; overflow:auto; padding:12px 14px 20px;
+  background:#0d1428; border-left:1px solid var(--line); box-shadow:-8px 0 24px #0008; animation:brief-in .2s ease both; }
+@keyframes brief-in { from { transform:translateX(24px); opacity:0; } to { transform:none; opacity:1; } }
+.briefing-head { position:sticky; top:-12px; margin:-12px -14px 8px; padding:12px 14px 8px; background:#0d1428; border-bottom:1px solid var(--line); z-index:1; }
+.brief-chips { display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 8px; }
+.brief-chip { border:1px solid var(--line); background:#141c33; color:var(--text); border-radius:999px; padding:4px 10px; font:inherit; font-size:12px; cursor:pointer; }
+.brief-chip.bad { border-color:#e5484d88; }
+.brief-chip:disabled { cursor:default; }
+.brief-line { display:flex; align-items:flex-start; gap:8px; padding:6px 4px; border-bottom:1px solid #1c2440; }
+.brief-line.link { cursor:pointer; }
+.brief-line.link:hover { background:#141e3a; }
+.brief-line.bad { color:var(--bad); }
+.brief-icon { width:20px; text-align:center; flex:none; }
 .move-pill { position:absolute; left:50%; transform:translateX(-50%); top:92px; z-index:6; display:flex; gap:8px; padding:6px; background:#0b1122ee; border:1px solid var(--line); border-radius:999px; box-shadow:0 4px 16px #000a; }
 .move-pill .btn { border-radius:999px; padding:6px 16px; }
 @media (pointer: coarse) {
@@ -150,6 +163,7 @@ input, select { background:#0a1022; color:var(--text); border:1px solid #33416b;
   .setup-cols { grid-template-columns:1fr; }
   .msg-grid { grid-template-columns:1fr; }
   .manage-grid { grid-template-columns:1fr; }
+  .briefing { width:100%; border-left:none; }
   .screen { padding:14px; }
   .title { font-size:34px; margin-top:16px; }
 }
