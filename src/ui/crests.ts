@@ -62,15 +62,18 @@ const MAJOR: Record<string, (t: Tones) => string> = {
     <path d="M14 24 H50 L32 53 Z" fill="${t.deep}" stroke="${t.light}" stroke-opacity=".6" stroke-width="1"/>
     <circle cx="32" cy="33" r="8.5" fill="${t.bright}" stroke="${INK}" stroke-width="1.4"/>
     <circle cx="35.5" cy="31" r="7" fill="${t.deep}" fill-opacity=".85"/>`,
-  // Krasnograd, half day and half night, with the twilight band its people share; the Ministry's orbit around it.
+  // Krasnograd, half day and half night, with the twilight band its people share; a moon's orbit passes behind it
+  // and comes round in front.
   krasnyr: (t) => `
     <path d="${polygon(8, 30.5, -67.5, 32, 32)}" fill="${t.dark}" stroke="${t.main}" stroke-width="2" stroke-linejoin="round"/>
-    <ellipse cx="32" cy="32" rx="26" ry="9" fill="none" stroke="${t.light}" stroke-opacity=".55" stroke-width="1.2" transform="rotate(-24 32 32)"/>
+    <path d="M6 32 A26 9 0 0 1 58 32" fill="none" stroke="${t.light}" stroke-opacity=".5" stroke-width="1.2" transform="rotate(-24 32 32)"/>
     <circle cx="32" cy="32" r="15" fill="${t.deep}" stroke="${INK}" stroke-width="1.4"/>
     <path d="M32 17 A15 15 0 0 0 32 47 Z" fill="${t.bright}"/>
     <path d="M32 17 C35.5 24 35.5 40 32 47 C28.5 40 28.5 24 32 17 Z" fill="${t.main}"/>
     <circle cx="32" cy="32" r="15" fill="none" stroke="${INK}" stroke-width="1.4"/>
-    ${dot(55.5, 22.5, 2.2, t.bright)}`,
+    <path d="M6 32 A26 9 0 0 0 58 32" fill="none" stroke="${INK}" stroke-opacity=".7" stroke-width="3" transform="rotate(-24 32 32)"/>
+    <path d="M6 32 A26 9 0 0 0 58 32" fill="none" stroke="${t.light}" stroke-width="1.4" transform="rotate(-24 32 32)"/>
+    <circle cx="52.5" cy="29.2" r="2.6" fill="${t.bright}" stroke="${INK}" stroke-width="1"/>`,
   // The network: nodes and links in a hexagon, the consensus at the centre.
   lattice: (t) => {
     const pts = [...Array(6)].map((_, i) => { const a = ((i * 60 - 90) * Math.PI) / 180; return [32 + 18 * Math.cos(a), 32 + 18 * Math.sin(a)]; });
