@@ -41,9 +41,12 @@ function managementScreen<T>(ui: GameUI, opts: {
   hexOf: (row: T) => number;
   empty: string;
   summary?: (rows: T[]) => HTMLElement | string;
+  /** Name of the filter tab to open on (e.g. 'Idle'). */
+  initialFilter?: string;
 }): void {
   const body = h('div');
-  let sortCol = 0, desc = false, filter = 0, picked: string | null = null;
+  let sortCol = 0, desc = false, picked: string | null = null;
+  let filter = Math.max(0, opts.filters.findIndex(([name]) => name === opts.initialFilter));
   const m = modal(opts.title, body, { wide: true, onClose: () => unsubscribe() });
   const render = () => {
     const all = opts.rows();
@@ -94,11 +97,12 @@ function managementScreen<T>(ui: GameUI, opts: {
 // -------------------------------------------------------------------------------------------------------
 // Colonies
 
-export function openColonies(ui: GameUI): void {
+export function openColonies(ui: GameUI, initialFilter?: string): void {
   const g = () => ui.game;
   const name = (hex: number) => g().map.hexes[hex].system!.name;
   managementScreen<number>(ui, {
     title: 'Colonies',
+    initialFilter,
     rows: () => g().map.hexes.map((x, i) => (x.owner === ui.viewer && x.system && x.system.development > 0 ? i : -1)).filter((i) => i >= 0),
     id: (hex) => String(hex),
     hexOf: (hex) => hex,
@@ -165,7 +169,7 @@ function hullFrac(ui: GameUI, f: Fleet): number {
   return max ? hull / max : 1;
 }
 
-export function openFleets(ui: GameUI): void {
+export function openFleets(ui: GameUI, initialFilter?: string): void {
   const g = () => ui.game;
   const fleets = () => Object.values(g().fleets).filter((f) => f.owner === ui.viewer);
   const atWarHere = (f: Fleet) => hostilesAt(g(), ui.viewer, f.hex);
@@ -173,16 +177,18 @@ export function openFleets(ui: GameUI): void {
   const rynkai = hasAbility(ui.viewer, 'wayOfTheBlade');
   managementScreen<Fleet>(ui, {
     title: 'Fleets',
+    initialFilter,
     rows: fleets,
     id: (f) => f.id,
     hexOf: (f) => f.hex,
     select: (f) => ui.select(f.hex, f.id),
     empty: 'No fleets match.',
-    summary: (rows) => `${rows.length} fleets, ${rows.reduce((a, f) => a + f.ships.length, 0)} ships. ${rows.filter((f) => f.movesLeft > 0 && !f.path.length).length} without orders this turn.`,
+    summary: (rows) => `${rows.length} fleets, ${rows.reduce((a, f) => a + f.ships.length, 0)} ships. ${rows.filter((f) => f.movesLeft > 0 && !f.path.length && !f.hold).length} without orders this turn.`,
     filters: [
       ['All', () => true],
       ['Warships', armed],
-      ['Idle', (f) => f.movesLeft > 0 && f.path.length === 0],
+      ['Idle', (f) => f.movesLeft > 0 && f.path.length === 0 && !f.hold],
+      ['Holding', (f) => !!f.hold],
       ['Damaged', (f) => hullFrac(ui, f) < 0.95],
       ['In battle', atWarHere],
       ['Support', (f) => !armed(f)],
@@ -218,6 +224,7 @@ export function openFleets(ui: GameUI): void {
       {
         name: 'Heading', key: (f) => (f.path.length ? placeName(ui, f.path[f.path.length - 1]) : ''),
         cell: (f) => atWarHere(f) ? h('span', { class: 'bad' }, 'in battle')
+          : f.hold ? h('span', { class: 'dim' }, 'holding')
           : f.path.length ? `${placeName(ui, f.path[f.path.length - 1])} (${f.path.length} hexes)` : h('span', { class: 'dim' }, f.movesLeft > 0 ? 'no orders' : '—'),
       },
       {

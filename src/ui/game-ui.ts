@@ -1,4 +1,5 @@
 /** The in-game client: map, top bar, context side panel and the screens opened from it. */
+import { checklistEmpty, endTurnCheckOn, openEndTurnCheck, type TurnChecklist } from './screens/endturn';
 import { openAgents, openColonies, openFleets } from './screens/manage';
 import { buildStarted, refundFor } from '../engine/economy';
 import { DOCTRINE_IDS, DOCTRINES, type DoctrineId } from '../data/doctrines';
@@ -21,7 +22,7 @@ import { activeFaction, relation } from '../engine/query';
 import { availableTechs, techCost } from '../engine/research';
 import type { Fleet, GameState } from '../engine/types';
 import { canSeeFleet } from '../engine/visibility';
-import { bar, button, clear, h, modal, toast } from './dom';
+import { bar, button, clear, h, isTouch, modal, toast } from './dom';
 import { costText, factionChip, ICON, num, signed } from './format';
 import { MapView, Minimap } from './mapview';
 import { openDiplomacy } from './screens/diplomacy';
@@ -29,7 +30,7 @@ import { openReport } from './screens/report';
 import { openResearch } from './screens/research';
 import { injectStyles } from './styles';
 import { isGameOver } from '../engine/victory';
-import { unreadCount, type Messaging } from './messaging';
+import { unreadAi, unreadChat, type Messaging } from './messaging';
 import { openMarket } from './screens/market';
 import { openVictory } from './screens/victory';
 import { routeCapacity, routeIncome, routesOf } from '../engine/routes';
@@ -85,7 +86,7 @@ export class GameUI {
     this.view.onHexClick = (hex, ev) => this.clickHex(hex, ev);
     this.unsubscribe = host.messaging?.subscribe(() => { if (this.game) this.renderTop(); }) ?? null;
     const signal = this.listeners.signal;
-    window.addEventListener('resize', () => { this.view.resize(); this.mini.draw(); }, { signal });
+    window.addEventListener('resize', () => { this.view.resize(); this.mini.draw(); if (this.game) this.renderTop(); }, { signal });
     window.addEventListener('keydown', (e) => {
       const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
       if (e.key === 'Escape') { if (this.moveMode) this.toggleMove(false); else this.select(null); }
@@ -144,6 +145,8 @@ export class GameUI {
     for (const fn of [...this.refreshHooks]) fn();
   }
 
+  /** Fleet whose name is being edited. */
+  private renaming: string | null = null;
   /** Fleet whose "Add fleet…" menu is open. */
   private addMenuFor: string | null = null;
   /** What is being dragged in the side panel. */
@@ -210,12 +213,19 @@ export class GameUI {
   }
 
   /** Ends the turn; with nothing being researched (and something to research), opens Research first. */
-  endTurn(skipResearchCheck = false): void {
+  /**
+   * Ends the turn. Unless `skipChecks`, first shows what is still waiting for orders (research, idle
+   * colonies and fleets, proposals); with the checklist turned off, only missing research is caught.
+   */
+  endTurn(skipChecks = false): void {
     if (!this.myTurn) return;
-    const research = this.game.factions[this.viewer].research;
-    if (!skipResearchCheck && !research.current && availableTechs(this.game, this.viewer).length > 0) {
-      openResearch(this, { beforeEndTurn: true });
-      return;
+    if (!skipChecks) {
+      const c = this.turnChecklist();
+      if (endTurnCheckOn() ? !checklistEmpty(c) : c.research) {
+        if (!endTurnCheckOn() || (c.research && checklistEmpty({ ...c, research: false }))) openResearch(this, { beforeEndTurn: true });
+        else openEndTurnCheck(this, c);
+        return;
+      }
     }
     const r = applyAction(this.game, this.viewer, { type: 'endTurn' });
     if (!r.ok) { toast(r.reason, 'error'); return; }
@@ -238,8 +248,19 @@ export class GameUI {
     this.updateOverlay();
     this.renderTop();
     this.renderSide();
+    this.keepSelectionVisible();
     this.view.invalidate();
     this.runHooks();
+  }
+
+  /** On a phone the selection sheet covers the bottom of the map: keep the selected hex above it. */
+  private keepSelectionVisible(): void {
+    const phone = window.innerWidth <= 760;
+    this.view.bottomInset = phone && this.selHex !== null ? this.side.offsetHeight : 0;
+    if (!phone || this.selHex === null) return;
+    const y = this.view.hexScreen(this.selHex).y;
+    const visible = this.view.canvas.clientHeight - this.view.bottomInset;
+    if (y > visible - 40 || y < 50) this.view.centerOn(this.selHex);
   }
 
   /** Whether taps on the map give the selected fleet or agent a destination (otherwise taps select). */
@@ -268,35 +289,26 @@ export class GameUI {
     const agent = this.selAgent ? this.game.agents[this.selAgent] : null;
     if (order && mover && mover.owner === this.viewer && this.myTurn && mover.movesLeft > 0) {
       if (hex === mover.hex) { this.toggleMove(false); return; }
-      if (this.pendingDest === hex) {
-        const fid = mover.id;
-        if (this.act({ type: 'move', fleet: fid, to: hex }, true)) {
-          const f = this.game.fleets[fid];
-          this.select(f ? f.hex : hex, f ? fid : null);
-        }
-        return;
-      }
+      if (this.pendingDest === hex) { this.confirmMove(); return; }
       const path = planPath(this.game, mover.id, hex);
       if (!path) { toast('No route there.', 'error'); return; }
       this.pendingDest = hex;
       this.view.overlay.path = [mover.hex, ...path];
       const fc = battleForecast(this.game, this.viewer, hex, [mover.id]);
       this.hint.textContent = fc
-        ? `Battle forecast: ${FORECAST_NAMES[fc.label]} (${fc.intel} intelligence). Tap again to attack.`
-        : 'Tap the same hex again to confirm the move (Esc cancels)';
+        ? `Battle forecast: ${FORECAST_NAMES[fc.label]} (${fc.intel} intelligence). ${isTouch() ? 'Tap again or press Confirm to attack.' : 'Tap again (or Confirm) to attack.'}`
+        : isTouch() ? 'Tap the hex again, or press Confirm' : 'Tap the same hex again (or Confirm) to move there; Esc cancels';
+      this.showPill(fc ? 'Attack' : 'Confirm move');
       this.view.invalidate();
       return;
     }
     if (order && agent && agent.owner === this.viewer && !agent.ship && this.myTurn && !agent.resident) {
       if (hex === agent.hex) { this.toggleMove(false); return; }
-      if (this.pendingDest === hex) {
-        const id = agent.id;
-        if (this.act({ type: 'moveAgent', agent: id, to: hex }, true)) this.select(this.game.agents[id]?.hex ?? hex, null, id);
-        return;
-      }
+      if (this.pendingDest === hex) { this.confirmMove(); return; }
       this.pendingDest = hex;
       this.view.overlay.path = [agent.hex, hex];
-      this.hint.textContent = 'Tap the same hex again to send the agent there (Esc cancels)';
+      this.hint.textContent = isTouch() ? 'Tap the hex again, or press Confirm' : 'Tap the same hex again (or Confirm) to send the agent there; Esc cancels';
+      this.showPill('Send agent');
       this.view.invalidate();
       return;
     }
@@ -310,30 +322,73 @@ export class GameUI {
     this.select(hex, mine[0]?.id ?? null);
   }
 
+  /** Carries out the move being previewed (the destination tapped once). */
+  confirmMove(): void {
+    const hex = this.pendingDest;
+    if (hex === null) return;
+    const mover = this.selFleet ? this.game.fleets[this.selFleet] : null;
+    const agent = this.selAgent ? this.game.agents[this.selAgent] : null;
+    if (mover) {
+      const fid = mover.id;
+      if (this.act({ type: 'move', fleet: fid, to: hex }, true)) {
+        const f = this.game.fleets[fid];
+        this.select(f ? f.hex : hex, f ? fid : null);
+      }
+    } else if (agent) {
+      const id = agent.id;
+      if (this.act({ type: 'moveAgent', agent: id, to: hex }, true)) this.select(this.game.agents[id]?.hex ?? hex, null, id);
+    }
+  }
+
+  /** The floating Confirm / Cancel buttons shown while a move is previewed. */
+  private pill: HTMLElement | null = null;
+
+  private showPill(label: string): void {
+    this.pill?.remove();
+    this.pill = h('div', { class: 'move-pill' },
+      button(label, () => this.confirmMove(), { cls: 'primary' }),
+      button('Cancel', () => this.toggleMove(false), { cls: 'ghost' }));
+    this.hint.after(this.pill);
+  }
+
   private updateOverlay(): void {
     this.view.overlay = {};
     this.hint.textContent = '';
+    if (this.pendingDest === null) { this.pill?.remove(); this.pill = null; }
     const f = this.selFleet ? this.game.fleets[this.selFleet] : null;
     if (f && f.owner === this.viewer) {
       if (f.movesLeft > 0 && this.myTurn && this.moveMode) this.view.overlay.reachable = reachableThisTurn(this.game, f.id);
       if (f.path.length) this.view.overlay.path = [f.hex, ...f.path];
       if (this.myTurn) {
+        const touch = isTouch();
         this.hint.textContent = f.movesLeft <= 0 ? 'No movement left this turn'
-          : this.moveMode ? 'Moving: tap a destination (Esc or tap the fleet to cancel)'
-          : 'Press Move (M), or right-click a hex, to send this fleet';
+          : this.moveMode ? (touch ? 'Moving: tap a destination (tap the fleet to cancel)' : 'Moving: tap a destination (Esc or tap the fleet to cancel)')
+          : touch ? 'Tap Move to send this fleet' : 'Press Move (M), or right-click a hex, to send this fleet';
       }
     }
     const a = this.selAgent ? this.game.agents[this.selAgent] : null;
     if (a && a.path.length) this.view.overlay.path = [a.hex, ...a.path];
-    if (a && a.owner === this.viewer && this.myTurn && this.moveMode) this.hint.textContent = 'Moving: tap where to send the agent (Esc cancels)';
+    if (a && a.owner === this.viewer && this.myTurn && this.moveMode) this.hint.textContent = isTouch() ? 'Moving: tap where to send the agent' : 'Moving: tap where to send the agent (Esc cancels)';
   }
 
   private fleetsAt(hex: number): Fleet[] {
     return Object.values(this.game.fleets).filter((f) => f.hex === hex && canSeeFleet(this.game, this.viewer, f));
   }
 
+  /** What is still waiting for the viewer's orders this turn. */
+  turnChecklist(): TurnChecklist {
+    const g = this.game;
+    const research = !g.factions[this.viewer].research.current && availableTechs(g, this.viewer).length > 0;
+    const idleSystems = g.map.hexes.map((x, i) => ({ x, i }))
+      .filter(({ x }) => x.owner === this.viewer && x.system && x.system.development > 0 && x.system.queue.length === 0)
+      .map(({ x, i }) => ({ hex: i, name: x.system!.name }));
+    const idleFleets = this.idleFleets().map((f) => ({ id: f.id, hex: f.hex }));
+    const proposals = Object.values(g.proposals).filter((p) => p.to === this.viewer && !p.answer).length;
+    return { research, idleSystems, idleFleets, proposals };
+  }
+
   private idleFleets(): Fleet[] {
-    return Object.values(this.game.fleets).filter((f) => f.owner === this.viewer && f.movesLeft > 0 && f.path.length === 0);
+    return Object.values(this.game.fleets).filter((f) => f.owner === this.viewer && f.movesLeft > 0 && f.path.length === 0 && !f.hold);
   }
 
   nextIdle(): void {
@@ -364,7 +419,18 @@ export class GameUI {
     // fixed zone, so nothing can ever slide underneath them.
     const scroll = h('div', { class: 'top-scroll' });
     const fixed = h('div', { class: 'top-fixed' });
-    clear(this.top).append(scroll, fixed);
+    // When the bar doesn't fit, it fades at the edge and a » button scrolls it (the mouse wheel does too).
+    const more = h('button', { class: 'top-more', title: 'More buttons', 'aria-label': 'More buttons',
+      onclick: () => scroll.scrollBy({ left: scroll.scrollLeft + scroll.clientWidth >= scroll.scrollWidth - 4 ? -scroll.scrollWidth : scroll.clientWidth * 0.7, behavior: 'smooth' }) }, '»');
+    const fit = () => {
+      this.top.classList.toggle('overflowing', scroll.scrollWidth > scroll.clientWidth + 2);
+      this.top.classList.toggle('at-end', scroll.scrollLeft + scroll.clientWidth >= scroll.scrollWidth - 4);
+      more.textContent = this.top.classList.contains('at-end') ? '«' : '»';
+    };
+    scroll.addEventListener('scroll', fit);
+    scroll.addEventListener('wheel', (e) => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { scroll.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+    clear(this.top).append(scroll, more, fixed);
+    requestAnimationFrame(fit);
     scroll.append(...[
       factionChip(this.viewer, true),
       h('span', { class: 'dim' }, `Turn ${g.turn}`),
@@ -377,9 +443,14 @@ export class GameUI {
       button('Agents', () => openAgents(this), { title: 'Diplomats, spies and embassies' }),
       button('Research', () => openResearch(this)),
       (() => {
-        // Proposals waiting for an answer, plus unread messages from players and computer powers.
-        const n = pending + unreadCount(this.host.messaging, this.game, this.viewer);
-        return button(n ? `Diplomacy (${n})` : 'Diplomacy', () => openDiplomacy(this), { cls: n ? 'primary' : '', title: 'Relations, embassies, proposals and messages' });
+        // A red count for what needs you (proposals to answer, messages from players); a dot for unread
+        // words from computer powers.
+        const action = pending + unreadChat(this.host.messaging, this.game, this.viewer);
+        const flavour = unreadAi(this.game, this.viewer);
+        const title = action ? `${pending ? `${pending} proposal${pending > 1 ? 's' : ''} to answer` : ''}${pending && action > pending ? ', ' : ''}${action > pending ? `${action - pending} unread message${action - pending > 1 ? 's' : ''}` : ''}`
+          : flavour ? 'Computer powers have said something' : 'Relations, embassies, proposals and messages';
+        return button(h('span', { class: 'row', style: 'gap:0' }, 'Diplomacy', action ? h('span', { class: 'badge' }, String(action)) : flavour ? h('span', { class: 'notice-dot' }) : ''),
+          () => openDiplomacy(this), { title });
       })(),
       button('Victory', () => openVictory(this)),
       button('Market', () => openMarket(this)),
@@ -405,11 +476,18 @@ export class GameUI {
 
   /** Empire overview in a dialog (used on phones, where the side panel only shows selections). */
   openEmpire(): void {
-    modal('Empire', this.empirePanel());
+    // Picking something in it (an idle system, say) closes it, so the selection shows.
+    const m = modal('Empire', this.empirePanel(), { onClose: () => off() });
+    const off = this.onRefresh(() => { if (this.selHex !== null) m.close(); });
   }
+
+  /** The selection the side panel last showed: a new one starts at the top. */
+  private sideKey = '';
 
   private renderSide(): void {
     const s = clear(this.side);
+    const key = `${this.selHex}|${this.selFleet}|${this.selAgent}`;
+    if (key !== this.sideKey) { this.sideKey = key; this.side.scrollTop = 0; }
     this.side.classList.toggle('empty', this.selHex === null);
     if (this.selHex === null) {
       s.append(this.empirePanel());
@@ -439,7 +517,9 @@ export class GameUI {
       s.append(h('div', { class: 'card' }, h('div', { class: 'row' }, h('b', null, spec.name), h('span', { class: 'grow' }), factionChip(base.owner, true)),
         h('div', { class: 'row' }, 'Hull', bar(base.hull / spec.hull, '#7cfc9a'), `${base.hull}/${spec.hull}`)));
     }
-    const fleets = this.fleetsAt(hex);
+    // The selected fleet first, then your other fleets, then everyone else's.
+    const fleets = this.fleetsAt(hex).sort((a, b) => (a.id === this.selFleet ? -1 : 0) - (b.id === this.selFleet ? -1 : 0)
+      || (a.owner === this.viewer ? -1 : 0) - (b.owner === this.viewer ? -1 : 0));
     const forecast = this.forecastCard(hex);
     if (forecast) s.append(forecast);
     const myFleets = fleets.filter((f) => f.owner === this.viewer);
@@ -449,7 +529,9 @@ export class GameUI {
           cls: 'small', title: 'Pack your fleets here into as few battle groups (up to 6 ships) as possible: warships with warships, support ships with support ships',
         }) : null));
       if (myFleets.length > 1 && this.myTurn) {
-        s.append(h('div', { class: 'dim', style: 'font-size:11px;margin-bottom:4px' }, 'Drag a fleet, or a single ship, onto another fleet to join them. Or select a fleet and press Add fleet.'));
+        s.append(h('div', { class: 'dim', style: 'font-size:11px;margin-bottom:4px' }, isTouch()
+          ? 'To join fleets, select one and press Add fleet, or press Combine all.'
+          : 'Drag a fleet, or a single ship, onto another fleet to join them. Or select a fleet and press Add fleet.'));
       }
     }
     for (const f of fleets) s.append(this.fleetCard(f));
@@ -518,7 +600,9 @@ export class GameUI {
       for (const { x, i } of idleSystems) wrap.append(button(x.system!.name, () => { this.view.centerOn(i); this.select(i); }, { cls: 'list-btn small' }));
     }
     wrap.append(h('h3', null, 'Tips'), h('div', { class: 'dim' },
-      'Tap a hex or fleet to select it. To move, press Move (M, or right-click), then tap the destination twice. Ships that end a turn alone in a hex claim it at the start of your next turn. Press N for the next idle fleet. Colonies, Fleets and Agents (top bar) list everything you run.'));
+      isTouch()
+        ? 'Tap a hex or fleet to select it. To move, tap Move, then tap the destination and Confirm. Ships that end a turn alone in a hex claim it at the start of your next turn. Colonies, Fleets and Agents (top bar, swipe it sideways) list everything you run.'
+        : 'Tap a hex or fleet to select it. To move, press Move (M, or right-click), then tap the destination twice. Ships that end a turn alone in a hex claim it at the start of your next turn. Press N for the next idle fleet. Colonies, Fleets and Agents (top bar) list everything you run.'));
     return wrap;
   }
 
@@ -573,9 +657,17 @@ export class GameUI {
     const tabs = h('div', { class: 'tabs' },
       ...(['ships', 'improvements', 'other'] as const).map((t) => button(t[0].toUpperCase() + t.slice(1), () => { this.buildTab = t; this.rerender(); }, { cls: `small ${this.buildTab === t ? 'on' : ''}` })));
     wrap.append(tabs);
-    const opt = (label: string, cost: string, check: { ok: boolean; reason?: string }, action: Action, title?: string) =>
-      button(h('span', { class: 'row grow' }, h('span', { class: 'grow' }, label), h('span', { class: 'dim' }, cost)), () => this.act(action),
-        { cls: 'list-btn small', disabled: !check.ok || !this.myTurn, title: check.ok ? title : (check as { reason: string }).reason });
+    const stock = g.factions[this.viewer].stock;
+    const opt = (label: string, cost: string, check: { ok: boolean; reason?: string; cost?: { metals: number; energy: number; exotics: number } }, action: Action, title?: string) => {
+      // Buildable here but too expensive right now: disabled too, with what is missing.
+      const short = check.ok && check.cost
+        ? (['metals', 'energy', 'exotics'] as const).filter((k) => stock[k] < check.cost![k]).map((k) => `${Math.ceil(check.cost![k] - stock[k])} more ${k}`)
+        : [];
+      const ok = check.ok && short.length === 0;
+      const why = !check.ok ? (check as { reason: string }).reason : short.length ? `Not enough resources: needs ${short.join(', ')}.` : '';
+      return button(h('span', { class: 'row grow' }, h('span', { class: 'grow' }, label), h('span', { class: short.length ? 'bad' : 'dim' }, cost)), () => this.act(action),
+        { cls: 'list-btn small', disabled: !ok || !this.myTurn, title: ok ? title : `${why}${title ? `\n${title}` : ''}` });
+    };
     if (this.buildTab === 'ships') {
       const designs = [...DESIGNS_BY_FACTION[this.viewer]].filter((d) => d.cls !== 'fighter').sort((a, b) => CLASSES[a.cls].size - CLASSES[b.cls].size);
       for (const d of designs) {
@@ -608,8 +700,28 @@ export class GameUI {
     const mine = f.owner === this.viewer;
     const sel = f.id === this.selFleet;
     const card = h('div', { class: `card ${sel ? 'sel' : ''}`, onclick: () => { if (!sel) this.select(f.hex, f.id); } });
-    card.append(h('div', { class: 'row' }, factionChip(f.owner, true), h('b', null, f.name || 'Fleet'), h('span', { class: 'grow' }),
-      mine ? h('span', { class: 'dim' }, `moves ${f.movesLeft}${f.path.length ? ` · ${f.path.length} to go` : ''}`) : h('span', { class: 'dim' }, `${f.ships.length} ships`)));
+    const nameEl: HTMLElement = this.renaming === f.id && mine
+      ? (() => {
+        const input = h('input', { value: f.name, maxlength: '40', style: 'width:150px', onclick: (e: Event) => e.stopPropagation() });
+        let done = false;
+        const finish = (keep: boolean) => {
+          if (done) return;
+          done = true;
+          this.renaming = null;
+          const name = input.value.trim();
+          if (keep && name && name !== f.name) this.act({ type: 'rename', fleet: f.id, name }); else this.rerender();
+        };
+        const save = () => finish(true);
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') { e.stopPropagation(); finish(false); } });
+        input.addEventListener('blur', save);
+        setTimeout(() => { input.focus(); input.select(); }, 0);
+        return input;
+      })()
+      : h('b', null, f.name || 'Fleet', f.reserve ? h('span', { class: 'dim', style: 'font-weight:400;font-size:11px', title: 'New warships built here join this fleet until it has 6 or you send it somewhere' }, ' · reserve') : '');
+    card.append(h('div', { class: 'row' }, factionChip(f.owner, true), nameEl,
+      mine && sel && this.myTurn && this.renaming !== f.id ? button('✎', () => { this.renaming = f.id; this.rerender(); }, { cls: 'small ghost', title: 'Rename this fleet' }) : null,
+      h('span', { class: 'grow' }),
+      mine ? h('span', { class: 'dim' }, `${f.hold ? 'holding · ' : ''}moves ${f.movesLeft}${f.path.length ? ` · ${f.path.length} to go` : ''}`) : h('span', { class: 'dim' }, `${f.ships.length} ships`)));
     if (!mine) {
       const classes = f.ships.map((s) => CLASSES[design(g.ships[s].design).cls].name);
       card.append(h('div', { class: 'dim' }, [...new Set(classes)].join(', ')));
@@ -652,6 +764,8 @@ export class GameUI {
     const A = (label: string, action: Action, title?: string) => acts.append(button(label, () => this.act(action), { cls: 'small', title }));
     if (f.movesLeft > 0) acts.append(button(this.moveMode ? 'Cancel move' : 'Move', () => this.toggleMove(), { cls: `small ${this.moveMode ? 'on' : 'primary'}`, title: 'Then tap a destination. Shortcut: M, or right-click a hex.' }));
     if (f.path.length) A('Stop', { type: 'stop', fleet: f.id });
+    A(f.hold ? 'Stop holding' : 'Hold', { type: 'hold', fleet: f.id, hold: !f.hold },
+      f.hold ? 'It counts as waiting for orders again' : 'Hold position on purpose: it won’t count as waiting for orders (N skips it) until you move it');
     if (roles.includes('colony') && hx.system && hx.system.development === 0) A('Colonize', { type: 'colonize', fleet: f.id });
     if (roles.includes('constructor') && hx.system && hx.system.development === 0) A('Found outpost', { type: 'outpost', fleet: f.id }, '30 metals, 10 energy');
     if (roles.includes('constructor') && hx.owner === this.viewer) A('Build starbase', { type: 'starbase', fleet: f.id });

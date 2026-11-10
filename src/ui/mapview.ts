@@ -104,6 +104,8 @@ export class MapView {
 
   /** Pixels on the right covered by the side panel, so centering uses the visible part of the map. */
   rightInset = 0;
+  /** Height covered at the bottom (the phone's selection sheet), so centering keeps hexes in view. */
+  bottomInset = 0;
 
   /** Screen position (CSS pixels, relative to the canvas) of a hex center. */
   hexScreen(hex: number): { x: number; y: number } {
@@ -115,8 +117,9 @@ export class MapView {
     const p = hexToPixel(this.state.map, hex, HEX);
     const { w: fullW, h } = this.size();
     const w = Math.max(200, fullW - this.rightInset);
+    const vh = Math.max(150, h - this.bottomInset);
     this.camX = p.x - w / 2 / this.zoom;
-    this.camY = p.y - h / 2 / this.zoom;
+    this.camY = p.y - vh / 2 / this.zoom;
     this.clampCamera();
     this.dirty = true;
     this.onCamera();

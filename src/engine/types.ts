@@ -104,6 +104,10 @@ export interface Fleet {
   path: number[];
   /** Standing combat orders (§7.2). */
   doctrine: DoctrineId;
+  /** Holding position on purpose: not counted as idle. Cleared when the fleet is given a destination. */
+  hold?: boolean;
+  /** A shipyard's reserve: new warships built there join it until it has 6 or is sent somewhere. */
+  reserve?: boolean;
 }
 
 export interface Army {

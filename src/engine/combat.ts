@@ -475,7 +475,7 @@ export function resolveBattleAt(state: GameState, hex: number, active: FactionId
       const wasAlive = !u.dead;
       applyHit(u, dmg);
       if (wasAlive && u.dead) {
-        lostThisRound.set(u.party, (lostThisRound.get(u.party) ?? 0) + 1);
+        if (u.kind === 'ship') lostThisRound.set(u.party, (lostThisRound.get(u.party) ?? 0) + 1);
         tryCapture(state, rng, u, band, enemiesOf(u.party).map((q) => q.faction), capturedBy);
       }
     }
@@ -655,7 +655,14 @@ export function resolveBattleAt(state: GameState, hex: number, active: FactionId
   }
 
   const involved = parties.map((p) => p.faction).filter((f) => f !== INDEPENDENT);
-  const summary = report.parties.map((p) => `${p.faction} lost ${p.lost}/${p.units}${p.captured ? ` (${p.captured} captured)` : ''}`).join(', ');
+  const shipsOf = (f: FactionId) => before.find((b) => b.faction === f)?.ships.length ?? 0;
+  const summary = report.parties.map((p) => {
+    const ships = shipsOf(p.faction);
+    const who = p.faction === INDEPENDENT ? 'Independents' : `${factionDef(p.faction).short}`;
+    const planet = parties.find((q) => q.faction === p.faction)!.units.find((u) => u.kind === 'planet');
+    const def = planet ? (planet.dead ? ', planetary defense knocked out' : '') : '';
+    return ships ? `${who} lost ${p.lost}/${ships} ships${p.captured ? ` (${p.captured} captured)` : ''}${def}` : `${who}${def || ' held'}`;
+  }).join('; ');
   const lost: Record<string, number> = {};
   for (const p of report.parties) if (p.faction !== INDEPENDENT) lost[p.faction] = p.lost + p.captured;
   const record = recordBattle(state, hex, firstRound, parties, before, notes, dealtTotal, takenTotal, env, hostileTo, {

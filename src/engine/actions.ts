@@ -30,6 +30,8 @@ export type Action =
   | { type: 'split'; fleet: string; ships: string[] }
   /** Move some ships of one fleet into another in the same hex. */
   | { type: 'transfer'; from: string; to: string; ships: string[] }
+  /** Hold position on purpose (or stop holding): a holding fleet doesn't count as waiting for orders. */
+  | { type: 'hold'; fleet: string; hold: boolean }
   /** Pack all your fleets in a hex into as few battle groups as possible. */
   | { type: 'combine'; hex: number }
   | { type: 'rename'; fleet: string; name: string }
@@ -86,6 +88,11 @@ export function applyAction(state: GameState, faction: FactionId, action: Action
       return { ok: true };
     case 'merge':
       return ownFleet(action.into) && ownFleet(action.from) ? mergeFleets(state, action.into, action.from) : no('Not your fleets.');
+    case 'hold':
+      if (!ownFleet(action.fleet)) return no('Not your fleet.');
+      state.fleets[action.fleet].hold = action.hold || undefined;
+      if (action.hold) state.fleets[action.fleet].path = [];
+      return { ok: true };
     case 'transfer':
       return ownFleet(action.from) && ownFleet(action.to) ? transferShips(state, action.from, action.to, action.ships) : no('Not your fleets.');
     case 'combine': {

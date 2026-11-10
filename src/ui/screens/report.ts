@@ -7,6 +7,8 @@ import type { GameUI } from '../game-ui';
 export function openReport(ui: GameUI, sinceTurn?: number): void {
   const g = ui.game;
   const events = eventsFor(g, ui.viewer, sinceTurn ?? g.turn - 1).slice().reverse();
+  // The automatic turn-start report only opens when something happened.
+  if (sinceTurn !== undefined && events.length === 0) return;
   const body = h('div');
   if (events.length === 0) body.append(h('div', { class: 'dim' }, 'Nothing to report.'));
   let lastTurn = -1;
@@ -20,7 +22,7 @@ export function openReport(ui: GameUI, sinceTurn?: number): void {
     if (e.hex !== undefined) row.addEventListener('click', () => { m.close(); ui.view.centerOn(e.hex!); ui.select(e.hex!); });
     body.append(row);
   }
-  const m = modal(sinceTurn !== undefined ? 'While you were away' : 'Reports', body);
+  const m = modal(sinceTurn !== undefined ? (ui.game.config.seats.length > 1 ? 'While you were away' : 'Since your last turn') : 'Reports', body);
 }
 
 function iconFor(kind: string): string {

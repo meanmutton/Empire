@@ -1,7 +1,9 @@
+import { applyAction } from '../src/engine/actions';
+import { completeBuild } from '../src/engine/economy';
 import { DESIGNS } from '../src/data/designs';
 import { neighbors, ring } from '../src/engine/hex';
 import {
-  buildOutpost, colonize, combineFleets, continuePaths, markClaims, mergeFleets, moveFleet, resetMovement, resolveClaims, splitFleet, transferShips,
+  buildOutpost, colonize, combineFleets, continuePaths, markClaims, mergeFleets, moveFleet, nextFleetName, resetMovement, resolveClaims, splitFleet, transferShips,
 } from '../src/engine/movement';
 import { canSeeFleet, isExplored } from '../src/engine/visibility';
 import { invade } from '../src/engine/ground';
@@ -241,5 +243,44 @@ describe('combining fleets', () => {
     const here = Object.values(g.fleets).filter((f) => f.owner === 'concord' && f.hex === hex);
     expect(here).toHaveLength(2);
     expect(here.map((f) => f.ships.length).sort()).toEqual([2, 3]);
+  });
+});
+
+describe('reserve fleets, numbered names and holding', () => {
+  it('new warships join the shipyard reserve, which takes a number when sent out', () => {
+    const g = newGame('reserve');
+    const home = g.factions.concord.home;
+    const line = firstDesign('concord', (d) => d.role === 'line' && d.cls === 'frigate');
+    const sys = g.map.hexes[home].system!;
+    for (let i = 0; i < 3; i++) completeBuild(g, 'concord', home, { kind: 'ship', item: line.id, remaining: 0 });
+    const reserves = Object.values(g.fleets).filter((f) => f.owner === 'concord' && f.reserve);
+    expect(reserves).toHaveLength(1);
+    expect(reserves[0].ships).toHaveLength(3);
+    expect(reserves[0].name).toBe(`${sys.name} Reserve`);
+    // Support ships stay on their own.
+    const scout = firstDesign('concord', (d) => d.role === 'scout');
+    completeBuild(g, 'concord', home, { kind: 'ship', item: scout.id, remaining: 0 });
+    expect(reserves[0].ships).toHaveLength(3);
+    // Sent somewhere, it leaves reserve duty and gets a numbered name; the next warship starts a new reserve.
+    const r = reserves[0];
+    r.movesLeft = 5;
+    const dest = ring(g.map, home, 1).find((h) => g.map.hexes[h].terrain === 'space')!;
+    expect(moveFleet(g, r.id, dest).ok).toBe(true);
+    expect(r.reserve).toBeFalsy();
+    expect(r.name).toBe('1st Fleet');
+    completeBuild(g, 'concord', home, { kind: 'ship', item: line.id, remaining: 0 });
+    expect(Object.values(g.fleets).filter((f) => f.owner === 'concord' && f.reserve)).toHaveLength(1);
+    expect(nextFleetName(g, 'concord')).toBe('2nd Fleet');
+  });
+
+  it('holding fleets stop holding when given a destination', () => {
+    const g = newGame('hold');
+    const f = Object.values(g.fleets).find((x) => x.owner === 'concord')!;
+    g.active = g.turnOrder.indexOf('concord');
+    expect(applyAction(g, 'concord', { type: 'hold', fleet: f.id, hold: true }).ok).toBe(true);
+    expect(g.fleets[f.id].hold).toBe(true);
+    const dest = ring(g.map, f.hex, 1).find((h) => g.map.hexes[h].terrain === 'space')!;
+    moveFleet(g, f.id, dest);
+    expect(g.fleets[f.id].hold).toBeFalsy();
   });
 });

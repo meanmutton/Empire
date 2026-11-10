@@ -44,8 +44,30 @@ export function toast(text: string, kind: 'info' | 'error' = 'info'): void {
   toastTimer = window.setTimeout(() => { el!.className = ''; }, 2600);
 }
 
+/** Open dialogs, newest last: Esc closes the newest. */
+const openModals: (() => void)[] = [];
+let escBound = false;
+
 export function modal(title: string, body: HTMLElement, opts: { wide?: boolean; onClose?: () => void } = {}): { close: () => void; root: HTMLElement } {
-  const close = () => { overlay.remove(); opts.onClose?.(); };
+  if (!escBound) {
+    escBound = true;
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !openModals.length) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      openModals[openModals.length - 1]();
+    }, true);
+  }
+  let closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    overlay.remove();
+    const i = openModals.indexOf(close);
+    if (i >= 0) openModals.splice(i, 1);
+    opts.onClose?.();
+  };
+  openModals.push(close);
   const overlay = h('div', { class: 'modal-overlay', onclick: (e: Event) => { if (e.target === overlay) close(); } },
     h('div', { class: `modal ${opts.wide ? 'wide' : ''}` },
       h('div', { class: 'modal-head' }, h('div', { class: 'modal-title' }, title), button('✕', close, { cls: 'ghost' })),
@@ -57,4 +79,9 @@ export function modal(title: string, body: HTMLElement, opts: { wide?: boolean; 
 export function bar(frac: number, color: string): HTMLElement {
   const f = Math.max(0, Math.min(1, frac));
   return h('div', { class: 'bar' }, h('div', { class: 'bar-fill', style: `width:${f * 100}%;background:${color}` }));
+}
+
+/** True on touch-first devices (phones, tablets): no hover, no right-click, no keyboard shortcuts. */
+export function isTouch(): boolean {
+  try { return window.matchMedia('(pointer: coarse)').matches; } catch { return false; }
 }
