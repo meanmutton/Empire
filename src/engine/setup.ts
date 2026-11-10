@@ -1,4 +1,5 @@
 /** Creating a new game: choose minors, generate the map, set up factions, starting units and relations. */
+import { applyAdvancedStart } from './advanced-start';
 import { DEFAULT_COMBAT_ROUNDS, MAX_COMBAT_ROUNDS, MIN_COMBAT_ROUNDS } from '../data/doctrines';
 import { BALANCE } from '../data/balance';
 import { DESIGNS_BY_FACTION, type ShipDesign } from '../data/designs';
@@ -134,6 +135,11 @@ export function createGame(opts: NewGameOptions): GameState {
       const tier1 = TECHS.filter((t) => t.tier <= 2 && t.requires.length === 0);
       for (const t of rng.shuffle(tier1).slice(0, 3)) grantTech(state, id, t.id);
     }
+  }
+  // Total War starts with the galaxy already carved up (§10.5).
+  if (preset === 'totalWar') {
+    applyAdvancedStart(state, rng);
+    state.log = [];
   }
   refreshOffers(state);
   return state;

@@ -218,8 +218,12 @@ export function battleHexes(state: GameState, faction: FactionId): number[] {
   const out: number[] = [];
   for (const hex of candidates) {
     const parties = collectParties(state, hex);
-    if (!parties.some((p) => p.faction === faction)) continue;
-    if (parties.some((p) => hostile(state, hex, faction, p.faction))) out.push(hex);
+    const me = parties.find((p) => p.faction === faction);
+    if (!me) continue;
+    const foes = parties.filter((p) => hostile(state, hex, faction, p.faction));
+    // No battle where nobody can shoot (two scouts passing, say).
+    const armed = (units: Unit[]) => units.some((u) => u.energy + u.missile + u.fighters > 0);
+    if (foes.length && (armed(me.units) || foes.some((p) => armed(p.units)))) out.push(hex);
   }
   return out.sort((a, b) => a - b);
 }

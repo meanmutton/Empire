@@ -64,7 +64,7 @@ export const PRESETS: Record<PresetId, PresetDef> = {
     majors: ALL_MAJORS.filter((m) => m !== 'rynkai'), victories: NON_MILITARY,
   },
   totalWar: {
-    name: 'Total War', text: 'Military victories only (Conquest, Hegemony, Glorious Campaign), and even the Concord may win by Conquest.',
+    name: 'Total War', text: 'Military victories only (Conquest, Hegemony, Glorious Campaign), and even the Concord may win by Conquest. Starts advanced: the galaxy already carved up, colonies a third developed, a third of the tech tree known, and 30-ship navies.',
     majors: ALL_MAJORS, victories: MILITARY, extra: { concord: ['conquest'] },
   },
 };

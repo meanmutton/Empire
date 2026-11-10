@@ -646,7 +646,18 @@ a good empire for new players.
 - **Peaceful**: four great powers (no Ryn'kai), and no military victories (Conquest, Hegemony, Glorious
   Campaign).
 - **Total War**: military victories only (Conquest, Hegemony, Glorious Campaign), and the Concord may win by
-  Conquest too. Score still decides a game that reaches the turn limit.
+  Conquest too. Score still decides a game that reaches the turn limit. Total War **starts advanced**
+  (`src/engine/advanced-start.ts`):
+  - the whole galaxy is claimed except black holes and a **one-hex neutral zone** wherever two powers meet;
+    great powers together hold about **60%** of the claimed space and minor powers about **40%**;
+  - every system inside a power's borders is its colony, **a third developed** (level 2 of 5) with
+    population and one improvement; home systems keep their usual development;
+  - every faction knows **a third of the tech tree** (16 of 49), chosen the way its own research leans
+    (the Ryn'kai lean to weapons, the Concord to society, and so on);
+  - great powers start with **30 ships** (best designs their techs allow, in battle groups at home and on the
+    borders), **5 diplomats, 5 spies** and 4 armies; minor powers with **10 ships** and an army;
+  - powers whose borders face each other already have contact, and everyone has mapped its own space plus
+    3 hexes beyond its borders.
 
 ### 10.3 Knowing how close your rivals are
 You always see your own progress. A rival's progress is secret unless your spies are at its home system:
