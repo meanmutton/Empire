@@ -261,6 +261,10 @@ Academy (new units start veteran).
   never taken by presence: fleets knock their planetary defense down to 0 in combat, then armies **invade**
   (§7.5).
 - An **enemy starbase** in a hex blocks any claim there until it is destroyed in combat.
+- **Enclosed space**: at the start of your turn, any pocket of unowned hexes (up to 60) that your territory
+  completely surrounds becomes yours, without ships. A pocket that touches the map edge or borders anyone
+  else's territory doesn't count. Inside it, settled independent worlds, black holes and hexes with other
+  powers' ships stay unclaimed.
 - An owned hex not connected to your home by a chain of owned hexes is **disconnected**: −50% yields
   *(tunable)*.
 
