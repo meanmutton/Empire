@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "release": "npm run build && mkdir -p release && cp dist/index.html release/Empire.html",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc -p relay --noEmit",
     "test": "vitest run",
