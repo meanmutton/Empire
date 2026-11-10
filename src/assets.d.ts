@@ -8,3 +8,9 @@ declare module '*.webp' {
 interface ImportMeta {
   glob<T = unknown>(pattern: string, options: { eager: true; import: 'default' }): Record<string, T>;
 }
+
+/** Text files imported whole (docs/LORE.md for the faction guide). */
+declare module '*?raw' {
+  const text: string;
+  export default text;
+}

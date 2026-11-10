@@ -91,6 +91,25 @@ h3 { margin:12px 0 6px; font-size:12px; letter-spacing:.08em; text-transform:upp
 .leader-pick.on { border-color:var(--accent); background:#1a2442; }
 .leader-name { font-size:11px; text-align:center; line-height:1.2; color:var(--dim); }
 .leader-pick.on .leader-name { color:var(--accent); }
+.guide-grid { display:grid; grid-template-columns:minmax(170px, 230px) minmax(0, 1fr); gap:14px; min-height:420px; }
+.guide-grid > * { min-width:0; }
+.guide-list { display:flex; flex-direction:column; max-height:70vh; overflow:auto; padding-right:4px; }
+.guide-head { margin:10px 0 3px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); }
+.guide-pick { display:none; width:100%; margin-bottom:8px; }
+.guide-pane { max-height:70vh; overflow:auto; line-height:1.5; padding-right:6px; }
+.guide-pane p { margin:6px 0; }
+.guide-title { margin:0 0 2px; font-size:20px; }
+.guide-top { display:flex; gap:12px; align-items:flex-start; margin-bottom:6px; }
+.guide-ul { margin:4px 0; padding-left:20px; }
+.guide-leader { display:flex; gap:10px; align-items:flex-start; }
+.guide-leader.on { border-color:var(--accent); }
+@media (max-width: 760px) {
+  .guide-grid { grid-template-columns:1fr; min-height:0; }
+  .guide-list { display:none; }
+  .guide-pick { display:block; }
+  .guide-pane { max-height:none; }
+  .guide-top .portrait, .guide-leader .portrait { width:64px !important; height:80px !important; }
+}
 .dip-head { display:flex; gap:12px; align-items:flex-start; }
 @media (max-width: 760px) { .dip-head .portrait { width:72px !important; height:90px !important; } }
 .card { background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:8px 10px; margin-bottom:8px; }
