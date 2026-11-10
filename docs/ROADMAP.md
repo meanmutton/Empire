@@ -45,10 +45,9 @@ Status key: `[ ]` not started, `[~]` PR open, `[x]` merged.
 
 ## Backlog (pick up here)
 Ordered roughly by value. Open a PR per item or small group.
-1. **Deploy the relay**: `relay/cloudformation.yaml` and `relay/deploy.sh` are ready (`docs/RELAY.md`); the
-   owner runs the script in AWS CloudShell, then builds `dist/index.html` with `EMPIRE_RELAY` baked in. The
-   game itself is one HTML file players open directly; only online play needs the relay. After the first
-   deploy: a real online test game, and optionally a custom domain for the relay address.
+1. **Relay follow-ups**: the relay is live (stack `empire-relay` in us-east-2, address in `.env`, verified with
+   an online game, chat and resume in November 2026). Next: email notices once SES is set up
+   (`NOTIFY_FROM=… relay/deploy.sh`), and optionally a custom domain for the relay address.
 2. **Balance from real games** (combat lethality, luck and doctrine numbers are in `BALANCE.combat` and
    `src/data/doctrines.ts`; `test/combat.test.ts` checks the calibration): territory spreads fast (~230 hexes per major by turn 80 in
    `test/ai.test.ts`); some AIs field 150–200 ships; tune claims, upkeep and research costs after playtests.
