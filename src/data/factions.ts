@@ -31,7 +31,7 @@ export const NO_MODIFIERS: Modifiers = {
 
 /** Visual family for procedural ship tokens. */
 export type HullStyle =
-  | 'arrow' | 'blade' | 'wedge' | 'hammer' | 'prism'
+  | 'arrow' | 'blade' | 'wedge' | 'bastion' | 'hammer' | 'prism'
   | 'orb' | 'scrap' | 'saucer' | 'spike' | 'insect' | 'cross' | 'sail' | 'ring' | 'crystal' | 'brick' | 'organic';
 
 /** AI personality weights, each 0..1. */
@@ -124,7 +124,7 @@ const MAJORS: FactionDef[] = [
     id: 'krasnyr', name: "Krasnyr People's Union", short: 'Krasnyr', kind: 'major',
     species: 'Mammalian humanoids', government: 'One-party collectivist state', inspiration: 'Cold War USSR',
     text: 'A vast collectivist state that would rather win a war in the shadows than on the battlefield.',
-    color: '#ff8c1a', style: 'hammer',
+    color: '#ff8c1a', style: 'bastion',
     modifiers: { popGrowth: 0.25, metals: 0.1, science: -0.1, espionage: 0.3, treatyBreak: 0.5 },
     abilities: ['stateSecurity', 'fiveYearPlan', 'fifthColumn'],
     roster: [
