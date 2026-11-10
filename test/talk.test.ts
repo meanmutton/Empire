@@ -142,3 +142,28 @@ describe('statements to computer powers', () => {
     expect(after.a === 'krasnyr' ? after.opinionAB : after.opinionBA).toBeGreaterThan(op0);
   });
 });
+
+describe('leader voices', () => {
+  it('a computer power speaks in its leader’s words, and falls back to the faction voice', async () => {
+    const { LEADER_VOICES } = await import('../src/ai/leader-voices');
+    const { createGame } = await import('../src/engine/setup');
+    const g = createGame({ seed: 'voices', seats: [{ faction: 'rynkai', name: 'Tester' }] });
+    for (const leader of ['halvorsen-okafor', 'lindqvist', 'sutton']) {
+      g.factions.concord.leader = leader;
+      const text = line(g, 'concord', 'rynkai', 'declareWar');
+      expect(LEADER_VOICES[`concord-${leader}`].declareWar!.map((l) => l.replace('{them}', 'Ryn\'kai Dominion'))).toContain(text);
+    }
+    g.factions.concord.leader = 'nobody';
+    expect(VOICES.concord.declareWar.map((l) => l.replace(/\{them\}/g, 'Ryn\'kai Dominion'))).toContain(line(g, 'concord', 'rynkai', 'declareWar'));
+  });
+
+  it('every leader line uses only known placeholders', async () => {
+    const { LEADER_VOICES } = await import('../src/ai/leader-voices');
+    for (const [key, lines] of Object.entries(LEADER_VOICES)) {
+      for (const [topic, list] of Object.entries(lines)) {
+        expect(VOICE_TOPICS, `${key} ${topic}`).toContain(topic);
+        for (const l of list!) expect(l.replace(/\{(them|target|system)\}/g, ''), `${key} ${topic}`).not.toMatch(/[{}]/);
+      }
+    }
+  });
+});
