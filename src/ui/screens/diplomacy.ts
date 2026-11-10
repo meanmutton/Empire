@@ -1,4 +1,4 @@
-/** Diplomacy: relations overview, inbox, prisoners and the proposal builder. */
+/** Diplomacy: relations, embassies and diplomats, proposals and conversations, all in one screen. */
 import { factionDef } from '../../data/factions';
 import { TECH_BY_ID } from '../../data/techs';
 import { hasEmbassy, opinionOf } from '../../engine/agents';
@@ -8,7 +8,11 @@ import { getBit } from '../../engine/bitset';
 import { itemValue } from '../../engine/diplomacy';
 import type { FactionId, Proposal, TradeItem } from '../../engine/types';
 import { button, clear, h, modal } from '../dom';
-import { factionChip, ICON, num } from '../format';
+import { costText, factionChip, ICON, num } from '../format';
+import { checkBuild } from '../../engine/economy';
+import { hexDistance } from '../../engine/hex';
+import { intelLevel } from '../../engine/intel';
+import { aiThread, aiUnread, chatPanel, groupThreads, threadName, threadUnread } from './messages';
 import type { GameUI } from '../game-ui';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -20,6 +24,7 @@ export function describeItem(ui: GameUI, item: TradeItem): string {
   switch (item.kind) {
     case 'resource': return `${num(item.amount)} ${item.resource}${item.perTurn ? ` per turn for ${item.perTurn} turns` : ''}`;
     case 'tech': return `Tech: ${TECH_BY_ID[item.tech]?.name ?? item.tech}`;
+    case 'anyTech': return 'A technology of the giver’s choice (the cheapest one the other side lacks)';
     case 'fleet': return `Fleet: ${g.fleets[item.fleet]?.name ?? 'gone'} (${g.fleets[item.fleet]?.ships.length ?? 0} ships)`;
     case 'hex': return `Territory: ${g.map.hexes[item.hex].system?.name ?? `hex ${item.hex}`}`;
     case 'army': return `Army (strength ${g.armies[item.army]?.strength ?? '?'})`;
@@ -31,77 +36,198 @@ export function describeItem(ui: GameUI, item: TradeItem): string {
   }
 }
 
-export function openDiplomacy(ui: GameUI): void {
-  const body = h('div');
-  modal('Diplomacy', body, { wide: true });
+/** Can the viewer see which technologies `other` knows? With an embassy there, or a spy at its capital. */
+export function seesTechOf(ui: GameUI, other: FactionId): boolean {
+  return hasEmbassy(ui.game, ui.viewer, other) || intelLevel(ui.game, ui.viewer, other) >= 1;
+}
+
+/**
+ * Diplomacy: everything about dealing with other powers in one place. The left column lists an overview,
+ * group chats and every power you have met (with unread and pending counts); the right shows the picked
+ * one: relations, embassy and diplomats, proposals, and the conversation (chat with human players,
+ * statements to computer powers).
+ *
+ * `focus` picks what opens first: a faction id, 'overview', 'all' (chat with everyone), or a group thread
+ * (comma-separated factions). 'ai:<faction>' (older callers) means that faction.
+ */
+export function openDiplomacy(ui: GameUI, focus: string = 'overview'): void {
+  let current = focus.startsWith('ai:') ? focus.slice(3) : focus;
+  const drafts = new Map<string, string>();
+  const body = h('div', { class: 'msg-grid' });
+  const messaging = ui.messaging;
+  const m = modal('Diplomacy', body, { wide: true, onClose: () => unsub?.() });
   const render = () => {
     clear(body);
     const g = ui.game;
     const me = ui.viewer;
-    // Inbox
+    const humanGame = g.config.seats.length > 1 && !!messaging;
+    const met = Object.keys(g.factions).filter((o) => o !== me && g.factions[o].alive && relation(g, me, o).contact)
+      .sort((a, b) => (g.factions[a].kind === 'major' ? 0 : 1) - (g.factions[b].kind === 'major' ? 0 : 1) || factionDef(a).name.localeCompare(factionDef(b).name));
+    const unmet = Object.keys(g.factions).filter((o) => o !== me && g.factions[o].alive && !relation(g, me, o).contact).length;
     const inbox = Object.values(g.proposals).filter((p) => p.to === me && !p.answer);
-    if (inbox.length) {
-      body.append(h('h3', null, 'Proposals for you'));
-      for (const p of inbox) body.append(proposalCard(ui, p, render));
+    const groups = humanGame ? groupThreads(ui, messaging!) : [];
+    const valid = new Set(['overview', ...(humanGame ? ['all', ...groups] : []), ...met]);
+    if (!valid.has(current)) current = 'overview';
+
+    const list = h('div', { class: 'dip-list' });
+    const badge = (n: number) => (n ? h('b', { class: 'good' }, String(n)) : '');
+    const entry = (key: string, label: HTMLElement | string, n: number, sub = '') =>
+      list.append(button(h('span', { class: 'row grow' }, label, sub ? h('span', { class: 'dim', style: 'font-size:11px' }, sub) : '', h('span', { class: 'grow' }), badge(n)),
+        () => { current = key; render(); }, { cls: `list-btn small ${key === current ? 'on' : ''}` }));
+    entry('overview', h('b', null, 'Overview'), inbox.length);
+    if (humanGame) {
+      entry('all', h('span', null, '📢 All players'), threadUnread(ui, messaging!, 'all'));
+      for (const k of groups) entry(k, h('span', null, ...k.split(',').map((f) => factionChip(f, true))), threadUnread(ui, messaging!, k));
     }
-    const sent = Object.values(g.proposals).filter((p) => p.from === me);
-    if (sent.length) {
-      body.append(h('h3', null, 'Your proposals'));
-      for (const p of sent) body.append(proposalCard(ui, p, render));
+    for (const o of met) {
+      const unread = humanSeat(ui, o) && messaging ? threadUnread(ui, messaging, o) : g.factions[o].kind === 'major' ? aiUnread(ui, o) : 0;
+      const pending = inbox.filter((p) => p.from === o).length;
+      const st = relation(g, me, o).status;
+      entry(o, factionChip(o, true), unread + pending, st === 'war' ? 'war' : st === 'alliance' ? 'ally' : g.factions[o].kind === 'minor' ? 'minor' : '');
     }
-    const prisoners = Object.values(g.agents).filter((a) => a.capturedBy === me);
-    if (prisoners.length) {
-      body.append(h('h3', null, 'Prisoners'));
-      for (const a of prisoners) {
-        body.append(h('div', { class: 'row' }, factionChip(a.owner, true), a.kind, h('span', { class: 'grow' }),
-          button('Execute', () => { if (confirm('Execute this prisoner? Everyone will think less of you.') && ui.act({ type: 'execute', agent: a.id })) render(); }, { cls: 'small danger', disabled: !ui.myTurn }),
-          h('span', { class: 'dim' }, 'or offer their return in a proposal')));
-      }
-    }
-    const guests = Object.values(g.agents).filter((a) => a.resident && a.target === me);
-    // Relations table
-    body.append(h('h3', null, 'Factions'));
-    const table = h('table', { class: 't' }, h('tr', null, h('th', null, 'Faction'), h('th', null, 'Status'), h('th', null, 'Their view of you'),
-      h('th', null, 'Embassies'), h('th', null, 'Agreements'), h('th', null, '')));
-    const others = Object.keys(g.factions).filter((o) => o !== me && g.factions[o].alive);
-    others.sort((a, b) => (g.factions[a].kind === 'major' ? 0 : 1) - (g.factions[b].kind === 'major' ? 0 : 1) || a.localeCompare(b));
-    for (const o of others) {
-      const r = relation(g, me, o);
-      if (!r.contact) {
-        table.append(h('tr', { class: 'dim' }, h('td', null, g.factions[o].kind === 'major' ? factionChip(o) : 'Unknown minor'), h('td', { colspan: '5' }, 'Not yet met')));
-        continue;
-      }
-      const op = opinionOf(g, o, me);
-      const actions = h('td', { class: 'row wrap' });
-      if (g.factions[o].controller === 'human' && g.config.seats.length > 1) {
-        actions.append(button('Message', () => ui.openMessages(o), { cls: 'small' }));
-      } else if (g.factions[o].controller === 'ai' && g.factions[o].kind === 'major') {
-        actions.append(button('Talk', () => ui.openMessages(`ai:${o}`), { cls: 'small' }));
-      }
-      if (ui.myTurn) {
-        if (canPropose(g, me, o)) {
-          actions.append(button('Propose…', () => openProposal(ui, o, render), { cls: 'small' }));
-          actions.append(button('Swap resources', () => openSwap(ui, o, render), { cls: 'small' }));
-        }
-        if (r.status !== 'war') actions.append(button('Declare war', () => { if (confirm(`Declare war on the ${factionDef(o).name}?`) && ui.act({ type: 'declareWar', target: o })) render(); }, { cls: 'small danger' }));
-        if (r.status === 'nap' || r.status === 'alliance') actions.append(button('Cancel treaty', () => { if (ui.act({ type: 'cancelTreaty', target: o })) render(); }, { cls: 'small' }));
-        const guest = guests.find((a) => a.owner === o);
-        if (guest) actions.append(button('Expel diplomat', () => { if (ui.act({ type: 'expel', agent: guest.id })) render(); }, { cls: 'small' }));
-      }
-      const f = g.factions[o];
-      table.append(h('tr', null,
-        h('td', null, factionChip(o), f.overlord ? h('div', { class: 'dim' }, `vassal of ${factionDef(f.overlord).short}`) : null,
-          h('div', { class: 'dim', style: 'font-size:11px' }, factionDef(o).government)),
-        h('td', { class: r.status === 'war' ? 'bad' : r.status === 'alliance' ? 'good' : '' }, STATUS_LABEL[r.status]),
-        h('td', { class: op >= 0 ? 'good' : 'bad' }, num(op)),
-        h('td', null, `${hasEmbassy(g, me, o) ? 'yours ✓' : 'yours ✗'} · ${hasEmbassy(g, o, me) ? 'theirs ✓' : 'theirs ✗'}`),
-        h('td', null, r.agreements.map((a) => AGREEMENTS[a as AgreementId]?.name ?? a).join(', ') || h('span', { class: 'dim' }, 'none')),
-        actions));
-    }
-    body.append(table);
-    body.append(h('div', { class: 'dim', style: 'margin-top:8px' }, 'To negotiate you need an embassy: send a diplomat to their home system. Diplomats travelling through hostile space can be captured.'));
+    if (unmet) list.append(h('div', { class: 'dim', style: 'font-size:12px;margin-top:6px' }, `${unmet} power${unmet > 1 ? 's' : ''} not yet met.`));
+    if (!met.length) list.append(h('div', { class: 'dim', style: 'font-size:12px;margin-top:6px' }, 'You have not met anyone yet. Explore with scouts.'));
+
+    let right: HTMLElement;
+    if (current === 'overview') right = overviewPane(ui, met, (k) => { current = k; render(); }, render);
+    else if (current === 'all' || current.includes(',')) right = h('div', null, h('h3', null, threadName(current)), chatPanel(ui, messaging!, current, drafts));
+    else right = factionPane(ui, current, drafts, render);
+    body.append(list, right);
+    ui.updateTopBar();
   };
+  const unsub = messaging?.subscribe(() => { if (m.root.isConnected) render(); });
   render();
+}
+
+/** "the Terran Concord", "The Lattice" (names that already start with The keep it). */
+function theName(f: FactionId): string {
+  const n = factionDef(f).name;
+  return /^the /i.test(n) ? n : `the ${n}`;
+}
+
+function humanSeat(ui: GameUI, f: FactionId): boolean {
+  return ui.game.factions[f].controller === 'human' && ui.game.config.seats.length > 1;
+}
+
+/** Proposals waiting for you, your recent proposals, prisoners, and every power at a glance. */
+function overviewPane(ui: GameUI, met: FactionId[], open: (key: string) => void, rerender: () => void): HTMLElement {
+  const g = ui.game;
+  const me = ui.viewer;
+  const pane = h('div');
+  const inbox = Object.values(g.proposals).filter((p) => p.to === me && !p.answer);
+  pane.append(h('h3', null, 'Proposals for you'));
+  if (!inbox.length) pane.append(h('div', { class: 'dim' }, 'None waiting.'));
+  for (const p of inbox) pane.append(proposalCard(ui, p, rerender));
+  const sent = Object.values(g.proposals).filter((p) => p.from === me).slice(-6);
+  if (sent.length) {
+    pane.append(h('h3', null, 'Your recent proposals'));
+    for (const p of sent) pane.append(proposalCard(ui, p, rerender));
+  }
+  const prisoners = Object.values(g.agents).filter((a) => a.capturedBy === me);
+  if (prisoners.length) {
+    pane.append(h('h3', null, 'Prisoners'));
+    for (const a of prisoners) {
+      pane.append(h('div', { class: 'row' }, factionChip(a.owner, true), a.kind, h('span', { class: 'grow' }),
+        button('Execute', () => { if (confirm('Execute this prisoner? Everyone will think less of you.') && ui.act({ type: 'execute', agent: a.id })) rerender(); }, { cls: 'small danger', disabled: !ui.myTurn }),
+        h('span', { class: 'dim' }, 'or offer their return in a proposal')));
+    }
+  }
+  pane.append(h('h3', null, 'Powers you have met'));
+  const table = h('table', { class: 't manage' }, h('tr', null, h('th', null, 'Power'), h('th', null, 'Status'), h('th', null, 'Their view of you'), h('th', null, 'Embassies'), h('th', null, 'Agreements')));
+  for (const o of met) {
+    const r = relation(g, me, o);
+    const op = opinionOf(g, o, me);
+    table.append(h('tr', { style: 'cursor:pointer', onclick: () => open(o) },
+      h('td', null, factionChip(o)),
+      h('td', { class: r.status === 'war' ? 'bad' : r.status === 'alliance' ? 'good' : '' }, STATUS_LABEL[r.status]),
+      h('td', { class: op >= 0 ? 'good' : 'bad' }, num(op)),
+      h('td', null, `${hasEmbassy(g, me, o) ? 'yours ✓' : 'yours ✗'} · ${hasEmbassy(g, o, me) ? 'theirs ✓' : 'theirs ✗'}`),
+      h('td', null, r.agreements.map((a) => AGREEMENTS[a as AgreementId]?.name ?? a).join(', ') || h('span', { class: 'dim' }, 'none'))));
+  }
+  if (met.length) pane.append(table);
+  return pane;
+}
+
+/** Everything about one power: relations, embassy and diplomats, actions, proposals, conversation. */
+function factionPane(ui: GameUI, o: FactionId, drafts: Map<string, string>, rerender: () => void): HTMLElement {
+  const g = ui.game;
+  const me = ui.viewer;
+  const def = factionDef(o);
+  const f = g.factions[o];
+  const r = relation(g, me, o);
+  const op = opinionOf(g, o, me);
+  const pane = h('div', { style: 'display:flex;flex-direction:column;gap:8px;min-width:0' });
+  pane.append(h('div', { class: 'row' }, h('b', { style: `font-size:16px;color:${def.color}` }, def.name), h('span', { class: 'grow' }),
+    h('span', { class: r.status === 'war' ? 'bad' : r.status === 'alliance' ? 'good' : 'dim' }, STATUS_LABEL[r.status])));
+  pane.append(h('div', { class: 'dim' }, `${def.government}${f.kind === 'minor' ? ' · minor power' : ''}${f.overlord ? ` · vassal of the ${factionDef(f.overlord).short}` : ''}${f.player ? ` · played by ${f.player}` : f.kind === 'major' ? ' · computer' : ''}`));
+  pane.append(h('div', { class: 'kv' },
+    h('span', { class: 'k' }, 'Their view of you'), h('span', { class: op >= 0 ? 'good' : 'bad' }, num(op)),
+    h('span', { class: 'k' }, 'Agreements'), h('span', null, r.agreements.map((a) => AGREEMENTS[a as AgreementId]?.name ?? a).join(', ') || 'none'),
+    h('span', { class: 'k' }, 'Their embassy with you'), h('span', null, hasEmbassy(g, o, me) ? 'yes' : 'no')));
+
+  pane.append(embassyCard(ui, o, rerender));
+
+  if (ui.myTurn) {
+    const acts = h('div', { class: 'row wrap' });
+    if (canPropose(g, me, o)) {
+      acts.append(button('Propose a deal…', () => openProposal(ui, o, rerender), { cls: 'small primary' }));
+      acts.append(button('Swap resources…', () => openSwap(ui, o, rerender), { cls: 'small' }));
+    }
+    if (r.status !== 'war') acts.append(button('Declare war', () => { if (confirm(`Declare war on ${theName(o)}?`) && ui.act({ type: 'declareWar', target: o })) rerender(); }, { cls: 'small danger' }));
+    if (r.status === 'nap' || r.status === 'alliance') acts.append(button('Cancel treaty', () => { if (ui.act({ type: 'cancelTreaty', target: o })) rerender(); }, { cls: 'small' }));
+    const guest = Object.values(g.agents).find((a) => a.resident && a.target === me && a.owner === o);
+    if (guest) acts.append(button('Expel their diplomat', () => { if (ui.act({ type: 'expel', agent: guest.id })) rerender(); }, { cls: 'small' }));
+    if (acts.childNodes.length) pane.append(acts);
+  }
+
+  const theirs = Object.values(g.proposals).filter((p) => (p.from === o && p.to === me) || (p.from === me && p.to === o)).filter((p) => !p.answer || p.turn >= g.turn - 3);
+  if (theirs.length) {
+    pane.append(h('h3', null, 'Proposals'));
+    for (const p of theirs) pane.append(proposalCard(ui, p, rerender));
+  }
+
+  pane.append(h('h3', null, 'Conversation'));
+  if (humanSeat(ui, o) && ui.messaging) pane.append(chatPanel(ui, ui.messaging, o, drafts));
+  else if (f.kind === 'major') pane.append(aiThread(ui, o, rerender));
+  else pane.append(h('div', { class: 'dim' }, 'Minor powers do not send messages. Deal with them through proposals: trade, treaties, or vassalage.'));
+  return pane;
+}
+
+/** Your embassy with a power: the ambassador posted there, a diplomat on the way, or one to send. */
+function embassyCard(ui: GameUI, o: FactionId, rerender: () => void): HTMLElement {
+  const g = ui.game;
+  const me = ui.viewer;
+  const card = h('div', { class: 'card' });
+  const mine = Object.values(g.agents).filter((a) => a.owner === me && a.kind === 'diplomat' && !a.capturedBy);
+  const home = g.factions[o].home;
+  if (hasEmbassy(g, me, o)) {
+    const amb = mine.find((a) => a.resident && a.target === o);
+    card.append(h('div', { class: 'row' }, h('b', null, '⚑ Embassy'), h('span', { class: 'grow' }, ' Your ambassador is posted at their capital: you can negotiate.'),
+      amb && ui.myTurn ? button('Recall', () => { if (ui.act({ type: 'recall', agent: amb.id })) rerender(); }, { cls: 'small' }) : null));
+    return card;
+  }
+  const enRoute = mine.find((a) => a.target === o && !a.resident && (a.path.length > 0 || a.ship));
+  if (enRoute) {
+    card.append(h('div', null, h('b', null, '⚑ No embassy yet. '), enRoute.ship ? 'A diplomat is on the way aboard a ship.' : `A diplomat is on the way: ${enRoute.path.length} hexes to go.`));
+    return card;
+  }
+  card.append(h('div', null, h('b', null, '⚑ No embassy. '), 'You need one to trade or sign treaties. Send a diplomat to their home system; through hostile space it may be captured.'));
+  const free = mine.filter((a) => !a.resident && !a.ship && a.path.length === 0)
+    .map((a) => ({ a, d: hexDistance(g.map, a.hex, home) })).sort((x, y) => x.d - y.d);
+  if (!ui.myTurn) return card;
+  if (free.length) {
+    const row = h('div', { class: 'row wrap', style: 'margin-top:6px' });
+    const sel = h('select', null, ...free.map(({ a, d }) => h('option', { value: a.id }, `Diplomat at ${g.map.hexes[a.hex].system?.name ?? 'deep space'} (${d} hexes away)`)));
+    row.append(sel, button('Send diplomat', () => { if (ui.act({ type: 'sendDiplomat', agent: sel.value, target: o })) rerender(); }, { cls: 'small primary' }));
+    card.append(row);
+  } else {
+    const myHome = g.factions[me].home;
+    const can = checkBuild(g, me, myHome, 'diplomat', '');
+    card.append(h('div', { class: 'row wrap', style: 'margin-top:6px' }, h('span', { class: 'dim' }, 'No free diplomat.'),
+      can.ok ? button(`Train one at ${g.map.hexes[myHome].system!.name} (${costText(can.cost)})`, () => { if (ui.act({ type: 'build', hex: myHome, kind: 'diplomat', item: '' })) rerender(); }, { cls: 'small' })
+        : h('span', { class: 'dim' }, 'Any colony of level 2 or more can train one (Build → Other).')));
+  }
+  return card;
 }
 
 function proposalCard(ui: GameUI, p: Proposal, rerender: () => void): HTMLElement {
@@ -130,7 +256,7 @@ function openProposal(ui: GameUI, to: FactionId, done: () => void): void {
   const give: TradeItem[] = [];
   const receive: TradeItem[] = [];
   const body = h('div');
-  const m = modal(`Proposal to the ${factionDef(to).name}`, body, { wide: true });
+  const m = modal(`Proposal to ${theName(to)}`, body, { wide: true });
   const render = () => {
     clear(body);
     const side = (label: string, items: TradeItem[], giver: FactionId, taker: FactionId) => {
@@ -146,7 +272,10 @@ function openProposal(ui: GameUI, to: FactionId, done: () => void): void {
     const ai = g.factions[to].controller === 'ai';
     const score = give.length + receive.length ? proposalScore(g, preview) : 0;
     body.append(h('div', { class: 'row' },
-      ai && (give.length || receive.length) ? h('span', { class: score > 0 ? 'good' : 'bad' }, score > 0 ? 'They will probably accept.' : 'They will probably refuse.') : h('span', { class: 'dim' }, ai ? 'Add something to trade.' : 'They will answer on their turn.'),
+      ai && (give.length || receive.length)
+        ? h('span', { class: score > 0 ? 'good' : 'bad' }, score > 0 ? 'They will probably accept' : 'They will probably refuse',
+          receive.some((i) => i.kind === 'anyTech') && score > 0 ? ', if they know a technology you lack.' : '.')
+        : h('span', { class: 'dim' }, ai ? 'Add something to trade.' : 'They will answer on their turn.'),
       h('span', { class: 'grow' }),
       button('Send proposal', () => { if (ui.act({ type: 'propose', to, give, receive })) { m.close(); done(); } }, { cls: 'primary', disabled: give.length + receive.length === 0 })));
   };
@@ -175,11 +304,22 @@ function itemAdder(ui: GameUI, giver: FactionId, taker: FactionId, add: (i: Trad
       detail.append(res, amt, k === 'perTurn' ? h('span', null, '× turns', turns) : '',
         button('Add', () => add({ kind: 'resource', resource: res.value as 'energy', amount: Math.max(1, Number(amt.value)), ...(k === 'perTurn' ? { perTurn: Math.max(1, Number(turns.value)) } : {}) }), { cls: 'small' }));
     } else if (k === 'tech') {
-      const theirs = new Set(g.factions[taker].research.known);
-      const options = g.factions[giver].research.known.filter((t) => !theirs.has(t));
-      if (giver !== ui.viewer) detail.append(h('span', { class: 'dim' }, 'You can only see techs you know about; ask anyway:'));
-      const sel = h('select', null, ...(giver === ui.viewer ? options : Object.keys(TECH_BY_ID).filter((t) => !theirs.has(t) && t !== 'ascension')).map((t) => h('option', { value: t }, TECH_BY_ID[t].name)));
-      detail.append(sel, button('Add', () => sel.value && add({ kind: 'tech', tech: sel.value }), { cls: 'small' }));
+      // What you can see: your own techs always; the other side's only with an embassy or a spy there.
+      const other = giver === ui.viewer ? taker : giver;
+      const sees = seesTechOf(ui, other);
+      const takerKnows = new Set(giver === ui.viewer && !sees ? [] : g.factions[taker].research.known);
+      const options = g.factions[giver].research.known.filter((t) => !takerKnows.has(t) && t !== 'ascension' && TECH_BY_ID[t]);
+      const ANY = '*';
+      const offering = giver === ui.viewer;
+      const sel = h('select', null,
+        h('option', { value: ANY }, offering ? 'One of my choice (my cheapest that they lack)' : 'One of their choice (their cheapest that you lack)'),
+        ...(offering || sees ? options : []).map((t) => h('option', { value: t }, `${TECH_BY_ID[t].name} (tier ${TECH_BY_ID[t].tier})`)));
+      detail.append(sel, button('Add', () => add(sel.value === ANY ? { kind: 'anyTech' } : { kind: 'tech', tech: sel.value }), { cls: 'small' }));
+      detail.append(h('div', { class: 'dim', style: 'font-size:11px;flex-basis:100%' }, sees
+        ? (offering ? 'Showing only techs they lack (your embassy or spies tell you what they know).' : 'Showing the techs they know and you lack (your embassy or spies report them).')
+        : offering
+          ? 'You can’t see what they already know, so some of these may be worth nothing to them. An embassy or a spy at their capital would tell you.'
+          : 'You can’t see what they know. Ask for one of their choice, or get an embassy or a spy at their capital to see their research.'));
     } else if (k === 'agreement') {
       const sel = h('select', null, ...Object.entries(AGREEMENTS).map(([id, a]) => h('option', { value: id, title: a.text }, a.name)));
       detail.append(sel, button('Add', () => add({ kind: 'agreement', agreement: sel.value }), { cls: 'small' }));
@@ -261,6 +401,6 @@ function openSwap(ui: GameUI, to: FactionId, done: () => void): void {
         const { give, receive } = items();
         if (ui.act({ type: 'propose', to, give, receive })) { m.close(); done(); }
       }, { cls: 'primary' })));
-  const m = modal(`Swap resources with the ${factionDef(to).name}`, body);
+  const m = modal(`Swap resources with ${theName(to)}`, body);
   update();
 }

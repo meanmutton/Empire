@@ -220,6 +220,8 @@ export interface Payment {
 export type TradeItem =
   | { kind: 'resource'; resource: StockpileKind; amount: number; perTurn?: number }
   | { kind: 'tech'; tech: string }
+  /** A technology of the giver's choice: on acceptance, the cheapest one it knows and the taker lacks. */
+  | { kind: 'anyTech' }
   | { kind: 'fleet'; fleet: Id }
   | { kind: 'hex'; hex: number }
   | { kind: 'army'; army: Id }
