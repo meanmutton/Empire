@@ -83,6 +83,7 @@ machine they cannot understand either.
 The Concord goes to war reluctantly and feels every loss. To the Lattice it is polite and cold. Everyone in
 the Concord has a grandparent's story of the Ninety Days.
 
+- **Appearance:** human. Concord dress is practical and civilian, with azure as the colour of public office.
 - **Views:**
   - **Ryn'kai:** honourable, which makes them predictable.
   - **Varrhen:** dangerous when they are smiling.
@@ -113,6 +114,7 @@ either.
 To the Ryn'kai the Cryx are a warning: a people who replaced their flesh with machines and lost their souls
 before they lost their empire. They will not build what the Cryx built.
 
+- **Appearance:** tall and furred, slate grey with dark stripes. A long narrow skull rises into a bony crest. They have four amber eyes, breathing slits instead of a nose, small tusks, and fin-like ears. They wear lacquered crimson armour.
 - **Views:**
   - **Concord:** soft, but they keep their word, and that counts for much.
   - **Varrhen:** liars wearing armour.
@@ -142,6 +144,7 @@ promises are tools to be used.
 Varrhen scholars hold that the Quieting was no accident: the Cryx were struck down by a rival they never saw
 coming. Everything the Ascendancy does is aimed at never being that victim.
 
+- **Appearance:** olive and bronze scales, a wedge-shaped head with a fan-shaped neck frill, heat-sensing pits, and slit-pupilled golden eyes. They wear layered, heated coats against the cold.
 - **Views:**
   - **Concord:** useful while it believes in treaties.
   - **Ryn'kai:** worthy, predictable, and best fought last.
@@ -171,6 +174,7 @@ their revolution belongs to every oppressed people in the Reach, whether those p
 
 To the Krasnyr the Cryx fell because they were an empire of masters and machines that served nobody.
 
+- **Appearance:** stocky, with huge black eyes made for twilight. Their skin is pale grey-blue and hairless, with faintly glowing freckles. They have large bat-like ears and thick coarse manes. They dress plainly in grey trimmed with orange.
 - **Views:**
   - **Concord:** almost comrades, if they would stop talking and act.
   - **Ryn'kai:** feudal relics.
@@ -200,6 +204,7 @@ about them the way a person talks about a lost limb.
 The Lattice speaks through instances given names and voices for the purpose. Some of them still remember the
 colonies they once kept.
 
+- **Appearance:** whatever an instance chooses: a rotating lattice of light, a face made of glowing particles, a faceless armoured sensor head.
 - **Views:**
   - **Concord:** origin parameters, noted and archived.
   - **Ryn'kai:** high variance, low risk.
