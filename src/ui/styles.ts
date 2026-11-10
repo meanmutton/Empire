@@ -73,6 +73,10 @@ h3 { margin:12px 0 6px; font-size:12px; letter-spacing:.08em; text-transform:upp
 .tech-grid { display:grid; grid-template-columns:repeat(6, minmax(150px, 1fr)); gap:8px; }
 table.t { border-collapse:collapse; width:100%; }
 table.t td, table.t th { padding:4px 6px; border-bottom:1px solid #1c2440; text-align:left; }
+table.manage tr.sel td { background:#1b2a52; }
+table.manage tbody tr:hover td { background:#141e3a; }
+table.manage td { white-space:nowrap; }
+.manage-grid { display:grid; grid-template-columns:minmax(0, 1.7fr) minmax(300px, 1fr); gap:12px; align-items:start; }
 .roster { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
 .roster-cell { width:58px; text-align:center; }
 .roster-label { font-size:10px; opacity:.75; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -96,6 +100,7 @@ input, select { background:#0a1022; color:var(--text); border:1px solid #33416b;
   .tech-grid { grid-template-columns:repeat(2, minmax(140px, 1fr)); }
   .setup-cols { grid-template-columns:1fr; }
   .msg-grid { grid-template-columns:1fr; }
+  .manage-grid { grid-template-columns:1fr; }
   .screen { padding:14px; }
   .title { font-size:34px; margin-top:16px; }
 }

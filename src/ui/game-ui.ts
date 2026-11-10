@@ -1,4 +1,5 @@
 /** The in-game client: map, top bar, context side panel and the screens opened from it. */
+import { openAgents, openColonies, openFleets } from './screens/manage';
 import { buildStarted, refundFor } from '../engine/economy';
 import { DOCTRINE_IDS, DOCTRINES, type DoctrineId } from '../data/doctrines';
 import { isCrippled } from '../engine/combat';
@@ -48,7 +49,7 @@ export interface GameHost {
   messaging?: Messaging;
 }
 
-const DEV_NAMES = ['Unsettled', 'Outpost', 'Colony', 'Settlement', 'Industrial World', 'Core World'];
+export const DEV_NAMES = ['Unsettled', 'Outpost', 'Colony', 'Settlement', 'Industrial World', 'Core World'];
 
 export class GameUI {
   readonly root: HTMLElement;
@@ -129,12 +130,30 @@ export class GameUI {
     return r.ok;
   }
 
+  private refreshHooks = new Set<() => void>();
+
+  /** Calls `fn` whenever the game view refreshes (after an order, a move, etc.). Returns an unsubscribe. */
+  onRefresh(fn: () => void): () => void {
+    this.refreshHooks.add(fn);
+    return () => this.refreshHooks.delete(fn);
+  }
+
+  private runHooks(): void {
+    for (const fn of [...this.refreshHooks]) fn();
+  }
+
+  /** True while the viewer is choosing a destination for the selected fleet or agent. */
+  get moving(): boolean {
+    return this.moveMode;
+  }
+
   refresh(): void {
     this.view.refresh();
     this.updateOverlay();
     this.renderTop();
     this.renderSide();
     this.mini.draw();
+    this.runHooks();
   }
 
   endTurn(): void {
@@ -161,6 +180,7 @@ export class GameUI {
     this.renderTop();
     this.renderSide();
     this.view.invalidate();
+    this.runHooks();
   }
 
   /** Whether taps on the map give the selected fleet or agent a destination (otherwise taps select). */
@@ -175,6 +195,7 @@ export class GameUI {
     this.updateOverlay();
     this.renderSide();
     this.view.invalidate();
+    this.runHooks();
   }
 
   /**
@@ -292,6 +313,9 @@ export class GameUI {
       res(ICON.metals, f.stock.metals, inc.net.metals, 'Metals'),
       res(ICON.exotics, f.stock.exotics, inc.net.exotics, 'Exotics'),
       h('span', { class: 'res', title: 'Science per turn' }, ICON.science, h('b', null, `+${num(inc.net.science)}`), h('span', { class: r.current ? 'dim' : 'bad' }, researchText)),
+      button('Colonies', () => openColonies(this), { title: 'Every system you run, in one list' }),
+      button('Fleets', () => openFleets(this), { title: 'Every fleet, its orders and condition' }),
+      button('Agents', () => openAgents(this), { title: 'Diplomats, spies and embassies' }),
       button('Research', () => openResearch(this)),
       button(pending ? `Diplomacy (${pending})` : 'Diplomacy', () => openDiplomacy(this), { cls: pending ? 'primary' : '' }),
       button('Victory', () => openVictory(this)),
@@ -416,11 +440,11 @@ export class GameUI {
       for (const { x, i } of idleSystems) wrap.append(button(x.system!.name, () => { this.view.centerOn(i); this.select(i); }, { cls: 'list-btn small' }));
     }
     wrap.append(h('h3', null, 'Tips'), h('div', { class: 'dim' },
-      'Tap a hex to inspect it. Tap your fleet, then tap a destination twice to move. Ships that end a turn alone in a hex claim it at the start of your next turn. Press N for the next idle fleet.'));
+      'Tap a hex or fleet to select it. To move, press Move (M, or right-click), then tap the destination twice. Ships that end a turn alone in a hex claim it at the start of your next turn. Press N for the next idle fleet. Colonies, Fleets and Agents (top bar) list everything you run.'));
     return wrap;
   }
 
-  private systemPanel(hex: number): HTMLElement {
+  systemPanel(hex: number): HTMLElement {
     const g = this.game;
     const hx = g.map.hexes[hex];
     const sys = hx.system!;
@@ -499,7 +523,7 @@ export class GameUI {
     return wrap;
   }
 
-  private fleetCard(f: Fleet): HTMLElement {
+  fleetCard(f: Fleet): HTMLElement {
     const g = this.game;
     const mine = f.owner === this.viewer;
     const sel = f.id === this.selFleet;
@@ -567,18 +591,28 @@ export class GameUI {
     return card;
   }
 
-  private agentCard(id: string): HTMLElement {
+  /** What an agent of the viewer is doing, in a few words. */
+  agentStatus(id: string): string {
+    const g = this.game;
+    const a = g.agents[id];
+    const capitalOf = Object.values(g.factions).find((f) => f.kind === 'major' && f.home === a.hex && f.alive);
+    const target = a.target && g.factions[a.target] ? factionDef(a.target).short : '';
+    return a.capturedBy ? `Prisoner of the ${factionDef(a.capturedBy).short}`
+      : a.resident ? `Ambassador to ${target}`
+      : a.ship ? 'Aboard a ship'
+      : a.mission ? `${MISSIONS[a.mission as MissionId].name} (${a.progress}/${MISSIONS[a.mission as MissionId].turns})`
+      : a.path.length ? `Travelling${a.kind === 'diplomat' && target ? ` to the ${target}` : ''}, ${a.path.length} hexes to go`
+      : a.kind === 'spy' && capitalOf?.id === this.viewer ? 'Guarding home against enemy spies'
+      : a.kind === 'spy' && capitalOf ? `Watching the ${factionDef(capitalOf.id).short} capital (see Victory)`
+      : 'Idle';
+  }
+
+  agentCard(id: string): HTMLElement {
     const g = this.game;
     const a = g.agents[id];
     const sel = this.selAgent === id;
     const card = h('div', { class: `card ${sel ? 'sel' : ''}`, onclick: () => { if (!sel) this.select(a.hex, null, id); } });
-    const capitalOf = Object.values(g.factions).find((f) => f.kind === 'major' && f.home === a.hex && f.alive);
-    const status = a.resident ? `Ambassador to ${factionDef(a.target!).short}`
-      : a.mission ? `${MISSIONS[a.mission as MissionId].name} (${a.progress}/${MISSIONS[a.mission as MissionId].turns})`
-      : a.path.length ? `Travelling, ${a.path.length} hexes to go`
-      : a.kind === 'spy' && capitalOf?.id === this.viewer ? 'Guarding home against enemy spies'
-      : a.kind === 'spy' && capitalOf ? `Watching the ${capitalOf.id === a.owner ? '' : factionDef(capitalOf.id).short} capital (see Victory)`
-      : 'Idle';
+    const status = this.agentStatus(id);
     card.append(h('div', { class: 'row' }, h('b', null, a.kind === 'diplomat' ? 'Diplomat' : 'Spy'), h('span', { class: 'grow' }), h('span', { class: 'dim' }, status)));
     if (!sel || !this.myTurn) return card;
     const acts = h('div', { class: 'row wrap', style: 'margin-top:6px' });
@@ -596,7 +630,7 @@ export class GameUI {
       if (here.owner && here.owner !== this.viewer && here.system) {
         const m = h('select', null, ...Object.entries(MISSIONS).map(([k, v]) => h('option', { value: k, title: v.text }, v.name)));
         acts.append(m, button('Start', () => this.act({ type: 'mission', agent: id, mission: m.value as MissionId }), { cls: 'small' }));
-      } else acts.append(h('span', { class: 'dim' }, 'Tap a foreign system twice to send the spy there.'));
+      } else acts.append(h('span', { class: 'dim' }, 'Press Move and tap a foreign system to send the spy there.'));
     }
     const ships = Object.values(g.fleets).filter((f) => f.owner === this.viewer && f.hex === a.hex).flatMap((f) => f.ships).filter((s) => cargoFree(g, s) > 0);
     if (ships.length && !a.resident) acts.append(button('Board ship', () => this.act({ type: 'board', agent: id, ship: ships[0] }), { cls: 'small' }));
