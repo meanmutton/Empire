@@ -64,6 +64,13 @@ Ordered roughly by value. Open a PR per item or small group.
    could look at the downloaded state (it holds the random seed), try different orders offline and keep the
    luckiest. Battles are much swingier since combat rounds landed, so this matters more for competitive games.
 8. **Tutorial**: a guided first few turns.
+9. **UX review follow-ups** (the full review is from November 2026; recommendations 1–9 are done or in progress):
+   - phone navigation (bottom tab bar, floating End Turn, draggable selection sheet);
+   - keyboard focus moved into dialogs and kept there, `role="dialog"`;
+   - research improvements: turns to complete, what each tech unlocks, suggestions, a short queue;
+   - carrying the splash screen's look into the dialogs and map.
+   **Saved for the end, with the manual:** the getting-started checklist with "Show me" buttons and the tabbed How to
+   play, so they don't need redoing while the game changes.
 
 ## Parked
 - **Desktop app (Tauri or Electron)**: the game ships as a single HTML file for now. A Tauri (~10 MB) or

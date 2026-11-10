@@ -109,6 +109,11 @@ h3 { margin:12px 0 6px; font-size:12px; letter-spacing:.08em; text-transform:upp
 table.t { border-collapse:collapse; width:100%; }
 table.t td, table.t th { padding:4px 6px; border-bottom:1px solid #1c2440; text-align:left; }
 table.manage tr.sel td { background:#1b2a52; }
+.side-tabs { margin:8px 0 6px; }
+.build-row { margin-bottom:3px; }
+.build-row.off .list-btn { opacity:.65; }
+.build-why { font-size:11px; color:var(--bad); margin:1px 0 0 10px; }
+.build-details { font-size:11px; color:var(--dim); white-space:pre-line; margin:3px 0 4px 10px; padding:6px 8px; border-left:2px solid var(--line); }
 .badge { display:inline-block; min-width:18px; margin-left:6px; padding:0 5px; border-radius:999px; background:#e5484d; color:#fff; font-size:11px; font-weight:700; line-height:18px; text-align:center; }
 .notice-dot { display:inline-block; width:8px; height:8px; margin-left:6px; border-radius:50%; background:#8fb3ff; }
 .card.drop-ok { outline:2px dashed var(--accent); outline-offset:2px; background:#1b2a52; }

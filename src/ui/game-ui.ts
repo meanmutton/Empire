@@ -22,7 +22,7 @@ import { activeFaction, relation } from '../engine/query';
 import { availableTechs, techCost } from '../engine/research';
 import type { Fleet, GameState } from '../engine/types';
 import { canSeeFleet } from '../engine/visibility';
-import { bar, button, clear, h, isTouch, modal, toast } from './dom';
+import { bar, button, clear, dialogOpen, h, isTouch, modal, toast } from './dom';
 import { costText, factionChip, ICON, num, signed } from './format';
 import { MapView, Minimap } from './mapview';
 import { openDiplomacy } from './screens/diplomacy';
@@ -52,6 +52,8 @@ export interface GameHost {
 }
 
 export const DEV_NAMES = ['Unsettled', 'Outpost', 'Colony', 'Settlement', 'Industrial World', 'Core World'];
+
+type SideTab = 'system' | 'fleets' | 'agents';
 
 /** A fleet, or one ship of a fleet, being dragged onto another fleet. */
 type FleetDrag = { kind: 'fleet'; fleet: string } | { kind: 'ship'; fleet: string; ship: string };
@@ -94,15 +96,9 @@ export class GameUI {
     this.unsubscribe = host.messaging?.subscribe(() => { if (this.game) this.renderTop(); }) ?? null;
     const signal = this.listeners.signal;
     window.addEventListener('resize', () => { this.view.resize(); this.mini.draw(); if (this.game) this.renderTop(); }, { signal });
-    window.addEventListener('keydown', (e) => {
-      const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
-      if (e.key === 'Escape') { if (this.moveMode) this.toggleMove(false); else this.select(null); }
-      if (e.key === 'n' && !typing) this.nextIdle();
-      if (e.key === 'm' && !typing) this.toggleMove();
-      if ((e.key === '+' || e.key === '=') && !typing) this.zoomBy(1.25);
-      if (e.key === '-' && !typing) this.zoomBy(0.8);
-      if (e.key === 'h' && !typing) this.view.centerOn(this.game.factions[this.viewer].home);
-    }, { signal });
+    window.addEventListener('keydown', (e) => this.onKey(e), { signal });
+    window.addEventListener('keyup', (e) => this.held.delete(e.key.toLowerCase()), { signal });
+    window.addEventListener('blur', () => this.held.clear(), { signal });
   }
 
   private listeners = new AbortController();
@@ -154,6 +150,86 @@ export class GameUI {
 
   private runHooks(): void {
     for (const fn of [...this.refreshHooks]) fn();
+  }
+
+  /** Movement keys being held (W A S D pan the map while held). */
+  private held = new Set<string>();
+  private panning = false;
+
+  /**
+   * Keyboard: W A S D pan, + − (or E Q) zoom, H home, ← → previous/next fleet, ↑ ↓ previous/next colony,
+   * N next fleet waiting for orders, M move, Enter end turn, Esc cancel or deselect. None of them act while
+   * typing or while a dialog is open.
+   */
+  private onKey(e: KeyboardEvent): void {
+    const t = e.target as HTMLElement | null;
+    const typing = t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement || !!t?.isContentEditable;
+    if (e.key === 'Escape') { if (this.moveMode) this.toggleMove(false); else this.select(null); return; }
+    if (typing || dialogOpen() || e.ctrlKey || e.metaKey || e.altKey || !this.game) return;
+    const k = e.key.toLowerCase();
+    const handled = () => e.preventDefault();
+    if ('wasd'.includes(k) && k.length === 1) {
+      handled();
+      this.held.add(k);
+      this.startPanning();
+      return;
+    }
+    switch (e.key) {
+      case 'n': case 'N': this.nextIdle(); break;
+      case 'm': case 'M': this.toggleMove(); break;
+      case '+': case '=': case 'e': case 'E': this.zoomBy(1.25); break;
+      case '-': case '_': case 'q': case 'Q': this.zoomBy(0.8); break;
+      case 'h': case 'H': this.view.centerOn(this.game.factions[this.viewer].home); break;
+      case 'ArrowRight': this.cycleFleet(1); break;
+      case 'ArrowLeft': this.cycleFleet(-1); break;
+      case 'ArrowDown': this.cycleColony(1); break;
+      case 'ArrowUp': this.cycleColony(-1); break;
+      case 'Enter':
+        // Not when Enter would press a focused button.
+        if (t instanceof HTMLButtonElement) return;
+        this.endTurn();
+        break;
+      default: return;
+    }
+    handled();
+  }
+
+  private startPanning(): void {
+    if (this.panning) return;
+    this.panning = true;
+    let last = performance.now();
+    const step = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      const dx = (this.held.has('d') ? 1 : 0) - (this.held.has('a') ? 1 : 0);
+      const dy = (this.held.has('s') ? 1 : 0) - (this.held.has('w') ? 1 : 0);
+      if ((!dx && !dy) || this.listeners.signal.aborted) { this.panning = false; return; }
+      this.view.panBy(dx * 700 * dt, dy * 700 * dt);
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  /** Selects (and centres on) your next or previous fleet. */
+  private cycleFleet(dir: 1 | -1): void {
+    const list = Object.values(this.game.fleets).filter((f) => f.owner === this.viewer).sort((a, b) => a.hex - b.hex || a.id.localeCompare(b.id));
+    if (!list.length) { toast('You have no fleets.'); return; }
+    const i = list.findIndex((f) => f.id === this.selFleet);
+    const f = list[(i < 0 ? (dir > 0 ? 0 : list.length - 1) : i + dir + list.length) % list.length];
+    this.view.centerOn(f.hex);
+    this.select(f.hex, f.id);
+  }
+
+  /** Selects (and centres on) your next or previous colony. */
+  private cycleColony(dir: 1 | -1): void {
+    const g = this.game;
+    const list = g.map.hexes.map((x, i) => (x.owner === this.viewer && x.system && x.system.development > 0 ? i : -1)).filter((i) => i >= 0)
+      .sort((a, b) => (g.map.hexes[a].system!.homeOf === this.viewer ? -1 : 0) - (g.map.hexes[b].system!.homeOf === this.viewer ? -1 : 0) || g.map.hexes[a].system!.name.localeCompare(g.map.hexes[b].system!.name));
+    if (!list.length) return;
+    const i = this.selHex === null ? -1 : list.indexOf(this.selHex);
+    const hex = list[(i < 0 ? (dir > 0 ? 0 : list.length - 1) : i + dir + list.length) % list.length];
+    this.view.centerOn(hex);
+    this.select(hex);
   }
 
   /** Zoom in or out around the middle of the visible map. */
@@ -229,6 +305,8 @@ export class GameUI {
     this.hoverCard = card;
   }
 
+  /** Build item whose details are open (ⓘ). */
+  private buildInfo: string | null = null;
   /** Fleet whose name is being edited. */
   private renaming: string | null = null;
   /** Fleet whose "Add fleet…" menu is open. */
@@ -597,45 +675,58 @@ export class GameUI {
       button('✕', () => this.select(null), { cls: 'ghost small' })));
     if (hx.terrain !== 'space') s.append(h('div', { class: 'dim' }, `${TERRAIN_INFO[hx.terrain].name}. ${TERRAIN_INFO[hx.terrain].text}`));
     if (hx.pendingClaim) s.append(h('div', null, factionChip(hx.pendingClaim, true), ' will claim this hex at the start of its next turn.'));
-    // With a fleet selected, fleets come first (the system and its build menu follow); otherwise the system.
-    const systemPart = hx.system ? this.systemPanel(hex) : null;
-    const fleetsFirst = !!this.selFleet && !!systemPart;
-    if (systemPart && !fleetsFirst) s.append(systemPart);
+    // Tabs: System, Fleets and Agents, when the hex has more than one of them. The selection picks the first
+    // tab shown (a selected fleet opens Fleets); the battle forecast stays above the tabs.
     const base = Object.values(g.starbases).find((b) => b.hex === hex);
-    if (base) {
-      const spec = BALANCE.starbase[base.tier as 1 | 2 | 3]!;
-      s.append(h('div', { class: 'card' }, h('div', { class: 'row' }, h('b', null, spec.name), h('span', { class: 'grow' }), factionChip(base.owner, true)),
-        h('div', { class: 'row' }, 'Hull', bar(base.hull / spec.hull, '#7cfc9a'), `${base.hull}/${spec.hull}`)));
-    }
-    // The selected fleet first, then your other fleets, then everyone else's.
     const fleets = this.fleetsAt(hex).sort((a, b) => (a.id === this.selFleet ? -1 : 0) - (b.id === this.selFleet ? -1 : 0)
       || (a.owner === this.viewer ? -1 : 0) - (b.owner === this.viewer ? -1 : 0));
+    const agents = Object.values(g.agents).filter((a) => a.hex === hex && a.owner === this.viewer && !a.ship && !a.capturedBy);
+    const tabs: SideTab[] = [];
+    if (hx.system) tabs.push('system');
+    if (fleets.length || base) tabs.push('fleets');
+    if (agents.length) tabs.push('agents');
+    if (key !== this.sideTabKey) {
+      this.sideTabKey = key;
+      this.sideTab = this.selFleet && tabs.includes('fleets') ? 'fleets' : this.selAgent && tabs.includes('agents') ? 'agents' : tabs[0] ?? 'system';
+    }
+    if (!tabs.includes(this.sideTab)) this.sideTab = tabs[0] ?? 'system';
     const forecast = this.forecastCard(hex);
     if (forecast) s.append(forecast);
-    const myFleets = fleets.filter((f) => f.owner === this.viewer);
-    if (fleets.length) {
-      s.append(h('div', { class: 'row', style: 'margin-top:12px' }, h('h3', { style: 'margin:0' }, 'Fleets'), h('span', { class: 'grow' }),
-        myFleets.length > 1 && this.myTurn ? button('Combine all', () => this.act({ type: 'combine', hex }), {
-          cls: 'small', title: 'Pack your fleets here into as few battle groups (up to 6 ships) as possible: warships with warships, support ships with support ships',
-        }) : null));
+    if (tabs.length > 1) {
+      const label: Record<SideTab, string> = { system: hx.system?.name ?? 'System', fleets: `Fleets (${fleets.length})`, agents: `Agents (${agents.length})` };
+      s.append(h('div', { class: 'tabs side-tabs' }, ...tabs.map((t) =>
+        button(label[t], () => { this.sideTab = t; this.rerender(); }, { cls: `small ${this.sideTab === t ? 'on' : ''}` }))));
+    }
+    if (this.sideTab === 'system' && hx.system) s.append(this.systemPanel(hex));
+    if (this.sideTab === 'fleets') {
+      if (base) {
+        const spec = BALANCE.starbase[base.tier as 1 | 2 | 3]!;
+        s.append(h('div', { class: 'card' }, h('div', { class: 'row' }, h('b', null, spec.name), h('span', { class: 'grow' }), factionChip(base.owner, true)),
+          h('div', { class: 'row' }, 'Hull', bar(base.hull / spec.hull, '#7cfc9a'), `${base.hull}/${spec.hull}`)));
+      }
+      const myFleets = fleets.filter((f) => f.owner === this.viewer);
       if (myFleets.length > 1 && this.myTurn) {
-        s.append(h('div', { class: 'dim', style: 'font-size:11px;margin-bottom:4px' }, isTouch()
+        s.append(h('div', { class: 'row', style: 'margin:6px 0 2px' }, h('span', { class: 'dim grow', style: 'font-size:11px' }, isTouch()
           ? 'To join fleets, select one and press Add fleet, or press Combine all.'
-          : 'Drag a fleet, or a single ship, onto another fleet to join them. Or select a fleet and press Add fleet.'));
+          : 'Drag a fleet, or a single ship, onto another fleet to join them. Or select a fleet and press Add fleet.'),
+          button('Combine all', () => this.act({ type: 'combine', hex }), {
+            cls: 'small', title: 'Pack your fleets here into as few battle groups (up to 6 ships) as possible: warships with warships, support ships with support ships',
+          })));
+      }
+      for (const f of fleets) s.append(this.fleetCard(f));
+      // While dragging a ship, a place to drop it into a fleet of its own.
+      if (myFleets.some((f) => f.ships.length > 1) && this.myTurn) {
+        const zone = h('div', { class: 'drop-new' }, 'Drop a ship here to make it a fleet of its own');
+        this.dropTarget(zone, (d) => d.kind === 'ship', (d) => { if (d.kind === 'ship') this.act({ type: 'split', fleet: d.fleet, ships: [d.ship] }); });
+        s.append(zone);
       }
     }
-    for (const f of fleets) s.append(this.fleetCard(f));
-    // While dragging a ship, a place to drop it into a fleet of its own.
-    if (myFleets.some((f) => f.ships.length > 1) && this.myTurn) {
-      const zone = h('div', { class: 'drop-new' }, 'Drop a ship here to make it a fleet of its own');
-      this.dropTarget(zone, (d) => d.kind === 'ship', (d) => { if (d.kind === 'ship') this.act({ type: 'split', fleet: d.fleet, ships: [d.ship] }); });
-      s.append(zone);
-    }
-    if (systemPart && fleetsFirst) s.append(h('h3', null, hx.system!.name), systemPart);
-    const agents = Object.values(g.agents).filter((a) => a.hex === hex && a.owner === this.viewer && !a.ship && !a.capturedBy);
-    if (agents.length) s.append(h('h3', null, 'Agents'));
-    for (const a of agents) s.append(this.agentCard(a.id));
+    if (this.sideTab === 'agents') for (const a of agents) s.append(this.agentCard(a.id));
   }
+
+  /** Which tab of the side panel is showing, and for which selection it was chosen. */
+  private sideTab: SideTab = 'system';
+  private sideTabKey = '';
 
   /** The battle forecast for the viewer's forces in a hex where enemies are present. */
   private forecastCard(hex: number): HTMLElement | null {
@@ -748,38 +839,58 @@ export class GameUI {
       ...(['ships', 'improvements', 'other'] as const).map((t) => button(t[0].toUpperCase() + t.slice(1), () => { this.buildTab = t; this.rerender(); }, { cls: `small ${this.buildTab === t ? 'on' : ''}` })));
     wrap.append(tabs);
     const stock = g.factions[this.viewer].stock;
-    const opt = (label: string, cost: string, check: { ok: boolean; reason?: string; cost?: { metals: number; energy: number; exotics: number } }, action: Action, title?: string) => {
+    const prod = Math.max(0.1, productionOf(g, hex));
+    const ahead = sys.queue.reduce((n, q) => n + q.remaining, 0);
+    /**
+     * One buildable item: tap to queue it. Shows when it would be ready (after what is already queued), the
+     * reason in plain words when it can't be built now, and an ⓘ toggle with its details (no hover needed).
+     */
+    const opt = (key: string, label: string, cost: string, check: { ok: boolean; reason?: string; cost?: { metals: number; energy: number; exotics: number; points?: number } }, action: Action, details?: string) => {
       // Buildable here but too expensive right now: disabled too, with what is missing.
       const short = check.ok && check.cost
         ? (['metals', 'energy', 'exotics'] as const).filter((k) => stock[k] < check.cost![k]).map((k) => `${Math.ceil(check.cost![k] - stock[k])} more ${k}`)
         : [];
       const ok = check.ok && short.length === 0;
-      const why = !check.ok ? (check as { reason: string }).reason : short.length ? `Not enough resources: needs ${short.join(', ')}.` : '';
-      return button(h('span', { class: 'row grow' }, h('span', { class: 'grow' }, label), h('span', { class: short.length ? 'bad' : 'dim' }, cost)), () => this.act(action),
-        { cls: 'list-btn small', disabled: !ok || !this.myTurn, title: ok ? title : `${why}${title ? `\n${title}` : ''}` });
+      const why = !check.ok ? (check as { reason: string }).reason : short.length ? `Needs ${short.join(', ')}.` : '';
+      const turns = check.ok && check.cost?.points ? Math.ceil((ahead + check.cost.points) / prod) : 0;
+      const open = this.buildInfo === key;
+      const row = h('div', { class: `build-row ${ok ? '' : 'off'}` });
+      row.append(h('div', { class: 'row', style: 'gap:4px' },
+        button(h('span', { class: 'row grow', style: 'gap:6px' }, h('span', { class: 'grow' }, label),
+          turns ? h('span', { class: 'dim', style: 'font-size:11px', title: 'Turns until it is ready, after what is already queued here' }, `${turns}t`) : '',
+          h('span', { class: short.length ? 'bad' : 'dim' }, cost)), () => this.act(action),
+          { cls: 'list-btn small grow', disabled: !ok || !this.myTurn, title: ok ? 'Add to the build queue' : why }),
+        details ? button('ⓘ', () => { this.buildInfo = open ? null : key; this.rerender(); }, { cls: `small ghost ${open ? 'on' : ''}`, title: 'Details' }) : null));
+      if (!ok && why) row.append(h('div', { class: 'build-why' }, why));
+      if (open && details) row.append(h('div', { class: 'build-details' }, details));
+      return row;
     };
     if (this.buildTab === 'ships') {
       const designs = [...DESIGNS_BY_FACTION[this.viewer]].filter((d) => d.cls !== 'fighter').sort((a, b) => CLASSES[a.cls].size - CLASSES[b.cls].size);
       for (const d of designs) {
         const c = checkBuild(g, this.viewer, hex, 'ship', d.id);
         const s = d.stats;
-        const title = `${CLASSES[d.cls].name} · ${ROLES[d.role].name}\nHull ${s.hull}, shields ${s.shields}, beams ${s.energy}, missiles ${s.missile}, PD ${s.pd}, hangar ${s.hangar}, cargo ${s.cargo}, speed ${s.speed}, sensors ${s.sensors}\nUpkeep ${d.upkeep}/turn`;
-        wrap.append(opt(`${d.name} · ${CLASSES[d.cls].name} ${ROLES[d.role].name}`, costText(c.ok ? c.cost : d.cost), c, { type: 'build', hex, kind: 'ship', item: d.id }, title));
+        const title = `${CLASSES[d.cls].name} · ${ROLES[d.role].name}. ${ROLES[d.role].text}\nHull ${s.hull} · shields ${s.shields} · beams ${s.energy} · missiles ${s.missile} · point defense ${s.pd} · hangar ${s.hangar} · cargo ${s.cargo} · speed ${s.speed} · sensors ${s.sensors}\nUpkeep ${d.upkeep} energy per turn`;
+        wrap.append(opt(`ship:${d.id}`, `${d.name} · ${CLASSES[d.cls].name} ${ROLES[d.role].name}`, costText(c.ok ? c.cost : d.cost), c, { type: 'build', hex, kind: 'ship', item: d.id }, title));
       }
     } else if (this.buildTab === 'improvements') {
       for (const [id, imp] of Object.entries(IMPROVEMENTS)) {
         const c = checkBuild(g, this.viewer, hex, 'improvement', id);
         const copies = sys.improvements.filter((x) => x === id).length + sys.queue.filter((q) => q.kind === 'improvement' && q.item === id).length;
         const repeat = copies && (imp.yields || imp.production) ? ` Another one here yields ${Math.round(Math.pow(REPEAT_FALLOFF, copies) * 100)}% (each repeat on the same world yields 20% less).` : '';
-        wrap.append(opt(copies ? `${imp.name} (${copies + 1}${copies === 1 ? 'nd' : copies === 2 ? 'rd' : 'th'})` : imp.name, costText(imp.cost), c, { type: 'build', hex, kind: 'improvement', item: id }, imp.text + repeat));
+        wrap.append(opt(`imp:${id}`, copies ? `${imp.name} (${copies + 1}${copies === 1 ? 'nd' : copies === 2 ? 'rd' : 'th'})` : imp.name, costText(imp.cost), c, { type: 'build', hex, kind: 'improvement', item: id }, imp.text + repeat));
       }
     } else {
-      const items: [string, Parameters<typeof checkBuild>[3], string][] = [
-        ['Develop to next level', 'develop', ''], ['Army', 'army', ''], ['Diplomat', 'diplomat', ''], ['Spy', 'spy', ''], ['Ascension Gate', 'wonder', 'ascensionGate'],
+      const items: [string, Parameters<typeof checkBuild>[3], string, string][] = [
+        ['Develop to next level', 'develop', '', `Raises ${sys.name} to ${DEV_NAMES[Math.min(5, sys.development + 1)]}: higher yields, more population and more improvement slots.`],
+        ['Army', 'army', '', 'A ground army (strength 10) for defending this world or, carried by transports, invading others. Costs 1 population.'],
+        ['Diplomat', 'diplomat', '', 'Opens an embassy when sent to another power’s capital (Diplomacy → Send diplomat). You need an embassy to trade or sign treaties.'],
+        ['Spy', 'spy', '', 'Runs missions in rival systems (steal technology, sabotage, incite unrest) or watches a capital for intelligence. Can be caught.'],
+        ['Ascension Gate', 'wonder', 'ascensionGate', 'The Concord’s path to an Ascendance victory.'],
       ];
-      for (const [label, kind, item] of items) {
+      for (const [label, kind, item, text] of items) {
         const c = checkBuild(g, this.viewer, hex, kind, item);
-        wrap.append(opt(label, c.ok ? costText(c.cost) : '', c, { type: 'build', hex, kind, item }));
+        wrap.append(opt(`other:${kind}`, label, c.ok ? costText(c.cost) : '', c, { type: 'build', hex, kind, item }, text));
       }
     }
     return wrap;

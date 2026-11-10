@@ -95,3 +95,8 @@ export function bar(frac: number, color: string): HTMLElement {
 export function isTouch(): boolean {
   try { return window.matchMedia('(pointer: coarse)').matches; } catch { return false; }
 }
+
+/** Whether a dialog is open (keyboard shortcuts for the map stand down while one is). */
+export function dialogOpen(): boolean {
+  return !!document.querySelector('.modal-overlay');
+}
