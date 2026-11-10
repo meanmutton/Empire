@@ -8,6 +8,7 @@ import { defaultLeader, LEADER_TITLES, LEADERS, SELF_LEADER } from '../data/lead
 import type { FactionId, GameState } from '../engine/types';
 import { h } from './dom';
 import { glyphElement } from './glyphs';
+import { revealingPortraits } from './screens/options';
 
 const IMAGES: Record<string, string> = {};
 for (const [path, url] of Object.entries(import.meta.glob<string>('./assets/portraits/*.webp', { eager: true, import: 'default' }))) {
@@ -42,6 +43,14 @@ export function leaderById(faction: FactionId, id: string | undefined, playerNam
   return { name: l.name, full: title ? `${title} ${l.name}` : l.name, portrait: `${faction}-${l.id}` };
 }
 
+/**
+ * Which picture to show for a key: a portrait with a modest version (`<key>-sfw`) shows that one unless the
+ * player turned on revealing portraits in Options.
+ */
+function pick(key: string): string {
+  return !revealingPortraits() && `${key}-sfw` in IMAGES ? `${key}-sfw` : key;
+}
+
 /** Whether a picture exists yet for this key. */
 export function hasPortrait(key: string | undefined): boolean {
   return !!key && key in IMAGES;
@@ -59,7 +68,7 @@ export function portraitElement(faction: FactionId, key: string | undefined, siz
     class: `portrait ${avatar ? 'avatar' : ''}`, title,
     style: `width:${w}px;height:${avatar ? w : Math.round(w * 1.25)}px;border-color:${def.color}`,
   });
-  const url = key ? IMAGES[key] : undefined;
+  const url = key ? IMAGES[pick(key)] : undefined;
   if (url) frame.append(h('img', { src: url, alt: title, draggable: false }));
   else frame.append(glyphElement(faction, def.color, Math.round(w * (avatar ? 0.55 : 0.5))));
   return frame;

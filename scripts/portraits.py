@@ -3,7 +3,8 @@
 Masters live in art/portraits/ (600x750 JPEG, named as in docs/art/PORTRAIT_PROMPTS.md, e.g.
 concord-sutton.jpg). Adding a new image: `python3 scripts/portraits.py --add path/to/source.png name`
 crops it to 4:5 and saves the master. Every run rebuilds the game copies in src/ui/assets/portraits/
-(240x300 WebP, about 5 KB each). Needs Pillow.
+(240x300 WebP, about 5 KB each). A modest version of a revealing portrait is saved as <name>-sfw; the
+game shows it unless revealing portraits are turned on in Options. Needs Pillow.
 """
 import glob
 import os

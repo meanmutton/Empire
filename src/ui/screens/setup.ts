@@ -11,6 +11,7 @@ import { injectStyles } from '../styles';
 import { LEADER_TITLES, LEADERS, SELF_LEADER } from '../../data/leaders';
 import { leaderById, portraitElement } from '../portraits';
 import { openHelp } from './help';
+import { openOptions } from './options';
 
 export interface SetupChoice extends NewGameOptions {
   online: boolean;
@@ -48,7 +49,8 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
   const render = () => {
     clear(screen);
     screen.append(h('div', { class: 'title' }, 'EMPIRE'), h('div', { class: 'subtitle' }, `A game of galactic conquest · v${VERSION} · `,
-      h('a', { href: '#', style: 'color:var(--accent)', onclick: (e: Event) => { e.preventDefault(); openHelp(); } }, 'How to play')));
+      h('a', { href: '#', style: 'color:var(--accent)', onclick: (e: Event) => { e.preventDefault(); openHelp(); } }, 'How to play'), ' · ',
+      h('a', { href: '#', style: 'color:var(--accent)', onclick: (e: Event) => { e.preventDefault(); openOptions(render); } }, 'Options')));
     const cols = h('div', { class: 'setup-cols' });
     const left = h('div');
     const saves = actions.saves();

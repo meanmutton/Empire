@@ -9,6 +9,10 @@ Thaurrun, Draskin and ARBITER). Once the style is settled, do the rest.
 
 The minor factions' envoys follow the leaders, in the same batches as their lore.
 
+**Modest versions.** For a revealing portrait, also make a covered version and save it with `-sfw` added to the
+name (for example `minor-vesh-sfw.png`). The game shows the `-sfw` version unless the player turns on
+"Show revealing portraits" in Options.
+
 ---
 
 ## Terran Concord (humans from Earth, year 4026; colour azure)

@@ -63,6 +63,8 @@ every faction has every class or role) and an AI personality. Full numbers are i
 **Leaders.** Each great power has three leaders (`src/data/leaders.ts`; lore in `docs/LORE.md`). A computer-run
 power gets one picked by the galaxy seed; a human player picks one at setup or leads under their own name. Their
 portraits appear in Diplomacy and beside their words; minor factions show an envoy. Leaders are flavour only.
+A portrait with a modest version (`<name>-sfw`) shows that one unless the player turns on **Show revealing
+portraits** in Options (title screen or in-game Menu; off by default, saved per browser).
 
 #### Terran Concord
 *Explorers, scientists and negotiators who would rather talk than fight.*
