@@ -93,8 +93,8 @@ the Concord has a grandparent's story of the Ninety Days.
     She is curious and patient, and she treats every first contact as a dig site.
   - **Mateo Lindqvist** is a negotiator who ended the Titan water strikes without a shot fired. He is warm,
     funny, and unmovable on principle.
-  - **Amara Sjöberg-Reyes** is a former fleet engineer and the most hawkish First Speaker in a century, which
-    by Concord standards still means careful.
+  - **Sean Sutton** is a former fleet engineer and the most hawkish First Speaker in a century, which by
+    Concord standards still means careful.
 
 ### Ryn'kai Dominion
 *Home: Ryn'kai Prime. Mammalian humanoids. A military dictatorship bound by an honour code.*
