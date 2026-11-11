@@ -4,7 +4,7 @@ import { ABILITIES } from '../../data/abilities';
 import { factionDef } from '../../data/factions';
 import { AVAILABILITY, DEFAULT_TURN_LIMIT, PRESETS, VICTORIES, type PresetId } from '../../data/victories';
 import { MAP_SIZES, type NewGameOptions } from '../../engine/setup';
-import { VERSION } from '../../version';
+import { VERSION_LABEL } from '../../version';
 import { button, clear, h } from '../dom';
 import { rosterStrip } from '../gallery';
 import { injectStyles } from '../styles';
@@ -50,7 +50,7 @@ export function showTitle(root: HTMLElement, actions: TitleActions): void {
 
   const render = () => {
     clear(screen);
-    screen.append(h('div', { class: 'title' }, 'EMPIRE'), h('div', { class: 'subtitle' }, `A game of galactic conquest · v${VERSION} · `,
+    screen.append(h('div', { class: 'title' }, 'EMPIRE'), h('div', { class: 'subtitle' }, `A game of galactic conquest · ${VERSION_LABEL} · `,
       h('a', { href: '#', style: 'color:var(--accent)', onclick: (e: Event) => { e.preventDefault(); openHelp(); } }, 'How to play'), ' · ',
       h('a', { href: '#', style: 'color:var(--accent)', onclick: (e: Event) => { e.preventDefault(); openGuide(); } }, 'Faction guide'), ' · ',
       h('a', { href: '#', style: 'color:var(--accent)', onclick: (e: Event) => { e.preventDefault(); openOptions(render); } }, 'Options')));

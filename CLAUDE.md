@@ -10,6 +10,9 @@ Online asynchronous turn-based 4X space strategy game for the browser (TypeScrip
 - Commands: `npm test`, `npm run typecheck`, `npm run build` (single-file `dist/index.html`), `npm run dev`,
   `npm run release` (rebuilds `release/Empire.html`, the downloadable, with the live relay from `.env`).
 - Release: any PR that changes the game runs `npm run release` and commits the new `release/Empire.html`.
+  Every release bumps the version first: `npm version patch --no-git-tag-version` (or `minor` for a milestone)
+  and adds an entry to `CHANGELOG.md`. The version lives only in `package.json`; `src/version.ts` reads it, and
+  the stage label (`STAGE`, now "Beta") is set there.
 - Engine rule: no `Math.random`, `Date.now`, DOM or network calls inside `src/engine`, `src/data` or `src/ai`;
   use the RNG in the game state, so every client computes identical results.
 - Workflow: one PR per roadmap phase on a `claude/NN-name` branch. Never push to or merge into `main`;
