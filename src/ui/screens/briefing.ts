@@ -1,6 +1,6 @@
 /**
- * Turn briefing: what happened since your last turn, as a dialog like the other screens
- * rather than a dialog in the way. Counters at the top (battles, wars, proposals, builds, idle colonies and
+ * Turn briefing: what happened since your last turn, as a dialog like the other screens.
+ * Counters at the top (battles, wars, proposals, builds, idle colonies and
  * fleets) jump to the right place; events are grouped into Military, Diplomacy, Empire and Galaxy, each
  * line jumps to the map, and battles link to their reports.
  *
