@@ -3,7 +3,7 @@
 Masters live in art/portraits/ (600x750 JPEG, named as in docs/art/PORTRAIT_PROMPTS.md, e.g.
 concord-sutton.jpg). Adding a new image: `python3 scripts/portraits.py --add path/to/source.png name`
 crops it to 4:5 and saves the master. Every run rebuilds the game copies in src/ui/assets/portraits/
-(240x300 WebP, about 5 KB each). A modest version of a revealing portrait is saved as <name>-sfw; the
+(360x450 WebP, about 10 KB each: sharp at portrait size on high-density screens, and big enough to view enlarged). A modest version of a revealing portrait is saved as <name>-sfw; the
 game shows it unless revealing portraits are turned on in Options. Needs Pillow.
 """
 import glob
@@ -38,7 +38,7 @@ def build():
     os.makedirs(GAME, exist_ok=True)
     for f in sorted(glob.glob(os.path.join(MASTERS, '*.jpg'))):
         name = os.path.splitext(os.path.basename(f))[0]
-        im = Image.open(f).convert('RGB').resize((240, 300), Image.LANCZOS)
+        im = Image.open(f).convert('RGB').resize((360, 450), Image.LANCZOS)
         out = os.path.join(GAME, f'{name}.webp')
         im.save(out, 'WEBP', quality=72, method=6)
         print(f'{name}: {os.path.getsize(out)} bytes')

@@ -6,12 +6,15 @@ import { beginGame } from './engine/turn';
 import type { GameState } from './engine/types';
 import { relayUrl } from './net/relay-client';
 import { toast } from './ui/dom';
+import { installClickSounds } from './ui/sound';
 import { showGallery } from './ui/gallery';
 import { showTitle } from './ui/screens/setup';
 import { LocalSession } from './ui/session-local';
 import { onlineGames, OnlineSession } from './ui/session-online';
 import { deleteSave, listSaves, loadGame } from './ui/storage';
 import { injectStyles } from './ui/styles';
+
+installClickSounds();
 
 const app = document.getElementById('app')!;
 const params = new URLSearchParams(location.search);
