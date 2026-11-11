@@ -21,13 +21,13 @@ import { armiesNeeded, campaignTarget, defenseAt, gatheredPower, isRunaway, spyT
 import { say } from './voice';
 import { hasEmbassy, opinionOf } from '../engine/agents';
 import { getBit } from '../engine/bitset';
-import { canPropose, militaryStrength, proposalScore, sharedEnemies } from '../engine/diplomacy';
+import { anyTechChoice, canPropose, itemValue, militaryStrength, proposalScore, sharedEnemies } from '../engine/diplomacy';
 import { checkBuild, factionIncome, rushCost, slotsOf } from '../engine/economy';
 import { cargoFree } from '../engine/ground';
 import { hexDistance, hexesWithin, neighbors } from '../engine/hex';
 import { planPath } from '../engine/movement';
 import { atWar, ownedHexes, relation } from '../engine/query';
-import { availableTechs } from '../engine/research';
+import { availableTechs, techCost } from '../engine/research';
 import { Rng } from '../engine/rng';
 import type { FactionId, Fleet, GameState } from '../engine/types';
 
@@ -147,10 +147,28 @@ function diplomacy(ctx: Ctx): void {
       }
       continue;
     }
+    // An ally who is about to complete a Grand Alliance (allied with everyone, holding the most systems) is
+    // a rival: ambitious or treacherous powers walk out before the alliance hands them the galaxy. The
+    // Ryn'kai never break an alliance first.
+    if (r.status === 'alliance' && ctx.major && !hasAbility(me, 'honorBound') && (state.factions[o].flags['vs:grandAlliance'] ?? 0) >= 3
+      && ctx.rng.chance(0.25 + p.treachery * 0.4 + p.aggression * 0.2)) {
+      if (act(ctx, { type: 'cancelTreaty', target: o })) { say(state, me, o, 'intentWarning'); continue; }
+    }
+    // An ally who leaves us to fight alone loses the alliance.
+    if (r.status === 'alliance' && op < 0 && !hasAbility(me, 'honorBound')) {
+      if (act(ctx, { type: 'cancelTreaty', target: o })) { say(state, me, o, 'reassureDoubt'); continue; }
+    }
     if (!ctx.rng.chance(0.25)) continue;
+    // Real trades first: technology for technology, and a surplus for something we lack.
+    if (tradeOffer(ctx, o)) continue;
     const want = (['trade', 'research', 'economic', 'openBorders'] as const).filter((a) => !r.agreements.includes(a));
     if (want.length && op >= -10 && p.diplomacy > 0.3) {
-      act(ctx, { type: 'propose', to: o, give: [{ kind: 'agreement', agreement: ctx.rng.pick(want) }], receive: [] });
+      const agreement = ctx.rng.pick(want);
+      // An agreement that profits them much more than us comes with a price.
+      const ours = itemValue(state, o, me, { kind: 'agreement', agreement }), theirs = itemValue(state, me, o, { kind: 'agreement', agreement });
+      const gap = Math.floor((theirs - ours) / 2);
+      const price = gap >= 25 ? [{ kind: 'resource' as const, resource: 'energy' as const, amount: Math.min(gap, Math.floor(state.factions[o].stock.energy / 2)) }].filter((x) => x.amount >= 20) : [];
+      act(ctx, { type: 'propose', to: o, give: [{ kind: 'agreement', agreement }], receive: price });
       continue;
     }
     if (ctx.major && r.status === 'relations' && op > 15 && p.diplomacy > 0.5) {
@@ -192,6 +210,44 @@ function diplomacy(ctx: Ctx): void {
   }
   const lattice = hasAbility(me, 'distributedCognition') ? ctx.rng.chance(0.5) : true;
   if (target && lattice) act(ctx, { type: 'declareWar', target });
+}
+
+/**
+ * Offers a real trade to `o` when there is one to make: a technology each side lacks (needs an embassy, to
+ * know what they know), or a surplus resource for one we are short of. True if an offer was made.
+ */
+function tradeOffer(ctx: Ctx, o: FactionId): boolean {
+  const { state, me } = ctx;
+  if (opinionOf(state, me, o) < -20) return false;
+  if (hasEmbassy(state, me, o)) {
+    const mine = anyTechChoice(state, me, o), wanted = anyTechChoice(state, o, me);
+    if (mine && wanted) {
+      // Give our cheapest that they lack; ask for the most valuable of theirs we could still afford to match.
+      const theirs = new Set(state.factions[o].research.known);
+      const ours = new Set(state.factions[me].research.known);
+      const candidates = state.factions[o].research.known.filter((t) => !ours.has(t) && t !== 'ascension' && TECH_BY_ID[t]);
+      const myCost = techCost(mine);
+      const ask = candidates.filter((t) => techCost(t) <= myCost * 1.3).sort((a, b) => techCost(b) - techCost(a))[0] ?? wanted;
+      if (theirs.has(ask)) return false;
+      return act(ctx, { type: 'propose', to: o, give: [{ kind: 'tech', tech: mine }], receive: [{ kind: 'tech', tech: ask }] });
+    }
+  }
+  const mine = state.factions[me].stock, theirs = state.factions[o].stock;
+  const kinds = ['energy', 'metals', 'exotics'] as const;
+  for (const surplus of kinds) {
+    for (const short of kinds) {
+      if (surplus === short) continue;
+      const rich = surplus === 'exotics' ? 60 : 350, poor = short === 'exotics' ? 5 : 70;
+      if (mine[surplus] < rich || mine[short] > poor || theirs[short] < (short === 'exotics' ? 30 : 200)) continue;
+      const amount = surplus === 'exotics' ? 20 : 120;
+      const value = itemValue(state, me, o, { kind: 'resource', resource: surplus, amount });
+      const per = itemValue(state, o, me, { kind: 'resource', resource: short, amount: 1 });
+      const get = Math.floor((value / per) * 0.8);
+      if (get < 10) continue;
+      return act(ctx, { type: 'propose', to: o, give: [{ kind: 'resource', resource: surplus, amount }], receive: [{ kind: 'resource', resource: short, amount: get }] });
+    }
+  }
+  return false;
 }
 
 function bordersOn(ctx: Ctx, other: FactionId, dist: number): boolean {

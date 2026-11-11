@@ -9,6 +9,7 @@ import { factionIncome } from './economy';
 import { log } from './events';
 import { newId } from './ids';
 import { atWar, ownedHexes, relation } from './query';
+import { hexDistance } from './hex';
 import { grantTech, techCost, techEffects } from './research';
 import type { FactionId, GameState, Proposal, Relation, RelationStatus, TradeItem } from './types';
 
@@ -383,8 +384,65 @@ export function militaryStrength(state: GameState, faction: FactionId): number {
 }
 
 /** Positive means the recipient (computer) would accept. */
+/** Turns a pact has to hold before the two sides will talk about an alliance. */
+export const ALLIANCE_AFTER_PACT = 10;
+
+/**
+ * Why `p.to` (a computer power) refuses a proposal's pact, alliance or vassalage outright, however much
+ * else is offered: these are decisions, not purchases. Null when there is no such objection.
+ */
+export function statusObjection(state: GameState, p: Proposal): string | null {
+  const to = p.to, from = p.from;
+  const r = relation(state, from, to);
+  const op = Math.round(opinionOf(state, to, from));
+  const pers = factionDef(to).personality;
+  const name = factionDef(to).short;
+  const items = [...p.give, ...p.receive];
+  for (const s of items) {
+    if (s.kind !== 'status') continue;
+    if (s.status === 'nap' && op < 10) return `The ${name} don't trust you enough for a pact yet: their opinion of you is ${op}, and needs to be at least +10.`;
+    if (s.status === 'alliance') {
+      const held = r.status === 'nap' ? state.turn - r.since : 0;
+      if (held < ALLIANCE_AFTER_PACT) {
+        return r.status === 'nap'
+          ? `An alliance needs a non-aggression pact that has held for ${ALLIANCE_AFTER_PACT} turns. Yours has held ${held}.`
+          : `An alliance needs a non-aggression pact first, held for ${ALLIANCE_AFTER_PACT} turns.`;
+      }
+      if (op < 40) return `Their opinion of you is ${op}. An ally's needs to be at least +40.`;
+      if (sharedEnemies(state, from, to) === 0 && !(pers.diplomacy >= 0.6 && op >= 60)) {
+        return `The ${name} see no common enemy to fight together. Be at war with someone they are at war with${pers.diplomacy >= 0.6 ? ', or win their opinion to +60' : ''}.`;
+      }
+      if (hasAbility(to, 'honorBound') && militaryStrength(state, from) < militaryStrength(state, to) * 0.6) return 'The Ryn\'kai ally only with the strong. Build up your fleet.';
+      if (hasAbility(to, 'distributedCognition') && militaryStrength(state, from) < militaryStrength(state, to) * 0.4) return 'The Lattice calculates that you would add too little to an alliance.';
+      // Nobody wants to be the last piece of someone else's Grand Alliance.
+      const others = Object.values(state.factions).filter((f) => f.kind === 'major' && f.alive && f.id !== from && f.id !== to);
+      if (state.factions[from].kind === 'major' && others.every((o) => relation(state, from, o.id).status === 'alliance') && op < 80) {
+        return `Every other great power is already your ally. The ${name} will not complete your Grand Alliance unless their opinion of you reaches +80 (it is ${op}).`;
+      }
+    }
+  }
+  // Becoming a vassal: only to a much stronger power they like, and only with a reason.
+  const vassalOf = p.receive.some((i) => i.kind === 'vassal') ? from : p.give.some((i) => i.kind === 'vassal') ? null : undefined;
+  if (vassalOf) {
+    const mine = militaryStrength(state, to), theirs = militaryStrength(state, vassalOf);
+    if (theirs < mine * 3) return `The ${name} will only bow to a power at least three times as strong as they are.`;
+    const held = Object.values(state.factions).filter((f) => f.overlord === vassalOf).length;
+    const need = 40 + held * 10;
+    if (op < need && !atWar(state, to, vassalOf)) return `Their opinion of you is ${op}; it needs to be at least +${need}${held ? ` (each vassal you already hold makes the others warier)` : ''}.`;
+    const home = state.factions[to].home;
+    const nearby = Object.values(state.fleets).filter((f) => f.owner === vassalOf && hexDistance(state.map, f.hex, home) <= 3)
+      .reduce((a, f) => a + f.ships.length, 0);
+    const threatened = Object.keys(state.factions).some((x) => x !== vassalOf && atWar(state, to, x) && militaryStrength(state, x) > mine);
+    if (nearby < 3 && !threatened && !atWar(state, to, vassalOf)) {
+      return `The ${name} see no reason to give up their independence: bring a fleet (at least 3 ships) within 3 hexes of their home, or wait until an enemy they can't face alone threatens them.`;
+    }
+  }
+  return null;
+}
+
 export function proposalScore(state: GameState, p: Proposal): number {
   const to = p.to, from = p.from;
+  if (statusObjection(state, p)) return -1000;
   const pers = factionDef(to).personality;
   const gain = p.give.reduce((a, i) => a + itemValue(state, from, to, i), 0);
   const cost = p.receive.reduce((a, i) => a + itemValue(state, to, from, i), 0);
@@ -515,6 +573,17 @@ export function runDiplomacy(state: GameState, faction: FactionId): void {
     if (r.status === 'alliance') d += 1;
     d += sharedEnemies(state, faction, other);
     if ((borderFleets.get(other) ?? 0) > 0 && !r.agreements.includes('openBorders') && r.status !== 'alliance') d -= 2;
+    // Alliances come with obligations: an ally who stays out of our wars (more than 3 turns old, against a
+    // power they know and are not allied with) is resented a little more every turn.
+    if (r.status === 'alliance' && state.factions[other].kind === 'major') {
+      for (const x of Object.keys(state.factions)) {
+        if (x === faction || x === other || !state.factions[x].alive) continue;
+        const war = relation(state, faction, x);
+        if (war.status !== 'war' || state.turn - war.since <= 3) continue;
+        const theirs = relation(state, other, x);
+        if (theirs.contact && theirs.status !== 'war' && theirs.status !== 'alliance') { d -= 5; break; }
+      }
+    }
     adjustOpinion(state, faction, other, d);
   }
 
