@@ -215,7 +215,13 @@ input, select { background:#0a1022; color:var(--text); border:1px solid #33416b;
 .event { padding:3px 0; border-bottom:1px solid #161e38; }
 .setup-cols { display:grid; grid-template-columns:minmax(280px, 420px) minmax(300px, 1fr); gap:20px; max-width:1200px; margin:0 auto; }
 .mobile-only { display:none; }
-.msg-grid { display:grid; grid-template-columns:minmax(150px, 210px) minmax(0, 1fr); gap:12px; min-height:360px; }
+.msg-grid { display:grid; grid-template-columns:minmax(170px, 230px) minmax(0, 1fr); gap:12px; min-height:360px; }
+.dip-group { margin:10px 0 3px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); }
+.dip-entry { padding-top:5px; padding-bottom:5px; }
+.dip-entry-body { display:flex; flex-direction:column; gap:2px; width:100%; min-width:0; }
+.dip-facts { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--dim); }
+.dip-status.bad { color:var(--bad); } .dip-status.good { color:var(--good); } .dip-status.ok { color:#4fd1c5; }
+.dip-emb { letter-spacing:1px; color:#3a4569; } .dip-emb .on { color:var(--accent); }
 .msg-grid > * { min-width:0; }
 /* Mid-size windows: drop the turn number and per-turn changes (both are in the Empire panel) so the bar fits. */
 @media (min-width: 761px) and (max-width: 1180px) {
