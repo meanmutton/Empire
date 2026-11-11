@@ -526,6 +526,23 @@ Techs can be traded, stolen by spies, and shared through research agreements (§
 `War` ↔ `Hostile` ↔ `Neutral` (contact only) ↔ `Relations` (embassy) ↔ `Non-Aggression Pact` ↔ `Alliance`;
 plus `Vassal`/`Overlord` for minors.
 
+**Pacts and alliances are earned, not bought** (`statusObjection` in `src/engine/diplomacy.ts`). A computer power
+refuses these outright, whatever else the proposal offers, until its conditions are met, and the proposal
+screen says which one is missing:
+- **Non-aggression pact:** their opinion of you is at least +10.
+- **Alliance:**
+  - a pact that has held for 10 turns;
+  - their opinion of you is at least +40;
+  - a common enemy you are both at war with (diplomatic powers will accept +60 opinion instead);
+  - the Ryn'kai want you at least 60% as strong as they are, and the Lattice at least 40%.
+- **Completing a Grand Alliance:** a power will not become the last ally you need unless its opinion of you is
+  +80.
+
+**Alliances come with obligations.** An ally who stays out of a war you have fought for more than 3 turns
+(against a power they know and aren't allied with) costs 5 opinion a turn. A computer ally whose opinion
+falls below 0 ends the alliance. Ambitious or treacherous computer powers also walk out of an alliance with
+anyone 3 turns into a Grand Alliance streak. The Ryn'kai never break an alliance first.
+
 ### 9.3 Agreements (need an embassy)
 
 | Agreement | Effect |
@@ -561,8 +578,13 @@ and nothing is taken from the partner, so both always come out ahead. AI faction
 by value, opinion and personality.
 
 ### 9.5 Vassals
-- A minor can become a major's **vassal** by agreement (enough opinion plus influence through gifts or
-  pressure), by military pressure (major fleet strength ≥ 3× the minor's nearby), or by occupying its home system.
+- A minor becomes a major's **vassal** by agreement, and gifts alone never buy it. The minor needs three things:
+  - The major is at least **3× as strong**.
+  - The minor likes it: opinion of at least +40, plus 10 for each vassal the major already holds. This is
+    waived if the two are at war.
+  - It has **a reason**: the major has 3 or more ships within 3 hexes of its home, or the minor is at war with
+    someone stronger than itself.
+- It can also happen by occupying the minor's home system.
 - Vassals pay 20% of their income as tribute, join their overlord's wars, give vision, and can't be attacked by
   the overlord's allies. Overlords must defend them, or the vassal may break free.
 - A vassal whose overlord loses its home system becomes independent.
@@ -588,9 +610,11 @@ Computer-run great powers can't read free text, but they talk, and they understa
 **They speak to you** in their own voice when something happens between you: first contact, an embassy
 opening, declaring war (or being attacked), peace, signing a pact or alliance, being betrayed, sending you
 a proposal, accepting or refusing yours, receiving a gift, your warships trespassing in their space (at
-most every 5 turns), and winning or losing a battle against you. The Concord is warm and earnest, the
-Ryn'kai formal and honor-bound, the Varrhen coldly superior, the Krasnyr full of comradely double-talk,
-the Lattice terse and numeric. Minor factions don't talk.
+most every 5 turns), and winning or losing a battle against you. They speak in the words of whoever leads
+them this game (`src/ai/leader-voices.ts`): each of the fifteen leaders has their own voice, from Sean
+Sutton's jokes and Lindqvist's bluntness to Vel'dhara quoting the Ledger, Kesh's files, Malenkai's
+figures and HALCYON's single warnings. Any occasion a leader has no line for falls back to the faction's
+voice (`src/ai/voice.ts`). Minor factions don't talk.
 
 **You can make statements** to them, on your turn. Each power answers, and acts on its answer, at the
 start of its next turn. Each kind of statement can be made to a power once every 3 turns.

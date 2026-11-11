@@ -82,6 +82,9 @@ h3 { margin:12px 0 6px; font-size:12px; letter-spacing:.08em; text-transform:upp
 .portrait { flex:none; display:flex; align-items:center; justify-content:center; overflow:hidden; border:1px solid; border-radius:6px;
   background:radial-gradient(circle at 50% 40%, #1b2542, #0a0f1e); box-shadow:0 2px 10px #0008; }
 .portrait img { width:100%; height:100%; object-fit:cover; display:block; }
+.portrait.zoomable { cursor:zoom-in; }
+.portrait-zoom { display:flex; flex-direction:column; align-items:center; gap:10px; }
+.portrait-zoom img { width:min(360px, 78vw); aspect-ratio:4/5; object-fit:cover; border:2px solid; border-radius:8px; box-shadow:0 6px 30px #000c; }
 .portrait.avatar { border-radius:50%; position:relative; }
 .portrait.avatar img { position:absolute; width:170%; height:212%; max-width:none; left:-35%; top:-32%; }
 .leader-strip { display:flex; gap:10px; margin:6px 0 2px; }
@@ -118,12 +121,12 @@ h3 { margin:12px 0 6px; font-size:12px; letter-spacing:.08em; text-transform:upp
 .dip-head { display:flex; gap:12px; align-items:flex-start; }
 @media (max-width: 760px) { .dip-head .portrait { width:72px !important; height:90px !important; } }
 .card { background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:8px 10px; margin-bottom:8px; }
-.card.sel { border-color:var(--accent); }
+.card.sel { border:2px solid var(--accent); padding:7px 9px; background:#1b2340; box-shadow:0 0 0 1px #ffd16633, 0 0 12px #ffd16622; }
 .kv { display:grid; grid-template-columns:auto 1fr; gap:2px 10px; }
 .kv .k { color:var(--dim); }
 .ship-row { display:flex; align-items:center; gap:6px; padding:3px 0; }
 .ship-row canvas { width:28px; height:28px; }
-.ship-row.sel { background:#ffd16622; border-radius:4px; }
+.ship-row.sel { background:#ffd16622; border-radius:4px; box-shadow:inset 0 0 0 2px var(--accent); }
 .list-btn { display:flex; justify-content:space-between; align-items:center; width:100%; text-align:left; margin:2px 0; }
 .tabs { display:flex; gap:4px; margin:6px 0; flex-wrap:wrap; }
 .tabs .btn.on { background:#3a4a85; border-color:#5b6fb8; }

@@ -96,10 +96,11 @@ the Concord has a grandparent's story of the Ninety Days.
 - **Leaders:** title First Speaker.
   - **Ingrid Halvorsen-Okafor** was a xenoarchaeologist and has walked more Cryx ruins than any living human.
     She is curious and patient, and she treats every first contact as a dig site.
-  - **Mateo Lindqvist** is a negotiator who ended the Titan water strikes without a shot fired. He is warm,
-    funny, and unmovable on principle.
-  - **Sean Sutton** is a former fleet engineer and the most hawkish First Speaker in a century, which by
-    Concord standards still means careful.
+  - **Mateo Lindqvist** is a negotiator who ended the Titan water strikes without a shot fired. He is blunt,
+    unsentimental and unmovable on principle, and never says in ten words what he can say in three.
+  - **Sean Sutton** is a former fleet engineer, warm and funny, with a joke for every crisis. He is also the most
+    hawkish First Speaker in a century, which by Concord standards still means careful: he builds the ships
+    and hopes nobody needs them.
 
 ### Ryn'kai Dominion
 *Home: Ryn'kai Prime. Mammalian humanoids. A military dictatorship bound by an honour code.*

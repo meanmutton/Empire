@@ -2,7 +2,7 @@
 import { factionDef } from '../../data/factions';
 import { TECH_BY_ID } from '../../data/techs';
 import { hasEmbassy, opinionOf } from '../../engine/agents';
-import { AGREEMENTS, canPropose, proposalScore, type AgreementId } from '../../engine/diplomacy';
+import { AGREEMENTS, canPropose, proposalScore, statusObjection, type AgreementId } from '../../engine/diplomacy';
 import { relation } from '../../engine/query';
 import { getBit } from '../../engine/bitset';
 import { itemValue } from '../../engine/diplomacy';
@@ -57,6 +57,8 @@ export function seesTechOf(ui: GameUI, other: FactionId): boolean {
 export function openDiplomacy(ui: GameUI, focus: string = 'overview'): void {
   let current = focus.startsWith('ai:') ? focus.slice(3) : focus;
   let marketTab: MarketTab = 'exchange';
+  // 'market:routes' (and the like) opens the Market at that tab.
+  if (current.startsWith('market:')) { marketTab = current.slice(7) as MarketTab; current = 'market'; }
   const drafts = new Map<string, string>();
   const body = h('div', { class: 'msg-grid' });
   const messaging = ui.messaging;
@@ -90,7 +92,9 @@ export function openDiplomacy(ui: GameUI, focus: string = 'overview'): void {
       const ai = !humanSeat(ui, o) && g.factions[o].kind === 'major' ? aiUnread(ui, o) : 0;
       const pending = inbox.filter((p) => p.from === o).length;
       const st = relation(g, me, o).status;
-      entry(o, factionChip(o, true), chat + pending, st === 'war' ? 'war' : st === 'alliance' ? 'ally' : g.factions[o].kind === 'minor' ? 'minor' : '', ai);
+      const lord = g.factions[o].overlord;
+      const sub = st === 'war' ? 'war' : lord === me ? 'your vassal' : lord ? `vassal of ${factionDef(lord).short}` : st === 'alliance' ? 'ally' : g.factions[o].kind === 'minor' ? 'minor' : '';
+      entry(o, factionChip(o, true), chat + pending, sub, ai);
     }
     if (unmet) list.append(h('div', { class: 'dim', style: 'font-size:12px;margin-top:6px' }, `${unmet} power${unmet > 1 ? 's' : ''} not yet met.`));
     if (!met.length) list.append(h('div', { class: 'dim', style: 'font-size:12px;margin-top:6px' }, 'You have not met anyone yet. Explore with scouts.'));
@@ -147,7 +151,8 @@ function overviewPane(ui: GameUI, met: FactionId[], open: (key: string) => void,
     const op = opinionOf(g, o, me);
     table.append(h('tr', { style: 'cursor:pointer', onclick: () => open(o) },
       h('td', null, factionChip(o)),
-      h('td', { class: r.status === 'war' ? 'bad' : r.status === 'alliance' ? 'good' : '' }, STATUS_LABEL[r.status]),
+      h('td', { class: r.status === 'war' ? 'bad' : r.status === 'alliance' || g.factions[o].overlord === me ? 'good' : '' }, STATUS_LABEL[r.status],
+        g.factions[o].overlord ? h('div', { style: 'font-size:11px' }, g.factions[o].overlord === me ? 'your vassal' : `vassal of the ${factionDef(g.factions[o].overlord!).short}`) : ''),
       h('td', { class: op >= 0 ? 'good' : 'bad' }, num(op)),
       h('td', null, `${hasEmbassy(g, me, o) ? 'yours ✓' : 'yours ✗'} · ${hasEmbassy(g, o, me) ? 'theirs ✓' : 'theirs ✗'}`),
       h('td', null, r.agreements.map((a) => AGREEMENTS[a as AgreementId]?.name ?? a).join(', ') || h('span', { class: 'dim' }, 'none'))));
@@ -170,7 +175,7 @@ function factionPane(ui: GameUI, o: FactionId, drafts: Map<string, string>, rere
   const head = h('div', { class: 'dip-head' });
   head.append(portraitElement(o, leader.portrait, 104, leader.full), h('div', { class: 'grow', style: 'min-width:0' },
     h('div', { class: 'row' }, crestElement(o, 28, `${def.kind === 'major' ? 'Crest' : 'Seal'} of the ${def.short}`), h('b', { style: `font-size:16px;color:${def.color}` }, def.name), h('span', { class: 'grow' }),
-      h('span', { class: r.status === 'war' ? 'bad' : r.status === 'alliance' ? 'good' : 'dim' }, STATUS_LABEL[r.status])),
+      h('span', { class: r.status === 'war' ? 'bad' : r.status === 'alliance' || f.overlord === me ? 'good' : 'dim' }, f.overlord === me ? 'Your vassal' : STATUS_LABEL[r.status])),
     h('div', { style: 'margin:2px 0 4px' }, leader.full),
     h('div', { class: 'dim' }, `${def.government}${f.kind === 'minor' ? ' · minor power' : ''}${f.overlord ? ` · vassal of the ${factionDef(f.overlord).short}` : ''}${f.player ? ` · played by ${f.player}` : f.kind === 'major' ? ' · computer' : ''}`),
     h('div', { class: 'row', style: 'margin-top:4px;align-items:flex-start' }, h('span', { class: 'dim grow', style: 'font-size:12px' }, def.text),
@@ -255,8 +260,18 @@ function proposalCard(ui: GameUI, p: Proposal, rerender: () => void): HTMLElemen
     h('div', { class: 'row' }, incoming ? 'From ' : 'To ', factionChip(other), h('span', { class: 'grow' }),
       p.answer ? h('b', { class: p.answer === 'accepted' ? 'good' : 'bad' }, p.answer) : h('span', { class: 'dim' }, `turn ${p.turn}`)),
     h('div', { class: 'row', style: 'align-items:flex-start' },
-      h('div', { class: 'grow' }, h('div', { class: 'dim' }, 'You receive'), ...theyGive.map((i) => h('div', null, describeItem(ui, i))), theyGive.length ? null : h('div', { class: 'dim' }, 'nothing')),
-      h('div', { class: 'grow' }, h('div', { class: 'dim' }, 'You give'), ...youGive.map((i) => h('div', null, describeItem(ui, i))), youGive.length ? null : h('div', { class: 'dim' }, 'nothing'))));
+      ...(() => {
+        // Agreements, pacts and peace bind both sides: they are listed as shared, not as something given.
+        const shared = (i: TradeItem) => i.kind === 'agreement' || i.kind === 'status';
+        const both = [...theyGive, ...youGive].filter(shared);
+        const col = (label: string, items: TradeItem[]) => h('div', { class: 'grow' }, h('div', { class: 'dim' }, label),
+          ...items.map((i) => h('div', null, describeItem(ui, i))), items.length ? null : h('div', { class: 'dim' }, 'nothing'));
+        return [
+          ...(both.length ? [col('Both sides agree to', both)] : []),
+          col('You receive', theyGive.filter((i) => !shared(i))),
+          col('You give', youGive.filter((i) => !shared(i))),
+        ];
+      })()));
   if (incoming && !p.answer && ui.myTurn) {
     card.append(h('div', { class: 'row' }, h('span', { class: 'grow' }),
       button('Reject', () => { if (ui.act({ type: 'reject', proposal: p.id }, true)) rerender(); }, { cls: 'small' }),
@@ -287,8 +302,11 @@ function openProposal(ui: GameUI, to: FactionId, done: () => void): void {
     const preview: Proposal = { id: 'preview', from: me, to, turn: g.turn, give, receive, answer: null };
     const ai = g.factions[to].controller === 'ai';
     const score = give.length + receive.length ? proposalScore(g, preview) : 0;
+    // A pact, alliance or vassalage they won't accept at any price says why.
+    const objection = ai && (give.length || receive.length) ? statusObjection(g, preview) : null;
     body.append(h('div', { class: 'row' },
-      ai && (give.length || receive.length)
+      objection ? h('span', { class: 'bad' }, `They will refuse whatever you add: ${objection}`)
+      : ai && (give.length || receive.length)
         ? h('span', { class: score > 0 ? 'good' : 'bad' }, score > 0 ? 'They will probably accept' : 'They will probably refuse',
           receive.some((i) => i.kind === 'anyTech') && score > 0 ? ', if they know a technology you lack.' : '.')
         : h('span', { class: 'dim' }, ai ? 'Add something to trade.' : 'They will answer on their turn.'),

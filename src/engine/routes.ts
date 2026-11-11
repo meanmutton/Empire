@@ -37,7 +37,7 @@ function settled(state: GameState, hex: number, owner: FactionId): boolean {
   return h.owner === owner && !!h.system && h.system.development >= 2;
 }
 
-function canTradeWith(state: GameState, a: FactionId, b: FactionId): boolean {
+export function canTradeWith(state: GameState, a: FactionId, b: FactionId): boolean {
   if (a === b) return true;
   const r = relation(state, a, b);
   if (r.status === 'war' || !r.contact) return false;
@@ -96,6 +96,27 @@ export function routeValue(state: GameState, r: TradeRoute): number {
   if (hasAbility(r.owner, 'tradeHub') || hasAbility(r.partner, 'tradeHub')) v *= 1.5;
   if (r.owner === r.partner) v *= DOMESTIC_SHARE;
   return Math.round(v * 10) / 10;
+}
+
+/**
+ * Where `owner` could open a new route, best first: every settled system of a power it may trade with (or of
+ * its own, far enough from another of its settled systems), with the energy it would pay each turn. The
+ * estimate takes the straight-line distance from the nearest of the owner's settled systems.
+ */
+export function routeOptions(state: GameState, owner: FactionId, known?: (hex: number) => boolean): { hex: number; partner: FactionId; from: number; value: number }[] {
+  const mine = state.map.hexes.map((_, i) => i).filter((i) => settled(state, i, owner));
+  const out: { hex: number; partner: FactionId; from: number; value: number }[] = [];
+  state.map.hexes.forEach((h, to) => {
+    const partner = h.owner;
+    if (!partner || !settled(state, to, partner) || (known && !known(to)) || !canTradeWith(state, owner, partner)) return;
+    const origins = mine.filter((i) => i !== to && (partner !== owner || hexDistance(state.map, i, to) >= DOMESTIC_MIN_DISTANCE))
+      .filter((i) => !(state.routes ?? []).some((r) => (r.from === i && r.to === to) || (r.from === to && r.to === i)));
+    if (!origins.length) return;
+    const from = origins.reduce((a, b) => (hexDistance(state.map, a, to) <= hexDistance(state.map, b, to) ? a : b));
+    const len = hexDistance(state.map, from, to) + 1;
+    out.push({ hex: to, partner, from, value: routeValue(state, { id: '', owner, partner, from, to, path: new Array(len).fill(0), since: state.turn }) });
+  });
+  return out.sort((a, b) => b.value - a.value);
 }
 
 /** Who is cutting a route right now: enemy warships on it, or a blockaded end. Empty if it flows. */
