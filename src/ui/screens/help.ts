@@ -39,7 +39,7 @@ const SECTIONS: [string, string[]][] = [
     'Trade resources, technology, fleets, territory and star charts, or sign trade, research, economic and manufacturing agreements, pacts and alliances.',
     'Minor factions can become your vassals: they pay tribute and join your wars.',
     'Everything about other powers is in Diplomacy: relations, embassies (send a diplomat from there), proposals, and conversations. Pick a power on the left. Computer-run great powers talk to you there, and you can make statements to them (demand they withdraw, ask for help, threaten, reassure, ask their intentions, denounce a rival), and they answer on their turn.',
-    'Spies sneak into enemy systems to steal technology, sabotage, incite unrest or map territory.',
+    'Spies sneak into rival star systems to steal technology, raid the treasury, sabotage, incite unrest or map territory: select a spy there to see every mission with its odds. You will hear when someone’s spies hit you, and sometimes whose.',
   ]],
   ['Keyboard shortcuts', [
     'W A S D: scroll the map (hold to keep scrolling). + and − (or E and Q): zoom. H: centre on your capital.',

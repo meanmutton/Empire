@@ -16,7 +16,7 @@ import { getBit } from '../engine/bitset';
 import { cargoFree } from '../engine/ground';
 import { blockadersAt } from '../engine/blockade';
 import { checkBuild, factionIncome, popCapOf, productionOf, REPEAT_FALLOFF, rushCost, slotsOf, systemYield } from '../engine/economy';
-import { MISSIONS, type MissionId } from '../engine/espionage';
+import { MISSIONS, successChance, type MissionId } from '../engine/espionage';
 import { groupSize, planPath, reachableThisTurn } from '../engine/movement';
 import { activeFaction, relation } from '../engine/query';
 import { availableTechs, techCost } from '../engine/research';
@@ -1009,7 +1009,7 @@ export class GameUI {
         ['Develop to next level', 'develop', '', `Raises ${sys.name} to ${DEV_NAMES[Math.min(5, sys.development + 1)]}: higher yields, more population and more improvement slots.`],
         ['Army', 'army', '', 'A ground army (strength 10) for defending this world or, carried by transports, invading others. Costs 1 population.'],
         ['Diplomat', 'diplomat', '', 'Opens an embassy when sent to another power’s capital (Diplomacy → Send diplomat). You need an embassy to trade or sign treaties.'],
-        ['Spy', 'spy', '', 'Runs missions in rival systems (steal technology, sabotage, incite unrest) or watches a capital for intelligence. Can be caught.'],
+        ['Spy', 'spy', '', 'Runs missions in rival systems (steal technology, raid the treasury, sabotage, incite unrest) or watches a capital for intelligence. Can be caught.'],
         ['Ascension Gate', 'wonder', 'ascensionGate', 'The Concord’s path to an Ascendance victory.'],
       ];
       for (const [label, kind, item, text] of items) {
@@ -1174,10 +1174,24 @@ export class GameUI {
     if (a.resident) acts.append(button('Recall', () => this.act({ type: 'recall', agent: id }), { cls: 'small' }));
     if (a.kind === 'spy') {
       const here = g.map.hexes[a.hex];
-      if (here.owner && here.owner !== this.viewer && here.system) {
-        const m = h('select', null, ...Object.entries(MISSIONS).map(([k, v]) => h('option', { value: k, title: v.text }, v.name)));
-        acts.append(m, button('Start', () => this.act({ type: 'mission', agent: id, mission: m.value as MissionId }), { cls: 'small' }));
-      } else acts.append(h('span', { class: 'dim' }, 'Press Move and tap a foreign system to send the spy there.'));
+      // Every mission this spy could run here, with its odds; elsewhere, what it could do once it arrives.
+      const usable = (Object.keys(MISSIONS) as MissionId[]).filter((k) => (k !== 'subversion' || hasAbility(this.viewer, 'fifthColumn')));
+      if (here.owner && here.owner !== this.viewer && here.system && !a.mission) {
+        const target = here.owner;
+        const list = h('div', { class: 'mission-list' });
+        for (const k of usable) {
+          if (k === 'assassinate' && here.system.homeOf !== target) continue;
+          const odds = Math.round(successChance(g, this.viewer, target, k) * 100);
+          list.append(h('div', { class: 'mission-row' },
+            button(MISSIONS[k].name, () => this.act({ type: 'mission', agent: id, mission: k }), { cls: 'small', title: MISSIONS[k].text }),
+            h('span', { class: 'dim grow', style: 'font-size:11px' }, `${MISSIONS[k].text} ${MISSIONS[k].turns} turn${MISSIONS[k].turns > 1 ? 's' : ''}, ${odds}% success.`)));
+        }
+        card.append(h('div', { style: 'margin-top:6px;font-size:12px' }, h('b', null, `Missions against the ${factionDef(target).short} here`), list,
+          h('div', { class: 'dim', style: 'font-size:11px' }, 'A failed mission can get the spy caught.')));
+      } else if (!a.mission) {
+        acts.append(h('div', { class: 'dim', style: 'font-size:12px' },
+          `Move this spy into a rival’s star system to run a mission there: ${usable.filter((k) => k !== 'assassinate').map((k) => MISSIONS[k].name).join(', ')}; at a capital, also ${MISSIONS.assassinate.name}. A spy left at a rival’s capital gathers intelligence instead; one at your own capital guards it.`));
+      }
     }
     const ships = Object.values(g.fleets).filter((f) => f.owner === this.viewer && f.hex === a.hex).flatMap((f) => f.ships).filter((s) => cargoFree(g, s) > 0);
     if (ships.length && !a.resident) acts.append(button('Board ship', () => this.act({ type: 'board', agent: id, ship: ships[0] }), { cls: 'small' }));

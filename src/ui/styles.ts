@@ -93,6 +93,9 @@ h3 { margin:12px 0 6px; font-size:12px; letter-spacing:.08em; text-transform:upp
 .leader-pick.on .leader-name { color:var(--accent); }
 .crest { display:inline-block; flex:none; line-height:0; }
 .crest svg { width:100%; height:100%; display:block; filter:drop-shadow(0 2px 4px #0009); }
+.mission-list { display:grid; gap:4px; margin:4px 0; }
+.mission-row { display:flex; gap:8px; align-items:center; }
+.mission-row .btn { flex:none; min-width:150px; }
 .guide-grid { display:grid; grid-template-columns:minmax(170px, 230px) minmax(0, 1fr); gap:14px; min-height:420px; }
 .guide-grid > * { min-width:0; }
 .guide-list { display:flex; flex-direction:column; max-height:70vh; overflow:auto; padding-right:4px; }

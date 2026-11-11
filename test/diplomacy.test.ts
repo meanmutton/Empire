@@ -190,6 +190,28 @@ describe('espionage', () => {
     return id;
   }
 
+  it('raids a rival treasury, and the victim hears about it', () => {
+    let raided = 0, told = 0;
+    for (let t = 0; t < 10; t++) {
+      const g = newGame('raid');
+      g.rng = seedRng(`r${t}`);
+      g.factions.lattice.stock.energy = 600;
+      g.factions.lattice.stock.metals = 400;
+      const before = g.factions.krasnyr.stock.energy;
+      const id = spyAt(g, 'krasnyr', g.factions.lattice.home);
+      expect(startMission(g, id, 'raid').ok).toBe(true);
+      for (let i = 0; i < 2; i++) runEspionage(g, 'krasnyr');
+      if (g.factions.krasnyr.stock.energy >= before + 90) {
+        raided++;
+        expect(g.factions.lattice.stock.energy).toBe(510);
+        expect(g.factions.lattice.stock.metals).toBe(340);
+        if (g.log.some((e) => e.to.includes('lattice') && /raided the treasury/.test(e.text))) told++;
+      }
+    }
+    expect(raided).toBeGreaterThan(3);
+    expect(told).toBe(raided);
+  });
+
   it('steals tech over a few turns', () => {
     let stolen = 0;
     for (let t = 0; t < 10; t++) {

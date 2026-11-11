@@ -368,8 +368,10 @@ A ship design = class + role + faction style. The role sets how the class's slot
 - **Armies**: built at systems with population; carried by Cargo/Troop ships; invade systems by beating the
   garrison in a ground battle. Strength, morale, experience.
 - **Spies**: move covertly (only visible to science vessels and starbases with detection). Missions:
-  Steal Tech, Sabotage (destroy an improvement or delay a build), Incite Unrest, Subversion (Krasnyr only),
-  Counter-intelligence, Assassinate Diplomat, Reveal Fleets.
+  Steal Tech, Raid the Treasury (steal 15% of the target's energy and metals, up to 150 of each), Sabotage
+  (destroy an improvement or delay a build), Incite Unrest, Subversion (Krasnyr only), Assassinate Diplomat,
+  Reveal Territory. A spy's panel lists every mission it could run where it stands, with the odds. Victims
+  always learn what was done to them, and half the time whose spies did it (−10 opinion).
 - **Diplomats**: travel physically to a faction's home system to open relations (§9). Can ride in ships.
   Capturable by enemy ships.
 - **Starbases**: built by Constructors in owned hexes; tiers Outpost Station → Starbase → Citadel.
