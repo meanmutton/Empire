@@ -14,6 +14,7 @@ import type { FactionId, GameState } from './types';
 export const MISSIONS = {
   stealTech: { name: 'Steal Technology', turns: 3, base: 0.45, text: 'Steal a technology the target knows.' },
   sabotage: { name: 'Sabotage', turns: 2, base: 0.5, text: 'Destroy an improvement or wreck the build queue.' },
+  raid: { name: 'Raid the Treasury', turns: 2, base: 0.5, text: 'Steal 15% of the target’s energy and metals (up to 150 of each).' },
   incite: { name: 'Incite Unrest', turns: 2, base: 0.55, text: 'Raise unrest in the system by 30.' },
   subversion: { name: 'Subversion', turns: 3, base: 0.45, text: 'Krasnyr only: raise unrest by 25; at 100 the system defects.' },
   reveal: { name: 'Reveal Territory', turns: 1, base: 0.7, text: 'Map all of the target’s territory.' },
@@ -81,6 +82,13 @@ function succeed(state: GameState, rng: Rng, agentId: string, mission: MissionId
   const a = state.agents[agentId];
   const me = a.owner;
   const sys = state.map.hexes[a.hex].system!;
+  // The victim always notices the damage; half the time it also learns whose spies did it (and minds).
+  const named = rng.chance(0.5);
+  const culprit = named ? `${factionDef(me).short} spies` : 'Foreign spies';
+  const tell = (text: string) => {
+    log(state, [target], 'spy', text, a.hex);
+    if (named) { adjustOpinion(state, target, me, -10); relation(state, me, target).contact = true; }
+  };
   switch (mission) {
     case 'stealTech': {
       const mine = new Set(state.factions[me].research.known);
@@ -89,6 +97,16 @@ function succeed(state: GameState, rng: Rng, agentId: string, mission: MissionId
       const t = rng.pick(options);
       grantTech(state, me, t);
       log(state, [me], 'spy', `Spies stole ${TECH_BY_ID[t].name} from ${factionDef(target).short}.`, a.hex);
+      tell(`${culprit} stole the secrets of ${TECH_BY_ID[t].name} from ${sys.name}.`);
+      return;
+    }
+    case 'raid': {
+      const ts = state.factions[target].stock, ms = state.factions[me].stock;
+      const energy = Math.floor(Math.min(150, Math.max(0, ts.energy) * 0.15)), metals = Math.floor(Math.min(150, Math.max(0, ts.metals) * 0.15));
+      ts.energy -= energy; ts.metals -= metals;
+      ms.energy += energy; ms.metals += metals;
+      log(state, [me], 'spy', `Spies raided the ${factionDef(target).short} treasury at ${sys.name}: +${energy} energy, +${metals} metals.`, a.hex);
+      tell(`${culprit} raided the treasury at ${sys.name}: ${energy} energy and ${metals} metals are gone.`);
       return;
     }
     case 'sabotage': {
@@ -105,6 +123,7 @@ function succeed(state: GameState, rng: Rng, agentId: string, mission: MissionId
     case 'incite':
       sys.unrest = Math.min(100, sys.unrest + 30);
       log(state, [me], 'spy', `Unrest is spreading on ${sys.name}.`, a.hex);
+      tell(`${culprit} are stirring up unrest on ${sys.name}.`);
       return;
     case 'subversion':
       sys.unrest = Math.min(100, sys.unrest + 25);

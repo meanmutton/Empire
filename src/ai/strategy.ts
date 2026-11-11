@@ -145,10 +145,12 @@ export function isRunaway(state: GameState, f: FactionId): boolean {
   return score(state, f) > avg * 1.4;
 }
 
+type SpyMission = 'stealTech' | 'sabotage' | 'incite' | 'subversion' | 'raid';
+
 /** Best place for a spy to work, and the mission to run there. */
-export function spyTarget(state: GameState, me: FactionId, from: number, enemies: FactionId[]): { hex: number; mission: 'stealTech' | 'sabotage' | 'incite' | 'subversion' } | null {
+export function spyTarget(state: GameState, me: FactionId, from: number, enemies: FactionId[]): { hex: number; mission: SpyMission } | null {
   const mine = new Set(state.factions[me].research.known);
-  let best: { hex: number; mission: 'stealTech' | 'sabotage' | 'incite' | 'subversion' } | null = null, bestScore = -Infinity;
+  let best: { hex: number; mission: SpyMission } | null = null, bestScore = -Infinity;
   for (const o of Object.values(state.factions)) {
     if (o.id === me || !o.alive || o.kind !== 'major' || !relation(state, me, o.id).contact || relation(state, me, o.id).status === 'alliance') continue;
     if (hasAbility(o.id, 'mindShield')) continue;
@@ -159,11 +161,13 @@ export function spyTarget(state: GameState, me: FactionId, from: number, enemies
       if (!sys || sys.development === 0) continue;
       const dist = hexDistance(state.map, from, h);
       if (dist > 20) continue;
-      let mission: 'stealTech' | 'sabotage' | 'incite' | 'subversion' = 'incite';
+      let mission: SpyMission = 'incite';
       let s = sys.development + sys.improvements.length - dist * 0.3;
       if (hasAbility(me, 'fifthColumn') && !sys.homeOf) { mission = 'subversion'; s += sys.unrest / 10 + 3; }
       else if (war && sys.improvements.some((i) => i === 'shipyard' || i === 'heavyShipyard')) { mission = 'sabotage'; s += 4; }
       else if (techGap >= 2) { mission = 'stealTech'; s += techGap; }
+      // A rich rival is worth robbing, more so in wartime.
+      else if (o.stock.energy + o.stock.metals > 300) { mission = 'raid'; s += 2 + (o.stock.energy + o.stock.metals) / 300 + (war ? 2 : 0); }
       if (s > bestScore) { bestScore = s; best = { hex: h, mission }; }
     }
   }

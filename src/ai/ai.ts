@@ -186,7 +186,10 @@ function diplomacy(ctx: Ctx): void {
 
   // War decisions (majors; minors only very aggressive ones, rarely).
   if (!ctx.major && p.aggression < 0.85) return;
-  if (ctx.enemies.length >= (ctx.major ? 2 : 1)) return;
+  // Wars with minor factions don't hold back a great power: it limits itself to one or two great-power wars
+  // at a time (two for the aggressive), whatever skirmishes it has with pirates and the like.
+  const majorEnemies = ctx.enemies.filter((o) => state.factions[o].kind === 'major').length;
+  if (ctx.major ? majorEnemies >= (p.aggression >= 0.6 ? 2 : 1) : ctx.enemies.length >= 1) return;
   if (state.turn < 12) return;
   const period = hasAbility(me, 'distributedCognition') ? 5 : 4;
   if ((state.turn + me.length) % period !== 0) return;
@@ -205,7 +208,7 @@ function diplomacy(ctx: Ctx): void {
     const threat = perceivedThreat(state, me, o);
     const runaway = state.factions[o].kind === 'major' && isRunaway(state, o);
     if (warsAgainst(state, o) >= 2 && threat < 0.7 && !runaway) continue;
-    const need = 2.2 - p.aggression * 1.2 + op / 100 - (threat >= 0.7 ? 0.8 : 0) - (runaway ? 0.5 : 0);
+    const need = 1.7 - p.aggression * 1.1 + op / 100 - (threat >= 0.7 ? 0.8 : 0) - (runaway ? 0.5 : 0);
     if (ratio > need && ratio > bestRatio) { bestRatio = ratio; target = o; }
   }
   const lattice = hasAbility(me, 'distributedCognition') ? ctx.rng.chance(0.5) : true;
@@ -311,7 +314,7 @@ function build(ctx: Ctx): void {
   const colonyTargets = ctx.major ? findColonyTargets(ctx, true).length : 0;
   const outpostTargets = findColonyTargets(ctx, false).length;
   const warStrength = fleets.filter((x) => classifyFleet(state, x) === 'war').reduce((a, x) => a + x.ships.length, 0);
-  const wantWarships = Math.round((ctx.major ? 6 : 3) + state.turn * (ctx.major ? 0.25 : 0.06) * (0.5 + ctx.p.aggression) + ctx.enemies.length * 6);
+  const wantWarships = Math.round((ctx.major ? 8 : 3) + state.turn * (ctx.major ? 0.35 : 0.06) * (0.5 + ctx.p.aggression) + ctx.enemies.length * 6);
   const armies = Object.values(state.armies).filter((a) => a.owner === me).length;
 
   for (const hex of systems) {
@@ -320,15 +323,24 @@ function build(ctx: Ctx): void {
     const yard = sys.improvements.includes('shipyard') || sys.improvements.includes('heavyShipyard');
     const tryBuild = (a: Action) => act(ctx, a);
     if (yard) {
+      // A navy before more settlers: below half the wanted fleet, warships come first.
+      if (ctx.major && warStrength < wantWarships / 2 && state.turn >= 6 && ctx.netEnergy > 2) {
+        const d = pickDesign(ctx, hex, (x) => x.role === 'line' || x.role === 'escort' || x.role === 'carrier' || x.role === 'raider', true);
+        if (d && d.upkeep < ctx.netEnergy - 1 && tryBuild({ type: 'build', hex, kind: 'ship', item: d.id })) {
+          ctx.netEnergy -= d.upkeep;
+          continue;
+        }
+      }
       if (ctx.major && count('scout') + queued('scout') < (state.turn < 40 ? 2 : 1)) {
         const d = pickDesign(ctx, hex, (x) => x.role === 'scout' || x.role === 'explore');
         if (d && tryBuild({ type: 'build', hex, kind: 'ship', item: d.id })) continue;
       }
-      if (ctx.major && colonyTargets > 0 && count('colony') + queued('colony') < 2) {
+      // Expansionist powers keep more colony ships and constructors in flight.
+      if (ctx.major && colonyTargets > 0 && count('colony') + queued('colony') < (ctx.p.expansion >= 0.7 ? 3 : 2)) {
         const d = pickDesign(ctx, hex, (x) => x.role === 'colony');
         if (d && tryBuild({ type: 'build', hex, kind: 'ship', item: d.id })) continue;
       }
-      if (outpostTargets > 0 && count('constructor') + queued('constructor') < (ctx.major ? 2 : 0)) {
+      if (outpostTargets > 0 && count('constructor') + queued('constructor') < (ctx.major ? (ctx.p.expansion >= 0.7 ? 3 : 2) : 0)) {
         const d = pickDesign(ctx, hex, (x) => x.role === 'constructor');
         if (d && tryBuild({ type: 'build', hex, kind: 'ship', item: d.id })) continue;
       }
@@ -348,7 +360,7 @@ function build(ctx: Ctx): void {
         if (tryBuild({ type: 'build', hex, kind: 'army', item: '' })) continue;
       }
       // Warships, as long as the energy economy can carry their upkeep.
-      if ((warStrength < wantWarships || f.stock.metals > 300) && ctx.netEnergy > 2) {
+      if ((warStrength < wantWarships || f.stock.metals > 200) && ctx.netEnergy > 2) {
         const d = pickDesign(ctx, hex, (x) => x.role === 'line' || x.role === 'escort' || x.role === 'carrier' || x.role === 'raider', true);
         if (d && d.upkeep < ctx.netEnergy - 1 && tryBuild({ type: 'build', hex, kind: 'ship', item: d.id })) {
           ctx.netEnergy -= d.upkeep;
@@ -367,9 +379,10 @@ function build(ctx: Ctx): void {
     if (ctx.major && f.flags.ascensionGate === undefined && sys.homeOf === me) {
       if (checkBuild(state, me, hex, 'wonder', 'ascensionGate').ok) tryBuild({ type: 'build', hex, kind: 'wonder', item: 'ascensionGate' });
     }
+    const wantSpies = 1 + Math.round(ctx.p.espionage * 3) + (state.turn > 40 ? 1 : 0);
     if (ctx.major && f.stock.energy > 120 && Object.values(state.agents).filter((a) => a.owner === me && a.kind === 'diplomat' && !a.capturedBy).length < 2 && sys.homeOf === me) {
       tryBuild({ type: 'build', hex, kind: 'diplomat', item: '' });
-    } else if (ctx.major && ctx.p.espionage > 0.5 && f.stock.energy > 150 && Object.values(state.agents).filter((a) => a.owner === me && a.kind === 'spy').length < 3 && sys.homeOf === me) {
+    } else if (ctx.major && state.turn >= 8 && f.stock.energy > 100 && Object.values(state.agents).filter((a) => a.owner === me && a.kind === 'spy' && !a.capturedBy).length < wantSpies && sys.homeOf === me) {
       tryBuild({ type: 'build', hex, kind: 'spy', item: '' });
     }
   }
@@ -378,9 +391,9 @@ function build(ctx: Ctx): void {
 /** Covers shortages on the galactic exchange from a big surplus of something else. */
 function trade(ctx: Ctx): void {
   const s = ctx.state.factions[ctx.me].stock;
-  const spare = 200 + ctx.state.turn * 2;
-  if (s.metals < 60 && s.energy > spare + 100) act(ctx, { type: 'exchange', sell: 'energy', buy: 'metals', amount: Math.min(200, s.energy - spare) });
-  else if (s.energy < 40 && s.metals > 300) act(ctx, { type: 'exchange', sell: 'metals', buy: 'energy', amount: 120 });
+  const spare = 80 + ctx.state.turn;
+  if (s.metals < 150 && s.energy > spare + 60) act(ctx, { type: 'exchange', sell: 'energy', buy: 'metals', amount: Math.min(250, Math.floor(s.energy - spare)) });
+  else if (s.energy < 80 && s.metals > 300) act(ctx, { type: 'exchange', sell: 'metals', buy: 'energy', amount: Math.min(400, Math.floor(s.metals - 200)) });
   if (s.exotics < 15 && ctx.state.factions[ctx.me].research.known.includes('hull4') && s.energy > spare + 150) {
     act(ctx, { type: 'exchange', sell: 'energy', buy: 'exotics', amount: 150 });
   }
@@ -400,7 +413,7 @@ function trade(ctx: Ctx): void {
 function rush(ctx: Ctx): void {
   const { state, me } = ctx;
   const stock = state.factions[me].stock;
-  const reserve = 150 + state.turn * 2;
+  const reserve = 100 + state.turn;
   const heads = ownedHexes(state, me).filter((h) => state.map.hexes[h].system?.queue.length)
     .map((h) => ({ h, c: rushCost(state, h) })).sort((a, b) => a.c - b.c);
   for (const { h, c } of heads) {
@@ -417,6 +430,8 @@ function chooseImprovement(ctx: Ctx, hex: number): string | null {
   if (sys.development >= 3 && !has('shipyard') && ownedHexes(ctx.state, ctx.me).filter((h) => ctx.state.map.hexes[h].system?.improvements.includes('shipyard')).length < 3) order.push('shipyard');
   if (sys.development >= 4 && !has('heavyShipyard')) order.push('heavyShipyard');
   if (sys.development === 5 && availableVictories(ctx.state, ctx.me).includes('singularity')) order.push('lab');
+  if (ctx.netEnergy < 4) order.push('fusionReactor', 'powerPlant');
+  if (ctx.state.factions[ctx.me].stock.metals < 100 && p.metals > 0) order.push('mine', 'deepMine');
   if (p.metals >= p.energy && p.metals >= p.science) order.push('deepMine', 'mine', 'factory', 'fusionReactor', 'powerPlant', 'university', 'lab');
   else if (p.science >= p.energy) order.push('university', 'lab', 'factory', 'deepMine', 'mine', 'fusionReactor', 'powerPlant');
   else order.push('fusionReactor', 'powerPlant', 'factory', 'deepMine', 'mine', 'university', 'lab');
