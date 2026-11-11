@@ -196,12 +196,12 @@ type**, a size (1–5) and a development level (§5.2).
 |-------------|------------|-------|
 | Terran, Ocean, Jungle | high | Best colony worlds; colony ships found a level-2 colony. |
 | Desert, Arctic | medium | Habitable; colony ships found a level-2 colony. |
-| Barren, Volcanic | very low | Metals; outposts. |
-| Gas giant | none | Energy and exotics; can only be developed to level 2 (outposts and orbital stations). |
+| Barren, Volcanic | very low | Metals; footholds. |
+| Gas giant | none | Energy and exotics; can only be developed to level 2 (footholds and colonies). |
 | Asteroid belt | very low | The system type found in asteroid fields; double metals with Deep-Core Mining. |
 
 A system's state comes from who owns it and how developed it is: **unsettled** (development 0, anyone can
-found an outpost or colony), an **independent colony** (pre-existing, level 1–2, with its own planetary defense
+settle it with a colony ship, or hold it with an outpost), an **independent colony** (pre-existing, level 1–2, with its own planetary defense
 and garrison), a faction's **colony**, or a **home system** (majors start at level 4, minors at 3). A system
 may also hold **ancient ruins**, a one-time reward for the first survey ship or colony.
 
@@ -239,13 +239,13 @@ Every system has a **planet type**, a **size** (1–5), base yields, and a **dev
 | Level | Name | Unlocks |
 |-------|------|---------|
 | 0 | Unclaimed / Survey | — |
-| 1 | Outpost | claims the hex |
+| 1 | Foothold | a colony ship's settlement on a harsh world (population cap below 4); claims the hex |
 | 2 | Colony | population can grow; spies and diplomats |
 | 3 | Settlement | shipyard (up to Destroyer) |
 | 4 | Industrial World | heavy shipyard (all classes) |
 | 5 | Core World | highest yields (×2.5 base) |
 
-**Improvement slots** = size + 2 × development − 1 (at least 2): from 2 on a small new outpost to 14 on a
+**Improvement slots** = size + 2 × development − 1 (at least 2): from 2 on a small new foothold to 14 on a
 large core world. Gas giants and similar uninhabitable worlds can be developed only to level 2.
 
 Builds are paid for up front when queued; each system then puts production points into its own queue
@@ -267,16 +267,36 @@ one before (100%, 80%, 64%, …), so a mix pays better than a stack.
   hex becomes yours at the **start of your next turn** if, at the end of your turn, your ship or battle group
   was in it with no other non-allied forces there. This gives enemies one round to contest or recapture it.
 - Taking an **enemy-owned** hex requires being at war with its owner.
-- **Settled planets** (any development level, including undefended outposts and independent colonies) are
+- **Settled planets** (any development level, including undefended footholds and independent colonies) are
   never taken by presence: fleets knock their planetary defense down to 0 in combat, then armies **invade**
   (§7.5).
 - An **enemy starbase** in a hex blocks any claim there until it is destroyed in combat.
+- **Outposts** are monitoring posts, not settlements. A Constructor builds one (30 metals, 10 energy; the
+  constructor survives but spends its turn) in any hex of your own territory or unclaimed space, one per hex,
+  never in a black hole or beside non-allied forces. It claims the hex at once and holds it: nobody can claim
+  that hex while the outpost stands, and it keeps the territory around it connected (see cut-off territory).
+  It watches the hexes around it exactly as far as your scouts see (their sensors plus your sensor techs),
+  and, like a scout, doesn't reveal cloaked ships. It has no yields, slots, population or build queue. A
+  world under your outpost can still be settled by your colony ship. Outposts are unarmed: enemy warships
+  (at war) in the hex, with none of the owner's forces left there, destroy it at the end of their turn,
+  after which the hex can be claimed as usual.
 - **Enclosed space**: at the start of your turn, any pocket of unowned hexes (up to 60) that your territory
   completely surrounds becomes yours, without ships. A pocket that touches the map edge or borders anyone
   else's territory doesn't count. Inside it, settled independent worlds, black holes and hexes with other
   powers' ships stay unclaimed.
 - An owned hex not connected to your home by a chain of owned hexes is **disconnected**: −50% yields
   *(tunable)*.
+- **Cut-off territory changes hands**: owned hexes with none of their owner's planets, outposts or starbases
+  connected to them (through the owner's territory) for **10 turns** pass to the power that **completely
+  engulfs** them: every hex bordering the piece belongs to that one power, and it doesn't touch the map edge.
+  If no single power surrounds it, it stays where it is. Hexes where the owner has ships, and settled worlds,
+  are never handed over this way. The hex panel shows the countdown and who would get it.
+- The hex panel also says, wherever your ships are, whether they will claim the hex and, if not, why not.
+
+**Moving more than one turn.** A fleet sent further than it can go this turn moves as far as it can at once
+and keeps the rest of its route. On each later turn it starts with its full movement and its route still set:
+you can redirect or stop it, and if you leave it alone it carries on along the route at the **end of your
+turn** (before battles and claims).
 
 ### 5.4 Income each turn
 `yield = base(system type) × development multiplier × improvement bonuses × faction modifiers × treaties`,
@@ -352,10 +372,10 @@ A ship design = class + role + faction style. The role sets how the class's slot
 | Ship-of-the-Line | Balanced weapons, shields and hull |
 | Fighter Carrier | Hangar for fighters; light weapons |
 | Escort | Point defense, shields; protects other ships (takes hits for them) |
-| Science Vessel | Survey, +science while orbiting anomalies, reveals cloaked ships |
+| Science Vessel | +2 science a turn, +5 while studying a nebula, pulsar, neutron star, ion storm or wormhole or beside a black hole; surveys ruins; reveals cloaked ships and spies in sensor range |
 | Cargo Vessel | Carries armies, colonists, resources; trade routes |
-| Colony Ship | Founds an Outpost/Colony on a system (consumed) |
-| Constructor | Builds starbases and outposts; upgrades systems remotely |
+| Colony Ship | Settles a system: a Colony (level 2) on habitable worlds, a Foothold (level 1) on harsh ones (consumed) |
+| Constructor | Builds outposts (monitoring posts, §5.3) and starbases |
 | Troop Transport | Heavy-duty army carrier with landing bonus |
 | Raider | Speed and missiles; bonus vs Cargo/Colony ships |
 
@@ -374,7 +394,7 @@ A ship design = class + role + faction style. The role sets how the class's slot
   always learn what was done to them, and half the time whose spies did it (−10 opinion).
 - **Diplomats**: travel physically to a faction's home system to open relations (§9). Can ride in ships.
   Capturable by enemy ships.
-- **Starbases**: built by Constructors in owned hexes; tiers Outpost Station → Starbase → Citadel.
+- **Starbases**: built by Constructors in owned hexes; tiers Orbital Station → Starbase → Citadel.
   Defense, shipyard and repair in empty space, extra sensor range, supply.
 
 ## 7. Combat

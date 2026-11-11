@@ -78,7 +78,7 @@ export const TECHS: TechDef[] = [
   T('aegis', 'Aegis Barrier', 'defense', 5, ['reactiveArmor'], 'Shields +25%.', { shields: 0.25 }),
   T('citadelDoctrine', 'Citadel Doctrine', 'defense', 6, ['aegis', 'planetaryFortress'], 'Starbases +50% hull, planetary defenses +50%.', { starbaseHull: 0.5, planetDefense: 0.5 }),
   // Construction
-  T('starbase1', 'Orbital Stations', 'construction', 1, [], 'Constructors can build Outpost Stations.'),
+  T('starbase1', 'Orbital Stations', 'construction', 1, [], 'Constructors can build Orbital Stations (tier-1 starbases).'),
   T('asteroidMining', 'Asteroid Mining', 'construction', 1, [], 'Asteroid belts yield +50% metals.', { asteroidMetals: 0.5 }),
   T('hull2', 'Hull Engineering II', 'construction', 2, ['starbase1'], 'Unlocks Destroyers and Light Cruisers.'),
   T('starbase2', 'Starbases', 'construction', 3, ['hull2'], 'Upgrade stations to Starbases.'),

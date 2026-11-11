@@ -15,13 +15,13 @@ import { applyAction, type Action } from '../engine/actions';
 import { getBit } from '../engine/bitset';
 import { cargoFree } from '../engine/ground';
 import { blockadersAt } from '../engine/blockade';
-import { checkBuild, factionIncome, popCapOf, productionOf, rushCost, systemYield } from '../engine/economy';
+import { checkBuild, factionIncome, popCapOf, productionOf, rushCost, SCIENCE_SHIP, studySite, systemYield } from '../engine/economy';
 import { MISSIONS, successChance, type MissionId } from '../engine/espionage';
-import { groupSize, planPath, reachableThisTurn } from '../engine/movement';
+import { claimBlocker, engulfer, groupSize, ORPHAN_TURNS, OUTPOST_COST, outpostBlocker, planPath, reachableThisTurn, territoryPiece } from '../engine/movement';
 import { activeFaction, relation } from '../engine/query';
 import { availableTechs, techCost } from '../engine/research';
 import type { Fleet, GameState } from '../engine/types';
-import { canSeeFleet } from '../engine/visibility';
+import { canSeeFleet, outpostRange } from '../engine/visibility';
 import { bar, button, clear, dialogOpen, h, isTouch, modal, toast } from './dom';
 import { costText, factionChip, ICON, num, signed } from './format';
 import { MapView, Minimap } from './mapview';
@@ -55,7 +55,7 @@ export interface GameHost {
   gameKey?: string;
 }
 
-export const DEV_NAMES = ['Unsettled', 'Outpost', 'Colony', 'Settlement', 'Industrial World', 'Core World'];
+export const DEV_NAMES = ['Unsettled', 'Foothold', 'Colony', 'Settlement', 'Industrial World', 'Core World'];
 
 type SideTab = 'system' | 'fleets' | 'agents';
 
@@ -819,7 +819,24 @@ export class GameUI {
       hx.owner ? factionChip(hx.owner, true) : h('span', { class: 'dim' }, 'Unclaimed'),
       button('✕', () => this.select(null), { cls: 'ghost small' })));
     if (hx.terrain !== 'space') s.append(h('div', { class: 'dim' }, `${TERRAIN_INFO[hx.terrain].name}. ${TERRAIN_INFO[hx.terrain].text}`));
+    if (hx.outpost && hx.owner) s.append(h('div', { style: 'font-size:12px;margin:2px 0' }, '📡 ',
+      hx.owner === this.viewer ? 'Your outpost' : `${factionDef(hx.owner).short} outpost`,
+      h('span', { class: 'dim' }, `: holds this hex and watches ${outpostRange(g, hx.owner)} hexes around it. Enemy warships here at the end of their turn destroy it.`)));
     if (hx.pendingClaim) s.append(h('div', null, factionChip(hx.pendingClaim, true), ' will claim this hex at the start of its next turn.'));
+    // Your ships here: will they take this hex, and if not, why not.
+    if (hx.owner !== this.viewer && !hx.pendingClaim && Object.values(g.fleets).some((f) => f.owner === this.viewer && f.hex === hex)) {
+      const why = claimBlocker(g, this.viewer, hex);
+      s.append(h('div', { class: why ? 'bad' : 'good', style: 'font-size:12px;margin:2px 0' },
+        why ? `Your ships won’t claim this hex. ${why}` : 'Your ships claim this hex if they are still here, alone, at the end of your turn.'));
+    }
+    if (hx.owner && hx.orphanSince !== undefined && g.turn > hx.orphanSince) {
+      const left = Math.max(0, ORPHAN_TURNS - (g.turn - hx.orphanSince));
+      const heir = engulfer(g, territoryPiece(g, hex).hexes);
+      const who = factionDef(hx.owner).short;
+      s.append(h('div', { class: 'dim', style: 'font-size:12px;margin:2px 0' }, heir
+        ? `Cut off from any ${who} planet, outpost or starbase and completely surrounded by the ${factionDef(heir).short}: it passes to them ${left ? `in ${left} turn${left === 1 ? '' : 's'}` : 'at the start of the next turn'} unless reconnected.`
+        : `Cut off from any ${who} planet, outpost or starbase. It would pass to a power that completely surrounds it after ${ORPHAN_TURNS} turns; no single power does.`));
+    }
     const lord = hx.owner ? g.factions[hx.owner]?.overlord : null;
     if (lord) s.append(h('div', { class: 'good' }, lord === this.viewer ? `${factionDef(hx.owner!).short}: your vassal. They pay you tribute and join your wars.` : `${factionDef(hx.owner!).short}: vassal of the ${factionDef(lord).short}.`));
     // Tabs: System, Fleets and Agents, when the hex has more than one of them. The selection picks the first
@@ -947,6 +964,15 @@ export class GameUI {
       h('span', { class: 'k' }, 'Population'), h('span', null, `${num(sys.population)} / ${num(popCapOf(g, sys, hx.owner))}`),
       h('span', { class: 'k' }, 'Defense'), h('span', null, `${num(sys.defense)} planetary, ${num(sys.garrison)} garrison`),
     );
+    // Armies stationed here (yours, or ones you can see defending it).
+    const stationed = Object.values(g.armies).filter((a) => a.hex === hex);
+    if (stationed.length) {
+      const yours = stationed.filter((a) => a.owner === this.viewer);
+      kv.append(h('span', { class: 'k' }, 'Armies'), h('span', null,
+        yours.length ? `🪖 ${yours.length} yours (strength ${num(yours.reduce((n, a) => n + a.strength, 0))})` : '',
+        stationed.length > yours.length ? `${yours.length ? ' · ' : ''}${stationed.length - yours.length} defending` : '',
+        yours.length ? infoTip('Armies stationed here defend this world. To use them for an invasion, bring a fleet with cargo room (a transport) here and press Load armies on it.') : ''));
+    }
     if (sys.unrest > 0) kv.append(h('span', { class: 'k' }, 'Unrest'), h('span', { class: 'bad' }, `${num(sys.unrest)}`));
     const blockers = blockadersAt(g, hex);
     if (blockers.length) kv.append(h('span', { class: 'k' }, 'Blockaded'), h('span', { class: 'bad' }, `by ${blockers.map((b) => factionDef(b).short).join(', ')}: output halved, shipyard idle`));
@@ -1120,16 +1146,48 @@ export class GameUI {
     A(f.hold ? 'Stop holding' : 'Hold', { type: 'hold', fleet: f.id, hold: !f.hold },
       f.hold ? 'It counts as waiting for orders again' : 'Hold position on purpose: it won’t count as waiting for orders (N skips it) until you move it');
     if (roles.includes('colony') && hx.system && hx.system.development === 0) A('Colonize', { type: 'colonize', fleet: f.id });
-    if (roles.includes('constructor') && hx.system && hx.system.development === 0) A('Found outpost', { type: 'outpost', fleet: f.id }, '30 metals, 10 energy');
+    if (roles.includes('constructor') && (!hx.owner || hx.owner === this.viewer) && !hx.outpost && hx.terrain !== 'blackHole') {
+      const why = outpostBlocker(g, this.viewer, f.hex) ?? (f.movesLeft <= 0 ? 'The constructor has already moved this turn.' : null);
+      acts.append(button('Build outpost', () => this.act({ type: 'outpost', fleet: f.id }), { cls: 'small', disabled: !!why,
+        title: why ?? `${OUTPOST_COST.metals} metals, ${OUTPOST_COST.energy} energy. Claims this hex and holds it, and watches ${outpostRange(g, this.viewer)} hexes around it, as far as your scouts see. No economy of its own.` }));
+    }
     if (roles.includes('constructor') && hx.owner === this.viewer) A('Build starbase', { type: 'starbase', fleet: f.id });
     if (roles.includes('cargo') && hx.system && hx.owner && hx.system.development >= 2) A('Open trade route', { type: 'establishRoute', fleet: f.id }, 'The cargo ship becomes a trade route back to your nearest settled system.');
     if (roles.includes('cargo')) acts.append(button('Where to trade ›', () => openDiplomacy(this, 'market:routes'), { cls: 'small', title: 'Every system you could open a trade route to, with what it would pay' }));
     const armiesAboard = f.ships.flatMap((s) => g.ships[s].cargo).filter((c) => g.armies[c]);
-    if (armiesAboard.length && hx.system && hx.owner !== this.viewer && hx.system.development > 0) A('Invade', { type: 'invade', fleet: f.id }, 'Planetary defense must be 0');
     const garrison = Object.values(g.armies).filter((a) => a.owner === this.viewer && a.hex === f.hex);
-    const hold = f.ships.find((s) => cargoFree(g, s) > 0);
-    if (garrison.length && hold) A(`Load army (${garrison.length})`, { type: 'loadArmy', army: garrison[0].id, ship: hold });
-    if (armiesAboard.length && hx.owner === this.viewer) A('Unload army', { type: 'unloadArmy', army: armiesAboard[0] });
+    const room = f.ships.reduce((n, s) => n + Math.max(0, cargoFree(g, s)), 0);
+    if (armiesAboard.length && hx.system && hx.owner !== this.viewer && hx.system.development > 0) {
+      const blocked = hx.system.defense > 0 ? `Knock its planetary defense down to 0 first (it is ${num(hx.system.defense)}): keep warships fighting here.` : '';
+      acts.append(button('Invade', () => this.act({ type: 'invade', fleet: f.id }), { cls: 'small primary', disabled: !!blocked, title: blocked || 'Land the armies aboard and fight the garrison for this world' }));
+    }
+    // What the fleet can carry, and what it is carrying.
+    const capacity = f.ships.reduce((n, s) => n + design(g.ships[s].design).stats.cargo, 0);
+    if (capacity > 0 && (armiesAboard.length || roles.includes('transport') || garrison.length)) {
+      const str = armiesAboard.reduce((n, a) => n + g.armies[a].strength, 0);
+      card.append(h('div', { class: 'dim', style: 'font-size:12px;margin-top:4px' },
+        armiesAboard.length ? `🪖 ${armiesAboard.length} ${armiesAboard.length > 1 ? 'armies' : 'army'} aboard (strength ${num(str)}), room for ${room} more` : `🪖 Room for ${room} ${room === 1 ? 'army' : 'armies'}`,
+        infoTip('To take a settled world: build armies at a populated system (Other → Army), load them onto a fleet with room (transports carry the most, and land with a +20% bonus), fly to an enemy world, bring its planetary defense down to 0 with warships, then press Invade.')));
+    }
+    // Science vessels: what they add each turn, and where they'd add more.
+    const scientists = roles.filter((r) => r === 'science').length;
+    if (mine && scientists) {
+      const site = studySite(g, f.hex);
+      const each = site ? SCIENCE_SHIP.study : SCIENCE_SHIP.base;
+      card.append(h('div', { class: 'dim', style: 'font-size:12px;margin-top:4px' },
+        `🔬 +${each * scientists} science a turn${site ? `, studying the ${site}` : ''}`,
+        infoTip(`Science vessels add ${SCIENCE_SHIP.base} science a turn anywhere, or ${SCIENCE_SHIP.study} while they study a nebula, pulsar, neutron star, ion storm or wormhole, or sit next to a black hole. They also survey ruins they pass, and reveal cloaked ships and enemy spies within their sensor range.`)));
+    }
+    if (garrison.length && room > 0) {
+      acts.append(button(`Load armies (${Math.min(garrison.length, room)})`, () => {
+        // As many of the armies here as the fleet's holds take.
+        for (const a of garrison) {
+          const ship = this.game.fleets[f.id]?.ships.find((s) => cargoFree(this.game, s) > 0);
+          if (!ship || !this.act({ type: 'loadArmy', army: a.id, ship }, true)) break;
+        }
+      }, { cls: 'small', title: 'Put the armies stationed here aboard this fleet, to carry them to an invasion' }));
+    }
+    if (armiesAboard.length && hx.owner === this.viewer) A(armiesAboard.length > 1 ? `Unload armies (${armiesAboard.length})` : 'Unload army', { type: 'unloadArmy', army: armiesAboard[0] });
     if (this.splitSet.size > 0 && this.splitSet.size < f.ships.length) {
       acts.append(button(`Split ${this.splitSet.size}`, () => {
         const ships = [...this.splitSet];

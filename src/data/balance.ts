@@ -54,7 +54,7 @@ export const BALANCE = {
   army: { metals: 15, energy: 5, population: 1, strength: 10, upkeep: 0.5 },
   starbase: [
     null,
-    { name: 'Outpost Station', metals: 60, energy: 20, hull: 150, defense: 10, sensors: 3 },
+    { name: 'Orbital Station', metals: 60, energy: 20, hull: 150, defense: 10, sensors: 3 },
     { name: 'Starbase', metals: 150, energy: 60, hull: 400, defense: 30, sensors: 4 },
     { name: 'Citadel', metals: 320, energy: 140, exotics: 20, hull: 900, defense: 70, sensors: 5 },
   ] as const,

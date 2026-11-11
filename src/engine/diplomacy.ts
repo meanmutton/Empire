@@ -109,9 +109,32 @@ export function canPropose(state: GameState, from: FactionId, to: FactionId): bo
   return hasEmbassy(state, from, to) || hasEmbassy(state, to, from);
 }
 
+/**
+ * What makes a trade item the same as another: a proposal can hold each tech, fleet, system, army, agreement
+ * and so on only once per side (and one "technology of their choice"). Resources have no key: amounts add up.
+ */
+export function tradeItemKey(item: TradeItem): string | null {
+  switch (item.kind) {
+    case 'resource': return null;
+    case 'tech': return `tech:${item.tech}`;
+    case 'fleet': return `fleet:${item.fleet}`;
+    case 'hex': return `hex:${item.hex}`;
+    case 'army': return `army:${item.army}`;
+    case 'agreement': return `agreement:${item.agreement}`;
+    case 'returnAgent': return `agent:${item.agent}`;
+    default: return item.kind;
+  }
+}
+
+function hasDuplicates(items: TradeItem[]): boolean {
+  const keys = items.map(tradeItemKey).filter((k): k is string => k !== null);
+  return new Set(keys).size !== keys.length;
+}
+
 export function propose(state: GameState, from: FactionId, to: FactionId, give: TradeItem[], receive: TradeItem[]): Result & { id?: string } {
   if (!canPropose(state, from, to)) return { ok: false, reason: 'You need an embassy to negotiate.' };
   if (give.length + receive.length === 0) return { ok: false, reason: 'Empty proposal.' };
+  if (hasDuplicates(give) || hasDuplicates(receive)) return { ok: false, reason: 'Each item can be in a proposal only once.' };
   for (const item of give) {
     const v = validItem(state, from, to, item);
     if (!v.ok) return v;

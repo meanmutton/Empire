@@ -1,7 +1,7 @@
 /** Fleet movement, battle-group management, territory claims and colonization (§5.3, §6.4). */
 import { BALANCE } from '../data/balance';
 import { design } from '../data/designs';
-import { hasAbility } from '../data/factions';
+import { factionDef, hasAbility } from '../data/factions';
 import { PLANET_YIELDS, TERRAIN_INFO } from '../data/improvements';
 import { ROLES } from '../data/ships';
 import { log } from './events';
@@ -12,7 +12,7 @@ import { atWar, fleetSpeed, friendly } from './query';
 import { Rng } from './rng';
 import { techEffects } from './research';
 import type { FactionId, Fleet, GameState } from './types';
-import { revealAround } from './visibility';
+import { outpostRange, revealAround } from './visibility';
 
 export type Result = { ok: true } | { ok: false; reason: string };
 const OK: Result = { ok: true };
@@ -243,7 +243,7 @@ export function resetMovement(state: GameState, faction: FactionId): void {
   }
 }
 
-/** Continues multi-turn paths at the start of a turn. */
+/** Continues multi-turn paths at the end of a faction's turn, with the movement each fleet has left. */
 export function continuePaths(state: GameState, faction: FactionId): void {
   for (const f of Object.values(state.fleets)) if (f.owner === faction && f.path.length > 0) advanceFleet(state, f.id);
 }
@@ -263,7 +263,111 @@ export function canClaim(state: GameState, faction: FactionId, hex: number): boo
   if (h.terrain === 'blackHole') return false;
   if (othersAt(state, faction, hex)) return false;
   if (h.system && h.system.development > 0) return false;
+  if (h.outpost) return false;
   return true;
+}
+
+/**
+ * Why `faction`'s ships in `hex` will not take it, in plain words, or null if they will (or it is already
+ * theirs). Shown in the hex panel so players know why a hex isn't changing hands.
+ */
+export function claimBlocker(state: GameState, faction: FactionId, hex: number): string | null {
+  const h = state.map.hexes[hex];
+  if (h.owner === faction) return null;
+  if (h.terrain === 'blackHole') return 'Black holes can’t be claimed.';
+  if (h.owner && !atWar(state, faction, h.owner)) return 'Someone else owns this hex: you can only take territory from a power you are at war with.';
+  if (h.system && h.system.development > 0) return 'A settled world can’t be taken by ships alone: bring down its planetary defense, then invade with armies carried by transports.';
+  if (othersAt(state, faction, hex)) return 'Another power’s ships or starbase are here: ships claim a hex only when they hold it alone.';
+  if (h.outpost && !hasWarshipAt(state, faction, hex)) return 'An outpost holds this hex: bring warships to destroy it first (they do at the end of your turn).';
+  return null;
+}
+
+/** Turns an owner's cut-off territory (no planet, outpost or starbase connected to it) lasts before it changes hands. */
+export const ORPHAN_TURNS = 10;
+
+/** Whether this hex anchors its owner's territory: a settled world, an outpost or one of the owner's starbases. */
+function anchors(state: GameState, hex: number): boolean {
+  const h = state.map.hexes[hex];
+  if (!h.owner) return false;
+  if ((h.system?.development ?? 0) > 0 || h.outpost) return true;
+  return Object.values(state.starbases).some((b) => b.hex === hex && b.owner === h.owner);
+}
+
+/** The connected piece of its owner's territory a hex belongs to, and whether a world, outpost or starbase anchors it. */
+export function territoryPiece(state: GameState, hex: number): { hexes: number[]; anchored: boolean } {
+  const hexes = state.map.hexes;
+  const owner = hexes[hex].owner;
+  if (!owner) return { hexes: [], anchored: false };
+  const seen = new Set([hex]);
+  const stack = [hex];
+  const part: number[] = [];
+  let anchored = false;
+  while (stack.length) {
+    const i = stack.pop()!;
+    part.push(i);
+    if (!anchored && anchors(state, i)) anchored = true;
+    for (const n of neighbors(state.map, i)) if (!seen.has(n) && hexes[n].owner === owner) { seen.add(n); stack.push(n); }
+  }
+  return { hexes: part, anchored };
+}
+
+/**
+ * The power that completely engulfs a piece of territory: every hex bordering it belongs to that one power and
+ * the piece doesn't touch the edge of the map. Null when no single power surrounds it.
+ */
+export function engulfer(state: GameState, part: number[]): FactionId | null {
+  const hexes = state.map.hexes;
+  const inPart = new Set(part);
+  let heir: FactionId | null = null;
+  for (const i of part) {
+    const ns = neighbors(state.map, i);
+    if (ns.length < 6) return null; // touches the edge of the map
+    for (const n of ns) {
+      if (inPart.has(n)) continue;
+      const o = hexes[n].owner;
+      if (!o || (heir && o !== heir)) return null;
+      heir = o;
+    }
+  }
+  return heir;
+}
+
+/**
+ * Start of a faction's turn: its territory that has had no planet, outpost or starbase connected to it for
+ * ORPHAN_TURNS turns passes to the power that completely engulfs it. Territory not surrounded by a single
+ * power stays where it is. Hexes where the owner still has ships, and settled worlds, never change hands
+ * this way.
+ */
+export function releaseOrphans(state: GameState, faction: FactionId): number[] {
+  const hexes = state.map.hexes;
+  const seen = new Uint8Array(hexes.length);
+  const moved: number[] = [];
+  for (let start = 0; start < hexes.length; start++) {
+    if (seen[start] || hexes[start].owner !== faction) continue;
+    const { hexes: part, anchored } = territoryPiece(state, start);
+    for (const i of part) seen[i] = 1;
+    if (anchored) { for (const i of part) delete hexes[i].orphanSince; continue; }
+    const since = Math.min(...part.map((i) => hexes[i].orphanSince ?? state.turn));
+    for (const i of part) hexes[i].orphanSince = since;
+    if (state.turn - since < ORPHAN_TURNS) continue;
+    const heir = engulfer(state, part);
+    if (!heir) continue;
+    const held = new Set(Object.values(state.fleets).filter((f) => f.owner === faction).map((f) => f.hex));
+    const changed: number[] = [];
+    for (const i of part) {
+      if (held.has(i) || hexes[i].system?.development) continue;
+      hexes[i].owner = heir;
+      hexes[i].pendingClaim = null;
+      delete hexes[i].orphanSince;
+      changed.push(i);
+    }
+    if (!changed.length) continue;
+    moved.push(...changed);
+    const n = changed.length;
+    log(state, [faction, heir], 'claim',
+      `${n} hex${n > 1 ? 'es' : ''} of ${factionDef(faction).short} territory, cut off for ${ORPHAN_TURNS} turns and completely surrounded by the ${factionDef(heir).short}, passed to them.`, changed[0]);
+  }
+  return moved;
 }
 
 /** End of turn: mark hexes this faction holds alone as pending claims. */
@@ -356,7 +460,7 @@ function colonizable(state: GameState, faction: FactionId, hex: number): Result 
   return OK;
 }
 
-/** A colony ship founds a colony (level 2 on habitable worlds, else an outpost) and is consumed. */
+/** A colony ship founds a colony (level 2 on habitable worlds, else a level-1 foothold) and is consumed. */
 export function colonize(state: GameState, fleetId: string): Result {
   const f = state.fleets[fleetId];
   if (!f) return fail('No such fleet.');
@@ -380,27 +484,72 @@ export function colonize(state: GameState, fleetId: string): Result {
 
 export const OUTPOST_COST = { metals: 30, energy: 10 };
 
-/** A constructor founds an outpost (level 1). The constructor survives but spends its turn. */
+/**
+ * Why a constructor in this hex can't build an outpost here, or null if it can. Outposts go in your own
+ * territory or unclaimed space, one per hex, never in a black hole or beside non-allied forces.
+ */
+export function outpostBlocker(state: GameState, faction: FactionId, hex: number): string | null {
+  const h = state.map.hexes[hex];
+  if (h.terrain === 'blackHole') return 'Nothing can be built in a black hole.';
+  if (h.outpost) return 'There is already an outpost here.';
+  if (h.owner && h.owner !== faction) return 'Outposts go in your own territory or unclaimed space.';
+  if (othersAt(state, faction, hex)) return 'Another power’s forces are here.';
+  return null;
+}
+
+/**
+ * A constructor builds an outpost: a monitoring post that claims the hex at once, holds it (it keeps cut-off
+ * territory connected and stops claims until warships destroy it) and watches as far as the faction's scouts
+ * see. It has no economy of its own. The constructor survives but spends its turn.
+ */
 export function buildOutpost(state: GameState, fleetId: string): Result {
   const f = state.fleets[fleetId];
   if (!f) return fail('No such fleet.');
   const sid = findShipWith(state, fleetId, (r) => ROLES[r as keyof typeof ROLES].construct === true);
   if (!sid) return fail('This fleet has no constructor.');
   if (f.movesLeft <= 0) return fail('The constructor has already moved this turn.');
-  const ok = colonizable(state, f.owner, f.hex);
-  if (!ok.ok) return ok;
+  const why = outpostBlocker(state, f.owner, f.hex);
+  if (why) return fail(why);
   const stock = state.factions[f.owner].stock;
   if (stock.metals < OUTPOST_COST.metals || stock.energy < OUTPOST_COST.energy) return fail('Not enough resources.');
   stock.metals -= OUTPOST_COST.metals;
   stock.energy -= OUTPOST_COST.energy;
   const h = state.map.hexes[f.hex];
-  h.system!.development = 1;
+  h.outpost = true;
   h.owner = f.owner;
   h.pendingClaim = null;
+  delete h.orphanSince;
   f.movesLeft = 0;
-  if (h.system!.ruins) surveyRuins(state, f.owner, f.hex);
-  log(state, [f.owner], 'colonized', `Outpost founded at ${h.system!.name}.`, f.hex);
+  revealAround(state, f.owner, f.hex, outpostRange(state, f.owner));
+  if (h.system?.ruins) surveyRuins(state, f.owner, f.hex);
+  log(state, [f.owner], 'colonized', `Outpost built${h.system ? ` at ${h.system.name}` : ''}.`, f.hex);
   return OK;
+}
+
+/** Whether `faction` has an armed warship in the hex. */
+function hasWarshipAt(state: GameState, faction: FactionId, hex: number): boolean {
+  return Object.values(state.fleets).some((f) => f.owner === faction && f.hex === hex && f.ships.some((s) => isWarship(design(state.ships[s].design))));
+}
+
+/**
+ * End of turn, after battles: this faction's warships destroy the outposts of powers it is at war with in
+ * the hexes they hold alone. Outposts are unarmed, so a warship is all it takes.
+ */
+export function razeOutposts(state: GameState, faction: FactionId): number[] {
+  const out: number[] = [];
+  state.map.hexes.forEach((h, i) => {
+    if (!h.outpost || !h.owner || !atWar(state, faction, h.owner)) return;
+    if (othersAt(state, faction, i) || !hasWarshipAt(state, faction, i)) return;
+    delete h.outpost;
+    out.push(i);
+    log(state, [faction, h.owner], 'captured', `${factionDef(faction).short} warships destroyed the ${factionDef(h.owner).short} outpost${h.system ? ` at ${h.system.name}` : ''}.`, i);
+  });
+  return out;
+}
+
+/** Outposts belong to the hex's owner: one in a hex that is no longer anyone's is gone. */
+export function tidyOutposts(state: GameState): void {
+  for (const h of state.map.hexes) if (h.outpost && !h.owner) delete h.outpost;
 }
 
 /** A constructor builds or upgrades a starbase in an owned hex. */
