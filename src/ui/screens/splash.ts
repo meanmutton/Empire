@@ -32,7 +32,7 @@ export function showSplash(root: HTMLElement, onPlay: () => void, version: strin
       h('div', { class: 'splash-play-frame' }, button('Play', go, { cls: 'primary splash-play' })),
       h('div', { class: 'splash-links' },
         h('a', { href: '#', onclick: (e: Event) => { e.preventDefault(); openHelp(); } }, 'How to play'),
-        h('span', null, ` · v${version}`))));
+        h('span', null, ` · ${version}`))));
   clear(root).append(splash);
   window.addEventListener('keydown', onKey);
 }

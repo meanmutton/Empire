@@ -1,6 +1,6 @@
 import { aiTurn } from './ai/ai';
 import { showSplash } from './ui/screens/splash';
-import { VERSION } from './version';
+import { VERSION_LABEL } from './version';
 import { createGame } from './engine/setup';
 import { beginGame } from './engine/turn';
 import type { GameState } from './engine/types';
@@ -82,4 +82,4 @@ else if (params.has('quick')) {
   beginGame(game, aiTurn);
   playLocal(game, newSaveId());
 } else if (params.has('join')) title();
-else showSplash(app, title, VERSION);
+else showSplash(app, title, VERSION_LABEL);
