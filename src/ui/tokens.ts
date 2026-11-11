@@ -129,10 +129,21 @@ function hullOf(style: HullStyle, s: number): { hull: Path2D; accent?: (ctx: Can
           ctx.fillRect(-0.64 * s, 0.32 * s, 0.18 * s, 0.22 * s);
         },
       };
-    case 'hammer': // blocky hammer (minor powers)
+    case 'hammer': // Grendis and Forgeborn: a heavy armoured hull with broad shoulders, plating and a forge-lit core
       return {
-        hull: poly([[-0.85, -0.95], [0.85, -0.95], [0.85, -0.45], [0.28, -0.45], [0.28, 0.95], [-0.28, 0.95], [-0.28, -0.45], [-0.85, -0.45]], s),
-        accent: (ctx, c) => { ctx.fillStyle = c.light; ctx.fillRect(-0.6 * s, -0.8 * s, 1.2 * s, 0.12 * s); },
+        hull: poly([[0, -1], [0.3, -0.84], [0.36, -0.5], [0.72, -0.34], [0.78, 0.22], [0.48, 0.36], [0.52, 0.95], [-0.52, 0.95], [-0.48, 0.36], [-0.78, 0.22], [-0.72, -0.34], [-0.36, -0.5], [-0.3, -0.84]], s),
+        accent: (ctx, c) => {
+          ctx.strokeStyle = c.dark;
+          ctx.lineWidth = Math.max(1, s * 0.06);
+          ctx.beginPath();
+          for (const y of [-0.5, -0.1, 0.36]) { ctx.moveTo(-0.62 * s, y * s); ctx.lineTo(0.62 * s, y * s); }
+          ctx.stroke();
+          ctx.fillStyle = c.light;
+          ctx.fillRect(-0.14 * s, -0.42 * s, 0.28 * s, 0.24 * s);
+          ctx.fillStyle = rgba('#ffb35a', 0.95);
+          ctx.fillRect(-0.3 * s, 0.62 * s, 0.18 * s, 0.24 * s);
+          ctx.fillRect(0.12 * s, 0.62 * s, 0.18 * s, 0.24 * s);
+        },
       };
     case 'prism': { // Lattice: geometric hexagonal prism with inner facets
       const hex = [...Array(6)].map((_, i) => [Math.cos((i * Math.PI) / 3 - Math.PI / 2) * 0.95, Math.sin((i * Math.PI) / 3 - Math.PI / 2) * 0.95]);
@@ -179,8 +190,19 @@ function hullOf(style: HullStyle, s: number): { hull: Path2D; accent?: (ctx: Can
         },
       };
     }
-    case 'cross':
-      return { hull: poly([[-0.25, -1], [0.25, -1], [0.25, -0.3], [0.85, -0.3], [0.85, 0.15], [0.25, 0.15], [0.25, 0.95], [-0.25, 0.95], [-0.25, 0.15], [-0.85, 0.15], [-0.85, -0.3], [-0.25, -0.3]], s) };
+    case 'cross': // Celestine, Vesh, Ilyrian: a tall spire with wings swept back like a cathedral arch, and a bright spine
+      return {
+        hull: poly([[0, -1], [0.13, -0.6], [0.2, -0.18], [0.76, 0.5], [0.8, 0.78], [0.5, 0.66], [0.28, 0.5], [0.24, 0.95], [0, 0.8], [-0.24, 0.95], [-0.28, 0.5], [-0.5, 0.66], [-0.8, 0.78], [-0.76, 0.5], [-0.2, -0.18], [-0.13, -0.6]], s),
+        accent: (ctx, c) => {
+          ctx.strokeStyle = c.light;
+          ctx.lineWidth = Math.max(1, s * 0.06);
+          ctx.beginPath(); ctx.moveTo(0, -0.82 * s); ctx.lineTo(0, 0.6 * s); ctx.stroke();
+          ctx.fillStyle = c.light;
+          ctx.beginPath(); ctx.arc(0, -0.15 * s, 0.11 * s, 0, Math.PI * 2); ctx.fill();
+          ctx.lineWidth = Math.max(1, s * 0.04);
+          ctx.beginPath(); ctx.moveTo(-0.62 * s, 0.6 * s); ctx.lineTo(-0.2 * s, 0.1 * s); ctx.moveTo(0.62 * s, 0.6 * s); ctx.lineTo(0.2 * s, 0.1 * s); ctx.stroke();
+        },
+      };
     case 'sail':
       return {
         hull: poly([[-0.25, -0.2], [0.25, -0.2], [0.35, 0.9], [-0.35, 0.9]], s),

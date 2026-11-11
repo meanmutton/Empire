@@ -9,9 +9,10 @@ describe('icon set', () => {
     for (const k of ['ship', 'develop', 'army', 'diplomat', 'spy', 'wonder']) expect(ICONS[`queue:${k}`], k).toBeTruthy();
   });
 
-  it('every drawing is SVG markup with a colour', () => {
+  it('every icon is an emoji or SVG markup, with a colour', () => {
     for (const [k, v] of Object.entries(ICONS)) {
-      expect(v.svg, k).toMatch(/^<(path|circle|rect|ellipse)/);
+      if (v.emoji) expect(v.emoji.length, k).toBeGreaterThan(0);
+      else expect(v.svg, k).toMatch(/^<(path|circle|rect|ellipse)/);
       expect(v.color, k).toMatch(/^#[0-9a-f]{6}$/i);
     }
   });

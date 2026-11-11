@@ -8,6 +8,7 @@ import { IMPROVEMENTS, PLANET_YIELDS, STAR_YIELDS } from '../data/improvements';
 import { CLASSES } from '../data/ships';
 import { log } from './events';
 import { newId } from './ids';
+import { neighbors } from './hex';
 import { connectedHexes, ownedHexes } from './query';
 import { techEffects } from './research';
 import { blockadedHexes, blockadersAt } from './blockade';
@@ -21,7 +22,7 @@ export function zeroResources(): Resources {
 /** Improvement slots a system has now: development + 1, capped by its size (0 when undeveloped). */
 /**
  * Improvement slots: grow with both the world's size (1–5) and its development (1–5), from 2 on a small new
- * outpost to 14 on a large core world.
+ * foothold to 14 on a large core world.
  */
 export function slotsOf(sys: StarSystem): number {
   return sys.development === 0 ? 0 : Math.max(2, sys.size + 2 * sys.development - 1);
@@ -125,6 +126,32 @@ export function systemYield(state: GameState, hex: number, connected?: Set<numbe
   return out;
 }
 
+/** Science a science vessel adds each turn: a little anywhere, more while it studies a stellar phenomenon. */
+export const SCIENCE_SHIP = { base: 2, study: 5 };
+
+/**
+ * What a science vessel in this hex could study, or null: a nebula, pulsar, neutron star, ion storm or
+ * wormhole, or the edge of a black hole (next to one).
+ */
+export function studySite(state: GameState, hex: number): string | null {
+  const t = state.map.hexes[hex].terrain;
+  if (t === 'nebula' || t === 'pulsar' || t === 'neutronStar' || t === 'ionStorm' || t === 'wormhole') return t === 'neutronStar' ? 'neutron star' : t === 'ionStorm' ? 'ion storm' : t;
+  if (neighbors(state.map, hex).some((n) => state.map.hexes[n].terrain === 'blackHole')) return 'black hole';
+  return null;
+}
+
+/** Science this faction's science vessels add this turn (before the faction's science bonuses). */
+export function scienceShipYield(state: GameState, faction: FactionId): number {
+  let total = 0;
+  for (const s of Object.values(state.ships)) {
+    if (s.owner !== faction || design(s.design).role !== 'science') continue;
+    const f = state.fleets[s.fleet];
+    if (!f) continue;
+    total += studySite(state, f.hex) ? SCIENCE_SHIP.study : SCIENCE_SHIP.base;
+  }
+  return total;
+}
+
 export interface IncomeReport {
   gross: Resources;
   upkeep: number;
@@ -150,6 +177,7 @@ export function factionIncome(state: GameState, faction: FactionId): IncomeRepor
   }
   gross.energy += emptyHexes * BALANCE.ownedHexEnergy;
   if (hasAbility(faction, 'distributedCognition')) gross.science += Math.floor(owned.length / 5);
+  gross.science += scienceShipYield(state, faction);
   for (const k of RESOURCE_KINDS) if (k !== 'population') gross[k] *= factionMultiplier(state, faction, k);
   for (const k of RESOURCE_KINDS) gross[k] = Math.round(gross[k] * 10) / 10;
   const upkeep = Math.round(upkeepOf(state, faction) * 10) / 10;
@@ -215,7 +243,7 @@ export function checkBuild(state: GameState, faction: FactionId, hex: number, ki
   const h = state.map.hexes[hex];
   const sys = h?.system;
   if (!sys || h.owner !== faction) return { ok: false, reason: 'You must own this system.' };
-  if (sys.development === 0) return { ok: false, reason: 'Found an outpost here first.' };
+  if (sys.development === 0) return { ok: false, reason: 'Settle this world with a colony ship first.' };
   const f = state.factions[faction];
   const known = new Set(f.research.known);
   const queued = sys.queue;
@@ -261,7 +289,7 @@ export function checkBuild(state: GameState, faction: FactionId, hex: number, ki
       const pendingLevels = queued.filter((q) => q.kind === 'develop').length;
       const next = sys.development + pendingLevels + 1;
       if (next > 5) return { ok: false, reason: 'Already a core world.' };
-      if (next >= 2 && PLANET_YIELDS[sys.planet].popCap === 0 && next > 2) return { ok: false, reason: 'This world can only hold an outpost.' };
+      if (next >= 2 && PLANET_YIELDS[sys.planet].popCap === 0 && next > 2) return { ok: false, reason: 'This world can only be developed to level 2.' };
       const c = BALANCE.developCost[next]!;
       let mult = 1;
       if (hasAbility(faction, 'terraformers')) mult = 0.6;

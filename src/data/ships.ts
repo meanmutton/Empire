@@ -49,7 +49,7 @@ interface RoleDef {
   survey?: boolean;
   /** Consumed to found a colony. */
   colonize?: boolean;
-  /** Can build starbases and outposts. */
+  /** Can build outposts (monitoring posts) and starbases. */
   construct?: boolean;
   /** Takes hits for its group. */
   escort?: boolean;
@@ -66,10 +66,10 @@ export const ROLES: Record<ShipRole, RoleDef> = {
   line:        { name: 'Ship-of-the-Line', text: 'Balanced warship.', alloc: { energy: 2, missile: 2, shields: 2, armor: 1, pd: 1 }, costMult: 1.0 },
   carrier:     { name: 'Fighter Carrier',  text: 'Launches fighter wings each round.', alloc: { hangar: 4, shields: 1, pd: 1 }, costMult: 1.15 },
   escort:      { name: 'Escort',           text: 'Point defense and shields; shields its group.', alloc: { pd: 3, shields: 2, energy: 1 }, escort: true, costMult: 0.95 },
-  science:     { name: 'Science Vessel',   text: 'Surveys anomalies, adds science, detects cloaked ships.', alloc: { sensors: 3, shields: 1 }, survey: true, costMult: 0.9 },
+  science:     { name: 'Science Vessel',   text: 'Adds science (more at nebulae, pulsars and other phenomena), surveys ruins, detects cloaked ships and spies.', alloc: { sensors: 3, shields: 1 }, survey: true, costMult: 0.9 },
   cargo:       { name: 'Cargo Vessel',     text: 'Hauls armies, agents and goods.', alloc: { cargo: 3, armor: 1 }, costMult: 0.7 },
-  colony:      { name: 'Colony Ship',      text: 'Founds a colony; consumed on use.', alloc: { cargo: 2, armor: 1 }, colonize: true, costMult: 1.1 },
-  constructor: { name: 'Constructor',      text: 'Builds starbases and outposts.', alloc: { cargo: 1, armor: 1 }, construct: true, costMult: 1.0 },
+  colony:      { name: 'Colony Ship',      text: 'Settles a world (a colony, or a foothold on harsh worlds); consumed on use.', alloc: { cargo: 2, armor: 1 }, colonize: true, costMult: 1.1 },
+  constructor: { name: 'Constructor',      text: 'Builds outposts (monitoring posts that hold a hex) and starbases.', alloc: { cargo: 1, armor: 1 }, construct: true, costMult: 1.0 },
   transport:   { name: 'Troop Transport',  text: 'Carries many armies; landing bonus.', alloc: { cargo: 4, armor: 1, shields: 1 }, costMult: 0.85 },
   raider:      { name: 'Raider',           text: 'Fast missile boat; preys on cargo and colony ships.', alloc: { missile: 3, engines: 1 }, raider: true, costMult: 0.9 },
 };

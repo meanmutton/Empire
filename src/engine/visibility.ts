@@ -1,6 +1,6 @@
 /** Fog of war: what each faction can see (§11). */
 import { BALANCE } from '../data/balance';
-import { design } from '../data/designs';
+import { design, DESIGNS_BY_FACTION } from '../data/designs';
 import { hasAbility } from '../data/factions';
 import { getBit, setBits } from './bitset';
 import { hexDistance, hexesWithin } from './hex';
@@ -16,6 +16,20 @@ export function revealAround(state: GameState, faction: FactionId, hex: number, 
 
 export function isExplored(state: GameState, faction: FactionId, hex: number): boolean {
   return getBit(state.factions[faction].explored, hex);
+}
+
+/**
+ * How far an outpost of `faction` sees: exactly as far as the faction's best scout it can build today (its
+ * sensors plus sensor techs). Like a scout, it doesn't detect cloaked ships.
+ */
+export function outpostRange(state: GameState, faction: FactionId): number {
+  const known = new Set(state.factions[faction]?.research.known ?? []);
+  let best = 2; // a faction without scouts still watches as far as a colony does
+  for (const d of DESIGNS_BY_FACTION[faction] ?? []) {
+    if (d.role !== 'scout' || (d.tech && !known.has(d.tech))) continue;
+    best = Math.max(best, d.stats.sensors);
+  }
+  return best + techEffects(state, faction).sensors;
 }
 
 interface Observer { hex: number; range: number; detects: boolean; }
@@ -41,8 +55,13 @@ export function observers(state: GameState, faction: FactionId): Observer[] {
     const spec = BALANCE.starbase[b.tier as 1 | 2 | 3];
     out.push({ hex: b.hex, range: spec?.sensors ?? 3, detects: true });
   }
+  const outposts = new Map<FactionId, number>();
   state.map.hexes.forEach((h, i) => {
     if (!h.owner || !side.has(h.owner)) return;
+    if (h.outpost) {
+      if (!outposts.has(h.owner)) outposts.set(h.owner, outpostRange(state, h.owner));
+      out.push({ hex: i, range: h.terrain === 'pulsar' ? Math.max(1, outposts.get(h.owner)! - 1) : outposts.get(h.owner)!, detects: false });
+    }
     if (h.system && h.system.development > 0) out.push({ hex: i, range: 2, detects: false });
     else out.push({ hex: i, range: 1, detects: false });
   });

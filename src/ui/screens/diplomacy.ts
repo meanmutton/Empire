@@ -5,9 +5,9 @@ import { hasEmbassy, opinionOf } from '../../engine/agents';
 import { AGREEMENTS, canPropose, proposalScore, statusObjection, type AgreementId } from '../../engine/diplomacy';
 import { relation } from '../../engine/query';
 import { getBit } from '../../engine/bitset';
-import { itemValue } from '../../engine/diplomacy';
+import { itemValue, tradeItemKey } from '../../engine/diplomacy';
 import type { FactionId, Proposal, TradeItem } from '../../engine/types';
-import { button, clear, h, modal } from '../dom';
+import { button, clear, h, modal, toast } from '../dom';
 import { costText, factionChip, ICON, num } from '../format';
 import { checkBuild } from '../../engine/economy';
 import { hexDistance } from '../../engine/hex';
@@ -320,7 +320,15 @@ function openProposal(ui: GameUI, to: FactionId, done: () => void): void {
     const side = (label: string, items: TradeItem[], giver: FactionId, taker: FactionId) => {
       const col = h('div', { class: 'grow card' }, h('b', null, label));
       items.forEach((it, i) => col.append(h('div', { class: 'row' }, h('span', { class: 'grow' }, describeItem(ui, it)), button('✕', () => { items.splice(i, 1); render(); }, { cls: 'small ghost' }))));
-      col.append(itemAdder(ui, giver, taker, (it) => { items.push(it); render(); }));
+      col.append(itemAdder(ui, giver, taker, items, (it) => {
+        // The same resource again adds to the amount; anything else already listed isn't added twice.
+        if (it.kind === 'resource') {
+          const same = items.find((x) => x.kind === 'resource' && x.resource === it.resource && !!x.perTurn === !!it.perTurn && (x.perTurn ?? 0) === (it.perTurn ?? 0));
+          if (same && same.kind === 'resource') { same.amount += it.amount; render(); return; }
+        } else if (items.some((x) => tradeItemKey(x) === tradeItemKey(it))) { toast('That is already in the proposal.'); return; }
+        items.push(it);
+        render();
+      }));
       return col;
     };
     body.append(h('div', { class: 'row', style: 'align-items:flex-start' },
@@ -343,7 +351,8 @@ function openProposal(ui: GameUI, to: FactionId, done: () => void): void {
   render();
 }
 
-function itemAdder(ui: GameUI, giver: FactionId, taker: FactionId, add: (i: TradeItem) => void): HTMLElement {
+function itemAdder(ui: GameUI, giver: FactionId, taker: FactionId, listed: TradeItem[], add: (i: TradeItem) => void): HTMLElement {
+  const taken = new Set(listed.map(tradeItemKey));
   const g = ui.game;
   const wrap = h('div', { style: 'margin-top:6px' });
   const kind = h('select', null,
@@ -369,13 +378,14 @@ function itemAdder(ui: GameUI, giver: FactionId, taker: FactionId, add: (i: Trad
       const other = giver === ui.viewer ? taker : giver;
       const sees = seesTechOf(ui, other);
       const takerKnows = new Set(giver === ui.viewer && !sees ? [] : g.factions[taker].research.known);
-      const options = g.factions[giver].research.known.filter((t) => !takerKnows.has(t) && t !== 'ascension' && TECH_BY_ID[t]);
+      const options = g.factions[giver].research.known.filter((t) => !takerKnows.has(t) && t !== 'ascension' && TECH_BY_ID[t] && !taken.has(`tech:${t}`));
       const ANY = '*';
       const offering = giver === ui.viewer;
       const sel = h('select', null,
-        h('option', { value: ANY }, offering ? 'One of my choice (my cheapest that they lack)' : 'One of their choice (their cheapest that you lack)'),
+        taken.has('anyTech') ? null : h('option', { value: ANY }, offering ? 'One of my choice (my cheapest that they lack)' : 'One of their choice (their cheapest that you lack)'),
         ...(offering || sees ? options : []).map((t) => h('option', { value: t }, `${TECH_BY_ID[t].name} (tier ${TECH_BY_ID[t].tier})`)));
-      detail.append(sel, button('Add', () => add(sel.value === ANY ? { kind: 'anyTech' } : { kind: 'tech', tech: sel.value }), { cls: 'small' }));
+      if (!sel.options.length) detail.append(h('span', { class: 'dim' }, 'Every technology on offer is already in the proposal.'));
+      else detail.append(sel, button('Add', () => add(sel.value === ANY ? { kind: 'anyTech' } : { kind: 'tech', tech: sel.value }), { cls: 'small' }));
       detail.append(h('div', { class: 'dim', style: 'font-size:11px;flex-basis:100%' }, sees
         ? (offering ? 'Showing only techs they lack (your embassy or spies tell you what they know).' : 'Showing the techs they know and you lack (your embassy or spies report them).')
         : offering

@@ -625,6 +625,22 @@ export class MapView {
   private drawStarbases(inView: number[], explored: (i: number) => boolean): void {
     const set = new Set(inView);
     const ctx = this.ctx;
+    // Outposts: a small sensor mast with two signal arcs, top left of the hex.
+    for (const i of inView) {
+      const hx = this.state.map.hexes[i];
+      if (!hx.outpost || !hx.owner || !explored(i)) continue;
+      if (!this.visible.has(i) && hx.owner !== this.viewer) continue;
+      const p = hexToPixel(this.state.map, i, HEX);
+      const x = p.x - HEX * 0.42, y = p.y - HEX * 0.38;
+      ctx.strokeStyle = '#fff';
+      ctx.fillStyle = factionDef(hx.owner).color;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, y + 1); ctx.lineTo(x - 3, y + 6); ctx.moveTo(x, y + 1); ctx.lineTo(x + 3, y + 6); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, y, 2.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = factionDef(hx.owner).color;
+      ctx.lineWidth = 1.1;
+      for (const r of [4.5, 7]) { ctx.beginPath(); ctx.arc(x, y, r, -Math.PI * 0.8, -Math.PI * 0.2); ctx.stroke(); }
+    }
     for (const b of Object.values(this.state.starbases)) {
       if (!set.has(b.hex) || !explored(b.hex)) continue;
       if (!this.visible.has(b.hex)) continue;

@@ -162,7 +162,7 @@ describe('colonization', () => {
     expect(colonize(g, fid).ok).toBe(false);
   });
 
-  it('constructors found outposts and survive', () => {
+  it('constructors build outposts and survive; an outpost holds the hex but settles nothing', () => {
     const g = newGame();
     const target = g.map.hexes.findIndex((h) => h.system && !h.owner && h.system.development === 0 && h.terrain === 'space');
     const fid = fleetOf(g, 'concord', firstDesign('concord', (d) => d.role === 'constructor'), target);
@@ -170,7 +170,9 @@ describe('colonization', () => {
     expect(buildOutpost(g, fid).ok).toBe(true);
     expect(g.factions.concord.stock.metals).toBeLessThan(metals);
     expect(g.fleets[fid]).toBeDefined();
-    expect(g.map.hexes[target].system!.development).toBe(1);
+    expect(g.map.hexes[target].outpost).toBe(true);
+    expect(g.map.hexes[target].owner).toBe('concord');
+    expect(g.map.hexes[target].system!.development).toBe(0);
   });
 });
 
