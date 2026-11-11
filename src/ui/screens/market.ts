@@ -7,7 +7,7 @@ import { contractCost, contractTerms, offersFor } from '../../engine/mercenaries
 import { canTradeWith, DOMESTIC_MIN_DISTANCE, routeCapacity, routeDisruptors, routeOptions, routesOf, routeValue } from '../../engine/routes';
 import { getBit } from '../../engine/bitset';
 import { hexDistance } from '../../engine/hex';
-import { relation } from '../../engine/query';
+import { fleetSpeed, relation } from '../../engine/query';
 import { costText, factionChip } from '../format';
 import type { StockpileKind } from '../../engine/types';
 import { button, h, toast } from '../dom';
@@ -148,30 +148,53 @@ function routesTab(ui: GameUI, rerender: () => void): HTMLElement {
   g.map.hexes.forEach((_, i) => { if (getBit(bits, i)) explored.add(i); });
   const options = routeOptions(g, me, (i) => explored.has(i)).slice(0, 10);
   const cargo = Object.values(g.fleets).filter((f) => f.owner === me && f.ships.some((s) => design(g.ships[s].design).role === 'cargo'));
+  const optionHexes = new Set(options.map((o) => o.hex));
+  const speed = (f: (typeof cargo)[number]) => Math.max(1, fleetSpeed(g, f.id));
+  const eta = (f: (typeof cargo)[number]) => Math.max(1, Math.ceil(f.path.length / speed(f)));
+  const bound = (f: (typeof cargo)[number]) => (f.path.length ? f.path[f.path.length - 1] : null);
+  // Free ships: not already on their way somewhere and not sitting where a route could open.
+  const free = cargo.filter((f) => !f.path.length && !optionHexes.has(f.hex));
+  const shipName = (f: (typeof cargo)[number]) => f.name || 'Cargo ship';
   const partners = new Set(options.map((o) => o.partner));
   const others = Object.keys(g.factions).filter((o) => o !== me && g.factions[o].alive && relation(g, me, o).contact && relation(g, me, o).status !== 'war' && !partners.has(o) && !canTradeWith(g, me, o));
   if (!options.length) wrap.append(h('div', { class: 'dim' }, 'Nowhere yet. You need a Trade Agreement with another power (propose one in Diplomacy), or two of your own settled systems at least ' + DOMESTIC_MIN_DISTANCE + ' hexes apart.'));
   else {
-    const t = h('table', { class: 't' }, h('tr', null, h('th', null, 'System'), h('th', null, 'Owner'), h('th', null, 'Per turn'), h('th', null, 'Distance'), h('th', null, '')));
+    const t = h('table', { class: 't' }, h('tr', null, h('th', null, 'System'), h('th', null, 'Owner'), h('th', null, 'Per turn'), h('th', null, 'Distance'), h('th', null, 'Cargo ship')));
     for (const o of options) {
       const hx = g.map.hexes[o.hex];
-      const nearest = cargo.filter((f) => f.path.length === 0 || f.path[f.path.length - 1] !== o.hex)
-        .sort((a, b) => hexDistance(g.map, a.hex, o.hex) - hexDistance(g.map, b.hex, o.hex))[0];
       const here = cargo.find((f) => f.hex === o.hex);
+      const coming = cargo.filter((f) => bound(f) === o.hex);
+      const nearest = [...free].sort((a, b) => hexDistance(g.map, a.hex, o.hex) - hexDistance(g.map, b.hex, o.hex))[0];
+      let cell: HTMLElement | string;
+      if (here) cell = button(`Open route (${shipName(here)})`, () => { if (ui.act({ type: 'establishRoute', fleet: here.id })) rerender(); }, { cls: 'small primary', disabled: !ui.myTurn || full });
+      else if (coming.length) cell = h('span', { class: 'good', style: 'font-size:12px' }, `${shipName(coming[0])} on its way · ${eta(coming[0])} turn${eta(coming[0]) > 1 ? 's' : ''}`);
+      else if (nearest) {
+        const turns = Math.max(1, Math.ceil(hexDistance(g.map, nearest.hex, o.hex) / speed(nearest)));
+        cell = button(`Send ${shipName(nearest)} · ~${turns}t`, () => {
+          if (ui.act({ type: 'move', fleet: nearest.id, to: o.hex }, true)) { toast(`${shipName(nearest)} is on its way to ${hx.system!.name}. When it arrives, open the route here or from the ship.`); rerender(); }
+        }, { cls: 'small', disabled: !ui.myTurn || full, title: `Sends your nearest free cargo ship, ${shipName(nearest)}, from ${g.map.hexes[nearest.hex].system?.name ?? 'deep space'} (${hexDistance(g.map, nearest.hex, o.hex)} hexes away)` });
+      } else cell = h('span', { class: 'dim', style: 'font-size:11px' }, cargo.length ? 'no free cargo ship' : 'no cargo ship');
       t.append(h('tr', null,
         h('td', null, hx.system!.name),
         h('td', null, o.partner === me ? 'Domestic' : factionChip(o.partner, true)),
         h('td', null, `${ICON.energy}~${num(o.value)}`),
         h('td', null, `${hexDistance(g.map, o.from, o.hex)} hexes from ${g.map.hexes[o.from].system!.name}`),
-        h('td', null, here
-          ? button('Open route', () => { if (ui.act({ type: 'establishRoute', fleet: here.id })) rerender(); }, { cls: 'small primary', disabled: !ui.myTurn || full })
-          : nearest
-            ? button('Send cargo ship', () => { if (ui.act({ type: 'move', fleet: nearest.id, to: o.hex })) { toast(`${nearest.name || 'Your cargo ship'} is on its way to ${hx.system!.name}. When it arrives, open the route here or from the ship.`); rerender(); } },
-              { cls: 'small', disabled: !ui.myTurn || full, title: `Sends ${nearest.name || 'a cargo ship'} (${hexDistance(g.map, nearest.hex, o.hex)} hexes away)` })
-            : h('span', { class: 'dim', style: 'font-size:11px' }, 'no cargo ship'))));
+        h('td', null, cell)));
     }
     wrap.append(t);
     if (!cargo.length) wrap.append(h('div', { class: 'dim', style: 'margin-top:6px' }, 'Routes are run by cargo ships: build one in a system with a shipyard (Ships tab, any Cargo design).'));
+  }
+  // Every cargo ship and what it is doing.
+  if (cargo.length) {
+    wrap.append(h('h3', null, 'Your cargo ships'));
+    for (const f of cargo) {
+      const to = bound(f);
+      const where = g.map.hexes[f.hex].system?.name ?? 'deep space';
+      const doing = to !== null ? `on its way to ${g.map.hexes[to].system?.name ?? 'a hex'}, ${eta(f)} turn${eta(f) > 1 ? 's' : ''}`
+        : optionHexes.has(f.hex) ? `at ${where}: ready to open a route` : `free, at ${where}`;
+      wrap.append(h('div', { class: 'row', style: 'gap:8px;font-size:12px;margin:2px 0' }, h('b', null, shipName(f)), h('span', { class: 'dim grow' }, doing),
+        to !== null ? button('Stop', () => { if (ui.act({ type: 'stop', fleet: f.id }, true)) rerender(); }, { cls: 'small', disabled: !ui.myTurn, title: 'Cancel this trip: it becomes free again' }) : ''));
+    }
   }
   if (others.length) wrap.append(h('div', { class: 'dim', style: 'margin-top:8px;font-size:12px' },
     'Sign a Trade Agreement (Diplomacy → Propose a deal) to trade with: ', ...others.flatMap((o, i) => [i ? ', ' : '', factionChip(o, true)])));

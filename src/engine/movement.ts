@@ -1,7 +1,7 @@
 /** Fleet movement, battle-group management, territory claims and colonization (§5.3, §6.4). */
 import { BALANCE } from '../data/balance';
 import { design } from '../data/designs';
-import { hasAbility } from '../data/factions';
+import { factionDef, hasAbility } from '../data/factions';
 import { PLANET_YIELDS, TERRAIN_INFO } from '../data/improvements';
 import { ROLES } from '../data/ships';
 import { log } from './events';
@@ -243,7 +243,7 @@ export function resetMovement(state: GameState, faction: FactionId): void {
   }
 }
 
-/** Continues multi-turn paths at the start of a turn. */
+/** Continues multi-turn paths at the end of a faction's turn, with the movement each fleet has left. */
 export function continuePaths(state: GameState, faction: FactionId): void {
   for (const f of Object.values(state.fleets)) if (f.owner === faction && f.path.length > 0) advanceFleet(state, f.id);
 }
@@ -264,6 +264,81 @@ export function canClaim(state: GameState, faction: FactionId, hex: number): boo
   if (othersAt(state, faction, hex)) return false;
   if (h.system && h.system.development > 0) return false;
   return true;
+}
+
+/**
+ * Why `faction`'s ships in `hex` will not take it, in plain words, or null if they will (or it is already
+ * theirs). Shown in the hex panel so players know why a hex isn't changing hands.
+ */
+export function claimBlocker(state: GameState, faction: FactionId, hex: number): string | null {
+  const h = state.map.hexes[hex];
+  if (h.owner === faction) return null;
+  if (h.terrain === 'blackHole') return 'Black holes can’t be claimed.';
+  if (h.owner && !atWar(state, faction, h.owner)) return 'Someone else owns this hex: you can only take territory from a power you are at war with.';
+  if (h.system && h.system.development > 0) return 'A settled world can’t be taken by ships alone: bring down its planetary defense, then invade with armies carried by transports.';
+  if (othersAt(state, faction, hex)) return 'Another power’s ships or starbase are here: ships claim a hex only when they hold it alone.';
+  return null;
+}
+
+/** Turns an owner's cut-off territory (no planet, outpost or starbase connected to it) lasts before it changes hands. */
+export const ORPHAN_TURNS = 10;
+
+/**
+ * Start of a faction's turn: its territory that has had no planet, outpost or starbase connected to it for
+ * ORPHAN_TURNS turns passes to whoever owns most of the hexes around it (or is released, if nobody does).
+ * Hexes where the owner still has ships, and settled worlds, never change hands this way.
+ */
+export function releaseOrphans(state: GameState, faction: FactionId): number[] {
+  const hexes = state.map.hexes;
+  const anchor = new Set<number>();
+  for (const b of Object.values(state.starbases)) if (b.owner === faction) anchor.add(b.hex);
+  const seen = new Uint8Array(hexes.length);
+  const moved: number[] = [];
+  for (let start = 0; start < hexes.length; start++) {
+    if (seen[start] || hexes[start].owner !== faction) continue;
+    const part: number[] = [];
+    const stack = [start];
+    seen[start] = 1;
+    let anchored = false;
+    while (stack.length) {
+      const i = stack.pop()!;
+      part.push(i);
+      if (anchor.has(i) || (hexes[i].system?.development ?? 0) > 0) anchored = true;
+      for (const n of neighbors(state.map, i)) if (!seen[n] && hexes[n].owner === faction) { seen[n] = 1; stack.push(n); }
+    }
+    if (anchored) { for (const i of part) delete hexes[i].orphanSince; continue; }
+    const since = Math.min(...part.map((i) => hexes[i].orphanSince ?? state.turn));
+    for (const i of part) hexes[i].orphanSince = since;
+    if (state.turn - since < ORPHAN_TURNS) continue;
+    // Who surrounds it: the faction owning most of the hexes bordering this piece of territory.
+    const border = new Map<FactionId | null, number>();
+    const inPart = new Set(part);
+    for (const i of part) for (const n of neighbors(state.map, i)) {
+      if (inPart.has(n)) continue;
+      const o = hexes[n].owner;
+      border.set(o, (border.get(o) ?? 0) + 1);
+    }
+    let heir: FactionId | null = null, best = 0;
+    for (const [o, c] of border) if (o && c > best) { heir = o; best = c; }
+    const total = [...border.values()].reduce((a, c) => a + c, 0);
+    if (heir && best * 2 <= total) heir = null; // nobody clearly surrounds it: it simply becomes empty space
+    const held = new Set(Object.values(state.fleets).filter((f) => f.owner === faction).map((f) => f.hex));
+    const changed: number[] = [];
+    for (const i of part) {
+      if (held.has(i) || hexes[i].system?.development) continue;
+      hexes[i].owner = heir;
+      hexes[i].pendingClaim = null;
+      delete hexes[i].orphanSince;
+      changed.push(i);
+    }
+    if (!changed.length) continue;
+    moved.push(...changed);
+    const n = changed.length, who = factionDef(faction).short;
+    log(state, heir ? [faction, heir] : [faction], 'claim', heir
+      ? `${n} hex${n > 1 ? 'es' : ''} of ${who} territory, cut off from any planet, outpost or starbase for ${ORPHAN_TURNS} turns, passed to the ${factionDef(heir).short}.`
+      : `${n} hex${n > 1 ? 'es' : ''} of ${who} territory, cut off from any planet, outpost or starbase for ${ORPHAN_TURNS} turns, became empty space.`, changed[0]);
+  }
+  return moved;
 }
 
 /** End of turn: mark hexes this faction holds alone as pending claims. */

@@ -11,6 +11,8 @@ const SECTIONS: [string, string[]][] = [
     'Only empty hexes are claimed this way. Settled planets must be invaded with armies once their planetary defense is down, and enemy starbases must be destroyed first.',
     'Enemy territory can only be claimed while at war.',
     'Territory cut off from your home produces half as much.',
+    'Territory with no planet, outpost or starbase of its owner connected to it for 10 turns passes to whoever surrounds it. Select such a hex to see the countdown.',
+    'Select a hex where your ships are to see whether they will claim it, and if not, why not.',
   ]],
   ['Economy', [
     'Systems produce energy ⚡, metals ⛏, science 🔬 and exotics ✦. Population 👥 grows on habitable worlds and crews big ships.',
@@ -33,6 +35,8 @@ const SECTIONS: [string, string[]][] = [
     'Map buttons (bottom left, or top right on phones): zoom in and out (+ and − keys), centre on your capital (H), and 🤝 to colour borders by how each power stands with you: red for war, green for allies. On a computer, rest the pointer on a hex for a summary of what is there. On a phone, the screens and End Turn are on the bar along the bottom (More holds the rest), and the panel for what you select slides up from it: drag its handle to resize it, or down to close it.',
     'Enemy warships sitting on one of your systems, with none of yours there to contest them, blockade it: half output, and its shipyard can’t finish ships or armies.',
     'Grind a system’s planetary defense to 0, then invade with armies carried by transports.',
+    'Armies don’t fly on their own: build them at a populated system (Other → Army), bring a transport (or any ship with cargo room) to them and press Load armies, then fly to the target. Each fleet card shows the armies aboard and the room left.',
+    'A fleet sent further than it can go in one turn moves as far as it can at once. On each later turn it starts with its full movement and its route, so you can redirect it; left alone, it carries on along the route at the end of your turn.',
   ]],
   ['Diplomacy and spies', [
     'Send a diplomat to another empire’s home system to open an embassy. You need one to trade or sign treaties. Diplomats travelling through hostile space can be captured.',

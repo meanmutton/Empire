@@ -10,7 +10,7 @@ import { pruneDispatches } from './dispatch';
 import { relaxMarket } from './market';
 import { advanceContracts, expireRentals, refreshOffers } from './mercenaries';
 import { runTradeRoutes } from './routes';
-import { applyHazards, claimEnclosed, continuePaths, markClaims, resetMovement, resolveClaims, surveyWithFleets } from './movement';
+import { applyHazards, claimEnclosed, continuePaths, markClaims, releaseOrphans, resetMovement, resolveClaims, surveyWithFleets } from './movement';
 import { activeFaction } from './query';
 import { advanceResearch } from './research';
 import type { FactionId, GameState } from './types';
@@ -27,6 +27,7 @@ export function startTurn(state: GameState): void {
     delete fs.flags.demobilizeAt;
   }
   resolveClaims(state, f);
+  releaseOrphans(state, f);
   claimEnclosed(state, f);
   runEconomy(state, f);
   runTradeRoutes(state, f);
@@ -39,7 +40,6 @@ export function startTurn(state: GameState): void {
   runMinorAbilities(state, f);
   expireRentals(state, f);
   advanceContracts(state, f);
-  continuePaths(state, f);
   checkForcedVassalage(state, f);
   updateExplored(state, f);
 }
@@ -48,6 +48,9 @@ export function startTurn(state: GameState): void {
 export function endTurn(state: GameState): void {
   if (isGameOver(state)) return;
   const f = activeFaction(state);
+  // Fleets still on a multi-turn route carry on now, with whatever movement they have left: at the start of
+  // a turn they keep their full movement and their route, so the player can let them continue or redirect.
+  continuePaths(state, f);
   resolveCombat(state, f);
   captureAgents(state, f);
   markClaims(state, f);

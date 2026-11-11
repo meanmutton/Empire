@@ -277,6 +277,16 @@ one before (100%, 80%, 64%, …), so a mix pays better than a stack.
   powers' ships stay unclaimed.
 - An owned hex not connected to your home by a chain of owned hexes is **disconnected**: −50% yields
   *(tunable)*.
+- **Cut-off territory changes hands**: owned hexes with none of their owner's planets, outposts or starbases
+  connected to them (through the owner's territory) for **10 turns** pass to the faction owning most of the
+  hexes around them, or become empty space if no one holds a majority. Hexes where the owner has ships, and
+  settled worlds, are never handed over this way. The hex panel shows the countdown.
+- The hex panel also says, wherever your ships are, whether they will claim the hex and, if not, why not.
+
+**Moving more than one turn.** A fleet sent further than it can go this turn moves as far as it can at once
+and keeps the rest of its route. On each later turn it starts with its full movement and its route still set:
+you can redirect or stop it, and if you leave it alone it carries on along the route at the **end of your
+turn** (before battles and claims).
 
 ### 5.4 Income each turn
 `yield = base(system type) × development multiplier × improvement bonuses × faction modifiers × treaties`,

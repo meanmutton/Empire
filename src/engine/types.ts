@@ -69,6 +69,8 @@ export interface Hex {
   owner: FactionId | null;
   /** Faction that will claim this hex at the start of its next turn (§5.3). */
   pendingClaim: FactionId | null;
+  /** Turn since which this hex's owner has had no planet, outpost or starbase connected to it (§5.3). */
+  orphanSince?: number;
   /** Wormhole twin hex index. */
   wormhole: number | null;
 }
