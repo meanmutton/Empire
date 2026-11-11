@@ -1,6 +1,8 @@
 import { talkStart } from '../src/ai/talk';
-import { line, VOICES, VOICE_TOPICS } from '../src/ai/voice';
-import { MAJOR_IDS } from '../src/data/factions';
+import { line, VOICES, VOICE_TOPICS, type Topic } from '../src/ai/voice';
+import { LEADER_VOICES } from '../src/ai/leader-voices';
+import { defaultLeader } from '../src/data/leaders';
+import { factionDef, MAJOR_IDS } from '../src/data/factions';
 import { applyAction } from '../src/engine/actions';
 import { adjustOpinion } from '../src/engine/agents';
 import { relation } from '../src/engine/query';
@@ -9,6 +11,13 @@ import { firstDesign, fleetOf, newGame, setStatus } from './helpers';
 import { DESIGNS } from '../src/data/designs';
 
 const from = (g: GameState, f: FactionId) => (g.dispatches ?? []).filter((d) => d.from === f);
+
+/** Whether `text` is one of the things `f`'s leader says on `topic` (to the Concord, about `target`). */
+function saidOn(g: GameState, f: FactionId, topic: Topic, text: string, target?: FactionId): boolean {
+  const lines = LEADER_VOICES[`${f}-${g.factions[f].leader ?? defaultLeader(g.seed, f)}`]?.[topic] ?? VOICES[f][topic];
+  return lines.some((l) => l.replace(/\{them\}/g, factionDef('concord').name)
+    .replace(/\{target\}/g, target ? factionDef(target).name.replace(/^The /, '') : 'others') === text);
+}
 
 /** Lets concord (the human) make a statement, then lets the computer answer. */
 function tell(g: GameState, to: FactionId, statement: Statement) {
@@ -53,7 +62,7 @@ describe('computer powers react to events', () => {
     g.active = g.turnOrder.indexOf('concord');
     applyAction(g, 'concord', { type: 'declareWar', target: 'lattice' });
     talkStart(g, 'lattice');
-    expect(from(g, 'lattice').at(-1)!.text).toMatch(/violation/i);
+    expect(saidOn(g, 'lattice', 'betrayed', from(g, 'lattice').at(-1)!.text)).toBe(true);
   });
 
   it('warn trespassers, at most every few turns', () => {
@@ -95,7 +104,7 @@ describe('statements to computer powers', () => {
     const inside = g.map.hexes.findIndex((h, i) => h.owner === 'concord' && !h.system && i !== g.factions.concord.home);
     const fid = fleetOf(g, 'lattice', DESIGNS['lattice:tensor'], inside);
     expect(tell(g, 'lattice', { kind: 'withdraw' }).ok).toBe(true);
-    expect(from(g, 'lattice').at(-1)!.text).toMatch(/Complying/);
+    expect(saidOn(g, 'lattice', 'withdrawYes', from(g, 'lattice').at(-1)!.text)).toBe(true);
     expect(g.fleets[fid].hex === inside && g.fleets[fid].path.length === 0).toBe(false);
     expect(g.dispatches!.find((d) => d.statement)!.answered).toBe(true);
   });
@@ -110,7 +119,7 @@ describe('statements to computer powers', () => {
     expect(g.factions.lattice.flags['cowed:concord']).toBeGreaterThan(g.turn);
     tell(g, 'rynkai', { kind: 'threaten' });
     expect(g.factions.rynkai.flags['cowed:concord']).toBeUndefined();
-    expect(from(g, 'rynkai').at(-1)!.text).toMatch(/threaten|insult/i);
+    expect(saidOn(g, 'rynkai', 'threatDefy', from(g, 'rynkai').at(-1)!.text)).toBe(true);
   });
 
   it('a power that likes you and hates the target joins your war', () => {
@@ -122,7 +131,7 @@ describe('statements to computer powers', () => {
     adjustOpinion(g, 'lattice', 'varrhen', -80);
     tell(g, 'lattice', { kind: 'requestAid', target: 'varrhen' });
     expect(relation(g, 'lattice', 'varrhen').status).toBe('war');
-    expect(from(g, 'lattice').at(-1)!.text).toMatch(/Joining/);
+    expect(saidOn(g, 'lattice', 'aidYes', from(g, 'lattice').at(-1)!.text, 'varrhen')).toBe(true);
   });
 
   it('answers questions about intentions, and reacts to denunciations', () => {
@@ -132,7 +141,7 @@ describe('statements to computer powers', () => {
     meet(g, 'concord', 'varrhen');
     setStatus(g, 'krasnyr', 'concord', 'war');
     tell(g, 'krasnyr', { kind: 'askIntentions' });
-    expect(from(g, 'krasnyr').at(-1)!.text).toMatch(/liberation/);
+    expect(saidOn(g, 'krasnyr', 'intentHostile', from(g, 'krasnyr').at(-1)!.text)).toBe(true);
     setStatus(g, 'krasnyr', 'concord', 'relations');
     adjustOpinion(g, 'krasnyr', 'varrhen', -50);
     const before = relation(g, 'krasnyr', 'concord');
@@ -155,6 +164,19 @@ describe('leader voices', () => {
     }
     g.factions.concord.leader = 'nobody';
     expect(VOICES.concord.declareWar.map((l) => l.replace(/\{them\}/g, 'Ryn\'kai Dominion'))).toContain(line(g, 'concord', 'rynkai', 'declareWar'));
+  });
+
+  it('every leader of every great power has a line for every occasion', async () => {
+    const { LEADER_VOICES } = await import('../src/ai/leader-voices');
+    const { LEADERS } = await import('../src/data/leaders');
+    for (const [faction, leaders] of Object.entries(LEADERS)) {
+      for (const l of leaders) {
+        const v = LEADER_VOICES[`${faction}-${l.id}`];
+        expect(v, `${faction}-${l.id}`).toBeTruthy();
+        for (const t of VOICE_TOPICS) expect(v[t]?.length ?? 0, `${faction}-${l.id} ${t}`).toBeGreaterThan(0);
+      }
+    }
+    expect(Object.keys(LEADER_VOICES)).toHaveLength(15);
   });
 
   it('every leader line uses only known placeholders', async () => {
