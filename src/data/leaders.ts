@@ -18,8 +18,8 @@ export const LEADER_TITLES: Record<string, string> = {
 export const LEADERS: Record<string, LeaderDef[]> = {
   concord: [
     { id: 'halvorsen-okafor', name: 'Ingrid Halvorsen-Okafor', text: 'A xenoarchaeologist who has walked more Cryx ruins than any living human. Curious and patient.' },
-    { id: 'lindqvist', name: 'Mateo Lindqvist', text: 'The negotiator who ended the Titan water strikes without a shot. Warm, funny, unmovable on principle.' },
-    { id: 'sutton', name: 'Sean Sutton', text: 'A former fleet engineer and the most hawkish First Speaker in a century, which still means careful.' },
+    { id: 'lindqvist', name: 'Mateo Lindqvist', text: 'The negotiator who ended the Titan water strikes without a shot. Blunt, unsentimental, unmovable on principle.' },
+    { id: 'sutton', name: 'Sean Sutton', text: 'A former fleet engineer, warm and funny, and still the most hawkish First Speaker in a century.' },
   ],
   rynkai: [
     { id: 'rynsora', name: "Kaeth Ryn'sora", text: 'The Unbroken: has never lost a duel or forgiven an insult. Formal, blunt and absolutely reliable.' },

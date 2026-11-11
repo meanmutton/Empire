@@ -1,6 +1,6 @@
 import { DESIGNS } from '../src/data/designs';
 import { relationKey } from '../src/engine/ids';
-import { establishRoute, routeCapacity, routeDisruptors, routeValue, runTradeRoutes } from '../src/engine/routes';
+import { establishRoute, routeCapacity, routeDisruptors, routeOptions, routeValue, runTradeRoutes } from '../src/engine/routes';
 import type { GameState } from '../src/engine/types';
 import { firstDesign, fleetOf, newGame, setStatus } from './helpers';
 
@@ -85,5 +85,22 @@ describe('trade routes', () => {
     setStatus(g, 'concord', 'lattice', 'war');
     runTradeRoutes(g, 'concord');
     expect(g.routes).toHaveLength(0);
+  });
+});
+
+describe('route options', () => {
+  it('lists only partners you may trade with, best first, plus distant domestic links', () => {
+    const g = newGame('route-options');
+    const before = routeOptions(g, 'concord');
+    expect(before.every((o) => o.partner === 'concord')).toBe(true);
+    const other = Object.keys(g.factions).find((f) => f !== 'concord' && g.factions[f].kind === 'major')!;
+    const key = relationKey('concord', other);
+    g.relations[key].contact = true;
+    g.relations[key].agreements.push('trade');
+    const after = routeOptions(g, 'concord');
+    expect(after.some((o) => o.partner === other)).toBe(true);
+    for (let i = 1; i < after.length; i++) expect(after[i - 1].value).toBeGreaterThanOrEqual(after[i].value);
+    setStatus(g, 'concord', other, 'war');
+    expect(routeOptions(g, 'concord').some((o) => o.partner === other)).toBe(false);
   });
 });

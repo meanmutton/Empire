@@ -34,6 +34,7 @@ import { isGameOver } from '../engine/victory';
 import { unreadAi, unreadChat, type Messaging } from './messaging';
 import { routeCapacity, routeIncome, routesOf } from '../engine/routes';
 import { tokenElement } from './tokens';
+import { sfx, type Sfx } from './sound';
 
 export interface GameHost {
   /** The viewer pressed End Turn (after the engine processed it). */
@@ -56,6 +57,13 @@ type SideTab = 'system' | 'fleets' | 'agents';
 
 /** A fleet, or one ship of a fleet, being dragged onto another fleet. */
 type FleetDrag = { kind: 'fleet'; fleet: string } | { kind: 'ship'; fleet: string; ship: string };
+
+/** The sound each kind of order makes when it goes through. */
+const ACTION_SOUNDS: Partial<Record<Action['type'], Sfx>> = {
+  move: 'move', moveAgent: 'move', sendDiplomat: 'move', build: 'build', rush: 'build', research: 'research',
+  declareWar: 'war', propose: 'confirm', accept: 'confirm', statement: 'confirm', mission: 'confirm', establishRoute: 'confirm',
+  colonize: 'colonize', outpost: 'colonize', starbase: 'build', invade: 'war', exchange: 'build', buyOffer: 'build', orderShip: 'build',
+};
 
 export class GameUI {
   readonly root: HTMLElement;
@@ -143,7 +151,11 @@ export class GameUI {
     if (!this.myTurn) { toast('It is not your turn.', 'error'); return false; }
     const r = applyAction(this.game, this.viewer, action);
     if (!r.ok) toast(r.reason, 'error');
-    else if (!quiet && r.text) toast(r.text);
+    else {
+      if (!quiet && r.text) toast(r.text);
+      const cue = ACTION_SOUNDS[action.type];
+      if (cue) sfx(cue);
+    }
     if (this.selFleet && !this.game.fleets[this.selFleet]) this.selFleet = null;
     if (this.selAgent && !this.game.agents[this.selAgent]) this.selAgent = null;
     this.refresh();
@@ -291,6 +303,8 @@ export class GameUI {
     const card = h('div', { class: 'hover-card' });
     card.append(h('div', { class: 'row' }, h('b', null, hx.system ? hx.system.name : TERRAIN_INFO[hx.terrain].name), h('span', { class: 'grow' }),
       hx.owner ? factionChip(hx.owner, true) : h('span', { class: 'dim' }, 'unclaimed')));
+    const lord = hx.owner ? g.factions[hx.owner]?.overlord : null;
+    if (lord) card.append(h('div', { class: 'good', style: 'font-size:11px' }, lord === this.viewer ? 'Your vassal' : `Vassal of the ${factionDef(lord).short}`));
     if (hx.system) {
       const s = hx.system;
       card.append(h('div', { class: 'dim' }, `${PLANET_YIELDS[s.planet].name} · size ${s.size}${s.development ? ` · ${DEV_NAMES[s.development]}` : ''}${s.homeOf ? ' · capital' : ''}`));
@@ -406,6 +420,7 @@ export class GameUI {
     }
     const r = applyAction(this.game, this.viewer, { type: 'endTurn' });
     if (!r.ok) { toast(r.reason, 'error'); return; }
+    sfx('endTurn');
     closeBriefing();
     this.select(null);
     this.host.afterEndTurn(this);
@@ -415,6 +430,7 @@ export class GameUI {
   // Selection and map clicks
 
   select(hex: number | null, fleet: string | null = null, agent: string | null = null): void {
+    if (hex !== null && (hex !== this.selHex || fleet !== this.selFleet || agent !== this.selAgent)) sfx('select');
     this.selHex = hex;
     this.selFleet = fleet;
     this.selAgent = agent;
@@ -773,10 +789,12 @@ export class GameUI {
     const s = clear(this.side);
     const key = `${this.selHex}|${this.selFleet}|${this.selAgent}`;
     if (key !== this.sideKey) {
+      const sameHex = this.sideKey.startsWith(`${this.selHex}|`);
       // A new selection on a phone opens the sheet halfway (unless it was pulled all the way up).
-      if (this.sheet === 'peek' && this.selHex !== null && !this.sideKey.startsWith(`${this.selHex}|`)) this.sheet = 'half';
+      if (this.sheet === 'peek' && this.selHex !== null && !sameHex) this.sheet = 'half';
       this.sideKey = key;
-      this.side.scrollTop = 0;
+      // A new hex starts at the top; picking another fleet or ship in the same hex keeps the panel where it is.
+      if (!sameHex) this.side.scrollTop = 0;
     }
     this.side.classList.toggle('empty', this.selHex === null);
     this.applySheet();
@@ -799,11 +817,13 @@ export class GameUI {
       button('✕', () => this.select(null), { cls: 'ghost small' })));
     if (hx.terrain !== 'space') s.append(h('div', { class: 'dim' }, `${TERRAIN_INFO[hx.terrain].name}. ${TERRAIN_INFO[hx.terrain].text}`));
     if (hx.pendingClaim) s.append(h('div', null, factionChip(hx.pendingClaim, true), ' will claim this hex at the start of its next turn.'));
+    const lord = hx.owner ? g.factions[hx.owner]?.overlord : null;
+    if (lord) s.append(h('div', { class: 'good' }, lord === this.viewer ? `${factionDef(hx.owner!).short}: your vassal. They pay you tribute and join your wars.` : `${factionDef(hx.owner!).short}: vassal of the ${factionDef(lord).short}.`));
     // Tabs: System, Fleets and Agents, when the hex has more than one of them. The selection picks the first
     // tab shown (a selected fleet opens Fleets); the battle forecast stays above the tabs.
     const base = Object.values(g.starbases).find((b) => b.hex === hex);
-    const fleets = this.fleetsAt(hex).sort((a, b) => (a.id === this.selFleet ? -1 : 0) - (b.id === this.selFleet ? -1 : 0)
-      || (a.owner === this.viewer ? -1 : 0) - (b.owner === this.viewer ? -1 : 0));
+    // A stable order (yours first): selecting a fleet highlights it where it is instead of moving it.
+    const fleets = this.fleetsAt(hex).sort((a, b) => (a.owner === this.viewer ? -1 : 0) - (b.owner === this.viewer ? -1 : 0) || a.id.localeCompare(b.id));
     const agents = Object.values(g.agents).filter((a) => a.hex === hex && a.owner === this.viewer && !a.ship && !a.capturedBy);
     const tabs: SideTab[] = [];
     if (hx.system) tabs.push('system');
@@ -989,21 +1009,34 @@ export class GameUI {
       if (open && details) row.append(h('div', { class: 'build-details' }, details));
       return row;
     };
+    // Things you can't build until you research something are left out; a line says how many are waiting.
+    const known = new Set(g.factions[this.viewer].research.known);
+    const locked = (n: number) => {
+      if (n) wrap.append(h('div', { class: 'dim', style: 'font-size:12px;margin-top:6px' }, `${n} more ${n === 1 ? 'unlocks' : 'unlock'} with research. `,
+        h('a', { href: '#', style: 'color:var(--accent)', onclick: (e: Event) => { e.preventDefault(); openResearch(this); } }, 'Research')));
+    };
     if (this.buildTab === 'ships') {
-      const designs = [...DESIGNS_BY_FACTION[this.viewer]].filter((d) => d.cls !== 'fighter').sort((a, b) => CLASSES[a.cls].size - CLASSES[b.cls].size);
+      const all = [...DESIGNS_BY_FACTION[this.viewer]].filter((d) => d.cls !== 'fighter').sort((a, b) => CLASSES[a.cls].size - CLASSES[b.cls].size);
+      const designs = all.filter((d) => !d.tech || known.has(d.tech));
       for (const d of designs) {
         const c = checkBuild(g, this.viewer, hex, 'ship', d.id);
         const s = d.stats;
         const title = `${CLASSES[d.cls].name} · ${ROLES[d.role].name}. ${ROLES[d.role].text}\nHull ${s.hull} · shields ${s.shields} · beams ${s.energy} · missiles ${s.missile} · point defense ${s.pd} · hangar ${s.hangar} · cargo ${s.cargo} · speed ${s.speed} · sensors ${s.sensors}\nUpkeep ${d.upkeep} energy per turn`;
         wrap.append(opt(`ship:${d.id}`, `${d.name} · ${CLASSES[d.cls].name} ${ROLES[d.role].name}`, costText(c.ok ? c.cost : d.cost), c, { type: 'build', hex, kind: 'ship', item: d.id }, title));
       }
+      locked(all.length - designs.length);
     } else if (this.buildTab === 'improvements') {
+      let waiting = 0;
       for (const [id, imp] of Object.entries(IMPROVEMENTS)) {
+        if (imp.tech && !known.has(imp.tech)) { waiting++; continue; }
         const c = checkBuild(g, this.viewer, hex, 'improvement', id);
+        // Unique improvements already here, and ones this world can never have, are left out too.
+        if (!c.ok && (c.reason === 'Already built.' || c.reason === 'No exotic source here.')) continue;
         const copies = sys.improvements.filter((x) => x === id).length + sys.queue.filter((q) => q.kind === 'improvement' && q.item === id).length;
         const repeat = copies && (imp.yields || imp.production) ? ` Another one here yields ${Math.round(Math.pow(REPEAT_FALLOFF, copies) * 100)}% (each repeat on the same world yields 20% less).` : '';
         wrap.append(opt(`imp:${id}`, copies ? `${imp.name} (${copies + 1}${copies === 1 ? 'nd' : copies === 2 ? 'rd' : 'th'})` : imp.name, costText(imp.cost), c, { type: 'build', hex, kind: 'improvement', item: id }, imp.text + repeat));
       }
+      locked(waiting);
     } else {
       const items: [string, Parameters<typeof checkBuild>[3], string, string][] = [
         ['Develop to next level', 'develop', '', `Raises ${sys.name} to ${DEV_NAMES[Math.min(5, sys.development + 1)]}: higher yields, more population and more improvement slots.`],
@@ -1013,6 +1046,7 @@ export class GameUI {
         ['Ascension Gate', 'wonder', 'ascensionGate', 'The Concord’s path to an Ascendance victory.'],
       ];
       for (const [label, kind, item, text] of items) {
+        if (kind === 'wonder' && !known.has('ascension')) continue;
         const c = checkBuild(g, this.viewer, hex, kind, item);
         wrap.append(opt(`other:${kind}`, label, c.ok ? costText(c.cost) : '', c, { type: 'build', hex, kind, item }, text));
       }
@@ -1095,6 +1129,7 @@ export class GameUI {
     if (roles.includes('constructor') && hx.system && hx.system.development === 0) A('Found outpost', { type: 'outpost', fleet: f.id }, '30 metals, 10 energy');
     if (roles.includes('constructor') && hx.owner === this.viewer) A('Build starbase', { type: 'starbase', fleet: f.id });
     if (roles.includes('cargo') && hx.system && hx.owner && hx.system.development >= 2) A('Open trade route', { type: 'establishRoute', fleet: f.id }, 'The cargo ship becomes a trade route back to your nearest settled system.');
+    if (roles.includes('cargo')) acts.append(button('Where to trade ›', () => openDiplomacy(this, 'market:routes'), { cls: 'small', title: 'Every system you could open a trade route to, with what it would pay' }));
     const armiesAboard = f.ships.flatMap((s) => g.ships[s].cargo).filter((c) => g.armies[c]);
     if (armiesAboard.length && hx.system && hx.owner !== this.viewer && hx.system.development > 0) A('Invade', { type: 'invade', fleet: f.id }, 'Planetary defense must be 0');
     const garrison = Object.values(g.armies).filter((a) => a.owner === this.viewer && a.hex === f.hex);

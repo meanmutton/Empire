@@ -57,6 +57,8 @@ export function seesTechOf(ui: GameUI, other: FactionId): boolean {
 export function openDiplomacy(ui: GameUI, focus: string = 'overview'): void {
   let current = focus.startsWith('ai:') ? focus.slice(3) : focus;
   let marketTab: MarketTab = 'exchange';
+  // 'market:routes' (and the like) opens the Market at that tab.
+  if (current.startsWith('market:')) { marketTab = current.slice(7) as MarketTab; current = 'market'; }
   const drafts = new Map<string, string>();
   const body = h('div', { class: 'msg-grid' });
   const messaging = ui.messaging;
@@ -90,7 +92,9 @@ export function openDiplomacy(ui: GameUI, focus: string = 'overview'): void {
       const ai = !humanSeat(ui, o) && g.factions[o].kind === 'major' ? aiUnread(ui, o) : 0;
       const pending = inbox.filter((p) => p.from === o).length;
       const st = relation(g, me, o).status;
-      entry(o, factionChip(o, true), chat + pending, st === 'war' ? 'war' : st === 'alliance' ? 'ally' : g.factions[o].kind === 'minor' ? 'minor' : '', ai);
+      const lord = g.factions[o].overlord;
+      const sub = st === 'war' ? 'war' : lord === me ? 'your vassal' : lord ? `vassal of ${factionDef(lord).short}` : st === 'alliance' ? 'ally' : g.factions[o].kind === 'minor' ? 'minor' : '';
+      entry(o, factionChip(o, true), chat + pending, sub, ai);
     }
     if (unmet) list.append(h('div', { class: 'dim', style: 'font-size:12px;margin-top:6px' }, `${unmet} power${unmet > 1 ? 's' : ''} not yet met.`));
     if (!met.length) list.append(h('div', { class: 'dim', style: 'font-size:12px;margin-top:6px' }, 'You have not met anyone yet. Explore with scouts.'));
@@ -147,7 +151,8 @@ function overviewPane(ui: GameUI, met: FactionId[], open: (key: string) => void,
     const op = opinionOf(g, o, me);
     table.append(h('tr', { style: 'cursor:pointer', onclick: () => open(o) },
       h('td', null, factionChip(o)),
-      h('td', { class: r.status === 'war' ? 'bad' : r.status === 'alliance' ? 'good' : '' }, STATUS_LABEL[r.status]),
+      h('td', { class: r.status === 'war' ? 'bad' : r.status === 'alliance' || g.factions[o].overlord === me ? 'good' : '' }, STATUS_LABEL[r.status],
+        g.factions[o].overlord ? h('div', { style: 'font-size:11px' }, g.factions[o].overlord === me ? 'your vassal' : `vassal of the ${factionDef(g.factions[o].overlord!).short}`) : ''),
       h('td', { class: op >= 0 ? 'good' : 'bad' }, num(op)),
       h('td', null, `${hasEmbassy(g, me, o) ? 'yours ✓' : 'yours ✗'} · ${hasEmbassy(g, o, me) ? 'theirs ✓' : 'theirs ✗'}`),
       h('td', null, r.agreements.map((a) => AGREEMENTS[a as AgreementId]?.name ?? a).join(', ') || h('span', { class: 'dim' }, 'none'))));
@@ -170,7 +175,7 @@ function factionPane(ui: GameUI, o: FactionId, drafts: Map<string, string>, rere
   const head = h('div', { class: 'dip-head' });
   head.append(portraitElement(o, leader.portrait, 104, leader.full), h('div', { class: 'grow', style: 'min-width:0' },
     h('div', { class: 'row' }, crestElement(o, 28, `${def.kind === 'major' ? 'Crest' : 'Seal'} of the ${def.short}`), h('b', { style: `font-size:16px;color:${def.color}` }, def.name), h('span', { class: 'grow' }),
-      h('span', { class: r.status === 'war' ? 'bad' : r.status === 'alliance' ? 'good' : 'dim' }, STATUS_LABEL[r.status])),
+      h('span', { class: r.status === 'war' ? 'bad' : r.status === 'alliance' || f.overlord === me ? 'good' : 'dim' }, f.overlord === me ? 'Your vassal' : STATUS_LABEL[r.status])),
     h('div', { style: 'margin:2px 0 4px' }, leader.full),
     h('div', { class: 'dim' }, `${def.government}${f.kind === 'minor' ? ' · minor power' : ''}${f.overlord ? ` · vassal of the ${factionDef(f.overlord).short}` : ''}${f.player ? ` · played by ${f.player}` : f.kind === 'major' ? ' · computer' : ''}`),
     h('div', { class: 'row', style: 'margin-top:4px;align-items:flex-start' }, h('span', { class: 'dim grow', style: 'font-size:12px' }, def.text),

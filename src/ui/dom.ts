@@ -1,4 +1,5 @@
 /** Tiny DOM helpers (no framework). */
+import { sfx } from './sound';
 type Child = Node | string | number | null | undefined | false;
 type Attrs = Record<string, unknown> & { class?: string; style?: string };
 
@@ -40,6 +41,7 @@ export function toast(text: string, kind: 'info' | 'error' = 'info'): void {
   }
   el.textContent = text;
   el.className = `show ${kind}`;
+  if (kind === 'error') sfx('error');
   window.clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => { el!.className = ''; }, 2600);
 }
@@ -73,11 +75,13 @@ export function modal(title: string, body: HTMLElement, opts: { wide?: boolean; 
     if (closed) return;
     closed = true;
     overlay.remove();
+    sfx('close');
     const i = openModals.indexOf(close);
     if (i >= 0) openModals.splice(i, 1);
     opts.onClose?.();
   };
   openModals.push(close);
+  sfx('open');
   const overlay = h('div', { class: 'modal-overlay', onclick: (e: Event) => { if (e.target === overlay) close(); } },
     h('div', { class: `modal ${opts.wide ? 'wide' : ''}` },
       h('div', { class: 'modal-head' }, h('div', { class: 'modal-title' }, title), button('✕', close, { cls: 'ghost' })),

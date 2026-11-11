@@ -11,6 +11,7 @@ import { factionDef } from '../../data/factions';
 import type { GameEvent, GameState } from '../../engine/types';
 import { eventsFor } from '../../engine/events';
 import { button, clear, h, isTouch, onEscape } from '../dom';
+import { sfx } from '../sound';
 import type { GameUI } from '../game-ui';
 import { openBattle } from './battle';
 import { victoryView } from './victory';
@@ -98,6 +99,8 @@ export function openBriefing(ui: GameUI, opts: { auto?: boolean; tab?: 'turn' | 
   const items = a.items.filter((i) => i.b === a.last);
   const pending = Object.values(g.proposals).filter((p) => p.to === ui.viewer && !p.answer).length;
   if (opts.auto && !pending && !items.some((i) => !ROUTINE.has(i.kind))) return;
+  // The start of your turn sounds like what happened: a battle, a war, or simply news.
+  if (opts.auto) sfx(items.some((i) => i.kind === 'battle') ? 'battle' : items.some((i) => i.kind === 'war') ? 'war' : 'message');
   current?.close();
   let tab: 'turn' | 'history' | 'victory' = opts.tab ?? 'turn';
   let page = 0;

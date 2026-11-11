@@ -3,6 +3,8 @@
  * the same words. Placeholders: {them} the listener's empire name, {target} a third empire, {system} a system.
  */
 import { factionDef } from '../data/factions';
+import { defaultLeader } from '../data/leaders';
+import { LEADER_VOICES } from './leader-voices';
 import { addDispatch } from '../engine/dispatch';
 import { Rng } from '../engine/rng';
 import type { FactionId, GameState } from '../engine/types';
@@ -188,9 +190,11 @@ const LATTICE: Lines = {
 
 const VOICES: Record<string, Lines> = { concord: CONCORD, rynkai: RYNKAI, varrhen: VARRHEN, krasnyr: KRASNYR, lattice: LATTICE };
 
-/** The words `from` would say on a topic (picked with the game's RNG). */
+/** The words `from` would say on a topic, in its leader's voice (picked with the game's RNG). */
 export function line(state: GameState, from: FactionId, to: FactionId, topic: Topic, vars: { target?: FactionId; system?: string } = {}): string {
-  const lines = VOICES[from]?.[topic];
+  // Whoever leads them this game speaks in their own words; topics they lack use the faction's voice.
+  const leader = state.factions[from]?.leader ?? defaultLeader(state.seed, from);
+  const lines = LEADER_VOICES[`${from}-${leader}`]?.[topic] ?? VOICES[from]?.[topic];
   if (!lines?.length) return '';
   const pick = lines.length === 1 ? lines[0] : new Rng(state.rng).pick(lines);
   return pick

@@ -83,7 +83,7 @@ These come last, once the game is settled. The owner wants to collaborate on bot
   built from it.
 - [x] **Faction emblems**: a glyph for every faction drawn from its lore (`src/ui/glyphs.ts`), and detailed
   crests for the great powers and seals for the minor factions (`src/ui/crests.ts`).
-- **Still to come from the lore**: the computer powers' voices rewritten in their leaders' words.
+- [x] **Leader voices**: each computer power speaks in its leader's own words (`src/ai/leader-voices.ts`).
 - **Instruction manual with screenshots**: how to play, every screen explained with real screenshots, plus the
   **faction guide** (lore, abilities, ships and victory paths for each faction). Built after the UI and
   rules stop changing.
