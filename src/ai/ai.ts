@@ -25,7 +25,7 @@ import { anyTechChoice, canPropose, itemValue, militaryStrength, proposalScore, 
 import { checkBuild, factionIncome, rushCost, slotsOf } from '../engine/economy';
 import { cargoFree } from '../engine/ground';
 import { hexDistance, hexesWithin, neighbors } from '../engine/hex';
-import { planPath } from '../engine/movement';
+import { outpostBlocker, planPath } from '../engine/movement';
 import { atWar, ownedHexes, relation } from '../engine/query';
 import { availableTechs, techCost } from '../engine/research';
 import { Rng } from '../engine/rng';
@@ -311,8 +311,8 @@ function build(ctx: Ctx): void {
   const fleets = myFleets(ctx);
   const count = (k: FleetKind) => fleets.filter((x) => classifyFleet(state, x) === k).length;
   const queued = (role: string) => systems.reduce((a, h) => a + state.map.hexes[h].system!.queue.filter((q) => q.kind === 'ship' && design(q.item).role === role).length, 0);
-  const colonyTargets = ctx.major ? findColonyTargets(ctx, true).length : 0;
-  const outpostTargets = findColonyTargets(ctx, false).length;
+  const colonyTargets = ctx.major ? findColonyTargets(ctx, true).length + findColonyTargets(ctx, false).length : 0;
+  const outpostTargets = ctx.major ? outpostSites(ctx).length : 0;
   const warStrength = fleets.filter((x) => classifyFleet(state, x) === 'war').reduce((a, x) => a + x.ships.length, 0);
   const wantWarships = Math.round((ctx.major ? 8 : 3) + state.turn * (ctx.major ? 0.35 : 0.06) * (0.5 + ctx.p.aggression) + ctx.enemies.length * 6);
   const armies = Object.values(state.armies).filter((a) => a.owner === me).length;
@@ -336,11 +336,11 @@ function build(ctx: Ctx): void {
         if (d && tryBuild({ type: 'build', hex, kind: 'ship', item: d.id })) continue;
       }
       // Expansionist powers keep more colony ships and constructors in flight.
-      if (ctx.major && colonyTargets > 0 && count('colony') + queued('colony') < (ctx.p.expansion >= 0.7 ? 3 : 2)) {
+      if (ctx.major && colonyTargets > 0 && count('colony') + queued('colony') < (ctx.p.expansion >= 0.7 ? 4 : 3)) {
         const d = pickDesign(ctx, hex, (x) => x.role === 'colony');
         if (d && tryBuild({ type: 'build', hex, kind: 'ship', item: d.id })) continue;
       }
-      if (outpostTargets > 0 && count('constructor') + queued('constructor') < (ctx.major ? (ctx.p.expansion >= 0.7 ? 3 : 2) : 0)) {
+      if (outpostTargets > 0 && count('constructor') + queued('constructor') < (ctx.major ? (ctx.p.expansion >= 0.7 ? 2 : 1) : 0)) {
         const d = pickDesign(ctx, hex, (x) => x.role === 'constructor');
         if (d && tryBuild({ type: 'build', hex, kind: 'ship', item: d.id })) continue;
       }
@@ -561,8 +561,10 @@ function fleets(ctx: Ctx): void {
   const unexplored: number[] = [];
   for (let h = 0; h < state.map.hexes.length; h++) if (!getBit(f.explored, h) && state.map.hexes[h].terrain !== 'blackHole') unexplored.push(h);
 
-  const colonyTargets = findColonyTargets(ctx, true);
-  const outpostTargets = [...findColonyTargets(ctx, false), ...colonyTargets.slice(2)];
+  // Colony ships settle every world worth having, habitable ones first; constructors put outposts where they
+  // hold a world for a later colony ship or watch a rival's border.
+  const colonyTargets = [...findColonyTargets(ctx, true), ...findColonyTargets(ctx, false)];
+  const outpostTargets = outpostSites(ctx);
 
   for (const fl of Object.values(state.fleets)) {
     if (fl.owner !== me || !state.fleets[fl.id]) continue;
@@ -644,11 +646,10 @@ function colonyShip(ctx: Ctx, fl: Fleet, targets: number[]): void {
 }
 
 function constructor(ctx: Ctx, fl: Fleet, targets: number[]): void {
-  const here = ctx.state.map.hexes[fl.hex];
-  if (here.system && here.system.development === 0 && (!here.owner || here.owner === ctx.me) && act(ctx, { type: 'outpost', fleet: fl.id })) return;
+  if (targets.includes(fl.hex) && act(ctx, { type: 'outpost', fleet: fl.id })) return;
   const t = targets.filter((h) => !ctx.reserved.has(h)).sort((a, b) => hexDistance(ctx.state.map, fl.hex, a) - hexDistance(ctx.state.map, fl.hex, b))[0];
   if (t === undefined) {
-    // Nothing to settle: fortify the border facing our nearest rival (or home).
+    // Nothing to watch: fortify the border facing our nearest rival (or home).
     const site = ctx.major ? starbaseSite(ctx.state, ctx.me) : null;
     const dest = site ?? ctx.home;
     if (fl.hex === dest) act(ctx, { type: 'starbase', fleet: fl.id });
@@ -657,6 +658,29 @@ function constructor(ctx: Ctx, fl: Fleet, targets: number[]): void {
   }
   ctx.reserved.add(t);
   if (moveTo(ctx, fl, t) && ctx.state.fleets[fl.id]?.hex === t && ctx.state.fleets[fl.id].movesLeft > 0) act(ctx, { type: 'outpost', fleet: fl.id });
+}
+
+/**
+ * Where an outpost is worth building, best first: unsettled worlds near us that colony ships won't reach soon
+ * (the outpost holds them), then our border hexes facing other powers (it watches them). Capped so outposts
+ * stay a garnish: two to start, one more every 12 turns.
+ */
+function outpostSites(ctx: Ctx): number[] {
+  const { state, me } = ctx;
+  const have = state.map.hexes.filter((h) => h.outpost && h.owner === me).length;
+  if (have >= 2 + Math.floor(state.turn / 12)) return [];
+  const ok = (h: number) => outpostBlocker(state, me, h) === null;
+  const worlds = [...findColonyTargets(ctx, true).slice(2), ...findColonyTargets(ctx, false).slice(1)]
+    .filter((h) => ok(h) && state.map.hexes[h].owner !== me);
+  const border: number[] = [];
+  for (const h of ctx.owned) {
+    if (!ok(h)) continue;
+    if (neighbors(state.map, h).some((n) => { const o = state.map.hexes[n].owner; return o && o !== me; })) border.push(h);
+  }
+  // Space the watch posts out: none within 3 hexes of another of ours.
+  const posts = state.map.hexes.map((h, i) => (h.outpost && h.owner === me ? i : -1)).filter((i) => i >= 0);
+  const spaced = border.filter((h) => !posts.some((p) => hexDistance(state.map, p, h) <= 3));
+  return [...worlds, ...spaced.sort((a, b) => hexDistance(state.map, ctx.home, a) - hexDistance(state.map, ctx.home, b))];
 }
 
 /** Unowned hexes next to our territory that nobody is claiming yet. */
