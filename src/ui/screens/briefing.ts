@@ -33,7 +33,7 @@ const KIND_SECTION: Record<string, Section> = {
 /** Kinds that are routine bookkeeping: on their own, they don't open the briefing at turn start. */
 const ROUTINE = new Set(['built', 'developed', 'claim', 'exchange', 'route', 'contract', 'mercenary']);
 
-const ICONS: Record<string, string> = {
+export const ICONS: Record<string, string> = {
   battle: '⚔', war: '🔥', peace: '🕊', treaty: '📜', built: '🛠', research: '🔬', colonized: '🌍', captured: '⛓', invasion: '🪖',
   embassy: '🏛', proposal: '✉', contact: '👁', spy: '🕵', vassal: '👑', victory: '🏆', eliminated: '☠', ruins: '⌂', developed: '⬆',
   defection: '🚩', blockade: '🚫', raid: '🏴', council: '🗳', capital: '🏛', wonder: '✨', route: '🚚', exchange: '💱',
@@ -44,7 +44,7 @@ export function iconFor(kind: string): string {
   return ICONS[kind] ?? '•';
 }
 
-function sectionOf(kind: string): Section {
+export function sectionOf(kind: string): Section {
   return KIND_SECTION[kind] ?? 'empire';
 }
 

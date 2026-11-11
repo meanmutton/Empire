@@ -18,6 +18,8 @@ import { crestElement } from '../crests';
 import { openGuide } from './guide';
 import { aiThread, aiUnread, chatPanel, groupThreads, threadName, threadUnread } from './messages';
 import type { GameUI } from '../game-ui';
+import { eventsFor } from '../../engine/events';
+import { ICONS, sectionOf } from './briefing';
 
 const STATUS_LABEL: Record<string, string> = {
   war: 'At war', hostile: 'Hostile', neutral: 'Neutral', relations: 'Relations', nap: 'Non-aggression pact', alliance: 'Alliance',
@@ -87,14 +89,18 @@ export function openDiplomacy(ui: GameUI, focus: string = 'overview'): void {
       entry('all', h('span', null, '📢 All players'), threadUnread(ui, messaging!, 'all'));
       for (const k of groups) entry(k, h('span', null, ...k.split(',').map((f) => factionChip(f, true))), threadUnread(ui, messaging!, k));
     }
-    for (const o of met) {
-      const chat = humanSeat(ui, o) && messaging ? threadUnread(ui, messaging, o) : 0;
-      const ai = !humanSeat(ui, o) && g.factions[o].kind === 'major' ? aiUnread(ui, o) : 0;
-      const pending = inbox.filter((p) => p.from === o).length;
-      const st = relation(g, me, o).status;
-      const lord = g.factions[o].overlord;
-      const sub = st === 'war' ? 'war' : lord === me ? 'your vassal' : lord ? `vassal of ${factionDef(lord).short}` : st === 'alliance' ? 'ally' : g.factions[o].kind === 'minor' ? 'minor' : '';
-      entry(o, factionChip(o, true), chat + pending, sub, ai);
+    // One entry per power you have met, great powers first: where you stand at a glance (details in the
+    // tooltips), with a count of what needs your attention.
+    for (const kind of ['major', 'minor'] as const) {
+      const group = met.filter((o) => g.factions[o].kind === kind);
+      if (!group.length) continue;
+      list.append(h('div', { class: 'dip-group' }, kind === 'major' ? 'Great powers' : 'Minor factions'));
+      for (const o of group) {
+        const chat = humanSeat(ui, o) && messaging ? threadUnread(ui, messaging, o) : 0;
+        const ai = !humanSeat(ui, o) && g.factions[o].kind === 'major' ? aiUnread(ui, o) : 0;
+        const pending = inbox.filter((p) => p.from === o).length;
+        list.append(button(powerEntry(ui, o, chat + pending, ai), () => { current = o; render(); }, { cls: `list-btn small dip-entry ${o === current ? 'on' : ''}` }));
+      }
     }
     if (unmet) list.append(h('div', { class: 'dim', style: 'font-size:12px;margin-top:6px' }, `${unmet} power${unmet > 1 ? 's' : ''} not yet met.`));
     if (!met.length) list.append(h('div', { class: 'dim', style: 'font-size:12px;margin-top:6px' }, 'You have not met anyone yet. Explore with scouts.'));
@@ -111,6 +117,31 @@ export function openDiplomacy(ui: GameUI, focus: string = 'overview'): void {
   render();
 }
 
+/**
+ * A power in the list: its chip and a count of what needs you on the first line; on the second, its status,
+ * its opinion of you, embassies and agreements, each explained in a tooltip.
+ */
+function powerEntry(ui: GameUI, o: FactionId, attention: number, aiWords: number): HTMLElement {
+  const g = ui.game;
+  const me = ui.viewer;
+  const r = relation(g, me, o);
+  const op = Math.round(opinionOf(g, o, me));
+  const lord = g.factions[o].overlord;
+  const status = lord === me ? 'Your vassal' : lord ? `Vassal of ${factionDef(lord).short}` : STATUS_LABEL[r.status];
+  const tone = r.status === 'war' ? 'bad' : r.status === 'alliance' || lord === me ? 'good' : r.status === 'nap' ? 'ok' : '';
+  const mine = hasEmbassy(g, me, o), theirs = hasEmbassy(g, o, me);
+  const agreements = r.agreements.map((a) => AGREEMENTS[a as AgreementId]?.name ?? a);
+  return h('span', { class: 'dip-entry-body' },
+    h('span', { class: 'row', style: 'gap:6px' }, factionChip(o, true), h('span', { class: 'grow' }),
+      attention ? h('span', { class: 'badge' }, String(attention)) : aiWords ? h('span', { class: 'notice-dot', title: 'New words from them' }) : ''),
+    h('span', { class: 'dip-facts' },
+      h('span', { class: `dip-status ${tone}` }, status),
+      h('span', { class: op >= 0 ? 'good' : 'bad', title: `Their opinion of you: ${op > 0 ? '+' : ''}${op}` }, `${op > 0 ? '+' : ''}${op}`),
+      h('span', { class: 'dip-emb', title: `Your embassy with them: ${mine ? 'yes' : 'no'}\nTheir embassy with you: ${theirs ? 'yes' : 'no'}${mine ? '' : '\nYou need an embassy to trade or sign treaties.'}` },
+        h('span', { class: mine ? 'on' : '' }, '◆'), h('span', { class: theirs ? 'on' : '' }, '◆')),
+      agreements.length ? h('span', { class: 'dip-agr', title: `Agreements: ${agreements.join(', ')}` }, `📜${agreements.length}`) : ''));
+}
+
 /** "the Terran Concord", "The Lattice" (names that already start with The keep it). */
 function theName(f: FactionId): string {
   const n = factionDef(f).name;
@@ -121,7 +152,7 @@ function humanSeat(ui: GameUI, f: FactionId): boolean {
   return ui.game.factions[f].controller === 'human' && ui.game.config.seats.length > 1;
 }
 
-/** Proposals waiting for you, your recent proposals, prisoners, and every power at a glance. */
+/** What needs you: proposals waiting for you, your recent proposals, prisoners, and recent diplomatic news. */
 function overviewPane(ui: GameUI, met: FactionId[], open: (key: string) => void, rerender: () => void): HTMLElement {
   const g = ui.game;
   const me = ui.viewer;
@@ -144,20 +175,16 @@ function overviewPane(ui: GameUI, met: FactionId[], open: (key: string) => void,
         h('span', { class: 'dim' }, 'or offer their return in a proposal')));
     }
   }
-  pane.append(h('h3', null, 'Powers you have met'));
-  const table = h('table', { class: 't manage' }, h('tr', null, h('th', null, 'Power'), h('th', null, 'Status'), h('th', null, 'Their view of you'), h('th', null, 'Embassies'), h('th', null, 'Agreements')));
-  for (const o of met) {
-    const r = relation(g, me, o);
-    const op = opinionOf(g, o, me);
-    table.append(h('tr', { style: 'cursor:pointer', onclick: () => open(o) },
-      h('td', null, factionChip(o)),
-      h('td', { class: r.status === 'war' ? 'bad' : r.status === 'alliance' || g.factions[o].overlord === me ? 'good' : '' }, STATUS_LABEL[r.status],
-        g.factions[o].overlord ? h('div', { style: 'font-size:11px' }, g.factions[o].overlord === me ? 'your vassal' : `vassal of the ${factionDef(g.factions[o].overlord!).short}`) : ''),
-      h('td', { class: op >= 0 ? 'good' : 'bad' }, num(op)),
-      h('td', null, `${hasEmbassy(g, me, o) ? 'yours ✓' : 'yours ✗'} · ${hasEmbassy(g, o, me) ? 'theirs ✓' : 'theirs ✗'}`),
-      h('td', null, r.agreements.map((a) => AGREEMENTS[a as AgreementId]?.name ?? a).join(', ') || h('span', { class: 'dim' }, 'none'))));
+  // Recent diplomatic news (the last few turns): wars, treaties, embassies, spies and the like.
+  const news = eventsFor(g, me, g.turn - 4).filter((e) => sectionOf(e.kind) === 'diplomacy').slice(-10).reverse();
+  pane.append(h('h3', null, 'Recent diplomacy'));
+  if (!news.length) pane.append(h('div', { class: 'dim' }, 'Nothing in the last few turns.'));
+  for (const e of news) pane.append(h('div', { class: 'brief-line' }, h('span', { class: 'brief-icon' }, ICONS[e.kind] ?? '•'),
+    h('span', { class: 'grow' }, e.text), h('span', { class: 'dim', style: 'font-size:11px' }, `turn ${e.turn}`)));
+  if (!inbox.length && !sent.length && !prisoners.length && met.length) {
+    pane.append(h('div', { class: 'dim', style: 'margin-top:10px;font-size:12px' }, 'Pick a power from the list to see where you stand, talk, or propose a deal.'));
   }
-  if (met.length) pane.append(h('div', { style: 'overflow-x:auto;max-width:100%' }, table));
+  void open;
   return pane;
 }
 
