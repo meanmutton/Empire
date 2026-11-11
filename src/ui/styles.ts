@@ -110,6 +110,7 @@ h3 { margin:12px 0 6px; font-size:12px; letter-spacing:.08em; text-transform:upp
 @media (pointer: coarse) { .info-tip { width:22px; height:22px; font-size:12px; } }
 .icon { display:inline-flex; align-items:center; justify-content:center; flex:none; line-height:0; }
 .icon img { width:100%; height:100%; object-fit:contain; }
+.icon.emoji { line-height:1; font-family:'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
 .colony-wrap { display:flex; justify-content:center; margin:6px 0 2px; }
 .colony-view { position:relative; flex:none; }
 .colony-planet { position:absolute; left:50%; top:50%; transform:translate(-50%, -50%); line-height:0; filter:drop-shadow(0 0 14px #0009); }
@@ -261,6 +262,74 @@ input, select { background:#0a1022; color:var(--text); border:1px solid #33416b;
 .dip-status.bad { color:var(--bad); } .dip-status.good { color:var(--good); } .dip-status.ok { color:#4fd1c5; }
 .dip-emb { letter-spacing:1px; color:#3a4569; } .dip-emb .on { color:var(--accent); }
 .msg-grid > * { min-width:0; }
+/* ===================================================================================================
+   Command deck theme: a starship bridge console. Crisp angled frames, cyan instrument light for
+   information, gold reserved for decisions. (Phone rules further down still apply on top of this.)
+   =================================================================================================== */
+:root { --panel:#071019f2; --panel2:#0b1724; --line:#1d3a4d; --dim:#7f9bb0; --accent:#ffc04d; --cy:#4fd8ff; }
+body { background:#03070d; font-variant-numeric:tabular-nums; }
+#topbar { background:#050c14; border-bottom:1px solid #1d3a4d; box-shadow:0 6px 24px #000a; }
+#topbar::after { content:''; position:absolute; left:0; right:0; bottom:-1px; height:1px; background:linear-gradient(90deg, transparent, #4fd8ff88, transparent); pointer-events:none; }
+#topbar .top-fixed { background:#071019; border-left:1px solid #1d3a4d; }
+#topbar .top-more { background:#071019; border-left-color:#1d3a4d; color:var(--cy); }
+#topbar .res { padding:0 12px; border-right:1px solid #16303f; }
+#topbar .res b { color:#e8f6ff; }
+.btn { background:#0a1a26; border:1px solid #23485c; border-radius:3px; padding:5px 12px; text-transform:uppercase; letter-spacing:.08em; font-size:12px;
+  clip-path:polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px); transition:background .12s, border-color .12s, color .12s; }
+.btn:hover:not(:disabled) { background:#0f2533; border-color:var(--cy); color:#dff7ff; }
+.btn.small { padding:3px 9px; font-size:11px; }
+.btn.ghost { clip-path:none; background:transparent; border-color:transparent; }
+.btn.primary { background:linear-gradient(180deg, #ffcc66, #e0a030); border-color:#ffd98a; color:#170f00; font-weight:700; }
+.btn.primary:hover:not(:disabled) { background:linear-gradient(180deg, #ffd889, #eab046); color:#170f00; border-color:#ffe3a6; }
+.btn.danger { background:#3a0f16; border-color:#8a2c3a; color:#ffb3bd; }
+#endturn { padding:7px 20px; }
+/* Lists keep normal lettering: they hold names and numbers, not commands. */
+.list-btn, .btn.list-btn { text-transform:none; letter-spacing:0; font-size:13px; clip-path:none; border-radius:2px; }
+.btn.small.list-btn { font-size:12px; }
+.tabs .btn.on { background:#0f2b3a; border-color:var(--cy); color:var(--cy); box-shadow:inset 0 -2px 0 var(--cy); }
+.list-btn.on { background:#0f2b3a; border-color:var(--cy); }
+#side { background-color:#040a12f2; border-left:1px solid #1d3a4d; padding:12px 14px 90px;
+  background-image:linear-gradient(#4fd8ff08 1px, transparent 1px), linear-gradient(90deg, #4fd8ff08 1px, transparent 1px), linear-gradient(180deg, #06101a, #040a12);
+  background-size:22px 22px, 22px 22px, 100% 100%; }
+#side > .row b { letter-spacing:.18em; text-transform:uppercase; color:#e8f6ff; }
+.card { background:#08141fe6; border:1px solid #1d3a4d; border-left:2px solid #4fd8ff66; border-radius:2px; padding:10px 12px;
+  clip-path:polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%); }
+.card.sel { border:1px solid var(--accent); border-left:3px solid var(--accent); background:#14200fe6; padding:9px 11px 9px 10px; box-shadow:none; }
+h3 { font-size:11px; letter-spacing:.24em; color:var(--cy); font-weight:600; margin:14px 0 6px; }
+h3::before { content:'▸ '; color:#4fd8ff99; }
+.kv .k { color:#6f8ca1; text-transform:uppercase; font-size:11px; letter-spacing:.08em; }
+.yield-chip { border-radius:2px; background:#0a1a26; border-color:#23485c; }
+.colony-slot { background:radial-gradient(circle at 40% 35%, #0f2533, #050c14); }
+.colony-view::before { content:''; position:absolute; inset:24px; border-radius:50%; border:1px dashed #4fd8ff33; pointer-events:none; }
+.colony-count { background:#050c14cc; border-color:#23485c; }
+.imp-tile { border-radius:2px; background:linear-gradient(#0b1a26, #071019); border-color:#1d3a4d; clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); }
+.imp-tile:hover:not(:disabled) { border-color:var(--cy); background:linear-gradient(#0f2533, #08141f); }
+.modal-overlay { background:#01050acc; }
+.modal { background:#060e17; border:1px solid #23485c; border-radius:2px; box-shadow:0 0 0 1px #000, 0 0 40px #4fd8ff18, 0 30px 80px #000;
+  clip-path:polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px)); }
+.modal-head { background:linear-gradient(90deg, #0d2433, #060e17); border-bottom:1px solid #23485c; padding:12px 18px; }
+.modal-title { font-size:15px; letter-spacing:.28em; text-transform:uppercase; color:#dff7ff; font-weight:600; }
+.modal-body { padding:14px 18px; }
+.dip-head .portrait, .portrait { border-radius:2px; }
+.portrait.avatar { border-radius:50%; }
+.tooltip { background:#060e17f5; border-color:#4fd8ff66; border-radius:2px; }
+.info-tip { border-color:#23485c; background:#0a1a26; color:var(--cy); }
+.unavail-toggle { border-top-color:#1d3a4d; }
+.brief-chip { border-radius:2px; background:#0a1a26; border-color:#23485c; }
+.badge { border-radius:2px; }
+.chip { letter-spacing:.02em; }
+#mini { border-radius:2px; border-color:#23485c; }
+#map-tools .btn { background:#050c14e6; }
+.hover-card { background:#060e17f2; border-color:#23485c; border-radius:2px; }
+.faction-card { background:#08141fcc; border-color:#1d3a4d; border-radius:2px; clip-path:polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%); }
+.faction-card.taken { border-color:var(--accent); }
+input, select, textarea { background:#050c14; border:1px solid #23485c; border-radius:2px; color:var(--text); }
+#phone-nav { background:#050c14f8; border-top:1px solid #1d3a4d; box-shadow:0 -1px 0 #4fd8ff22; }
+.nav-label { letter-spacing:.02em; }
+#phone-nav .nav-end { letter-spacing:.06em; }
+.sheet-handle { background:#0b1724; border-bottom-color:#1d3a4d; }
+.sheet-handle span { background:var(--cy); opacity:.6; }
+
 /* Mid-size windows: drop the turn number and per-turn changes (both are in the Empire panel) so the bar fits. */
 @media (min-width: 761px) and (max-width: 1180px) {
   #topbar .top-turn, #topbar .top-net { display:none; }

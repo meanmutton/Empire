@@ -1,6 +1,6 @@
 /**
- * The icon set. Every icon has a key (`imp:mine`, `res:energy`, `queue:ship` …) and a built-in SVG drawing
- * (24×24, line art in `currentColor`). To replace one with artwork, drop a file named after its key, with
+ * The icon set. Every icon has a key (`imp:mine`, `res:energy`, `queue:ship` …) and a built-in look: the
+ * familiar emoji for resources and kinds of build, an SVG drawing (24×24 line art) for improvements. To replace one with artwork, drop a file named after its key, with
  * the colon as a dash, into src/ui/assets/icons/ (for example `imp-mine.png`, `.webp` or `.svg`): the build
  * picks it up and every screen shows it instead of the drawing. Nothing else needs changing.
  */
@@ -12,8 +12,8 @@ for (const [path, url] of Object.entries(import.meta.glob<string>('./assets/icon
   FILES[name.replace('-', ':')] = url;
 }
 
-/** Each icon's drawing (SVG markup inside a 0 0 24 24 box) and its colour. */
-interface IconDef { svg: string; color: string }
+/** Each icon: an emoji, or a drawing (SVG markup inside a 0 0 24 24 box), and its colour. */
+interface IconDef { svg?: string; emoji?: string; color: string }
 
 const C = {
   metals: '#d9a35b', energy: '#ffd166', science: '#6cc4ff', exotics: '#c58bff', people: '#7ce0a0',
@@ -22,13 +22,13 @@ const C = {
 
 export const ICONS: Record<string, IconDef> = {
   // Resources
-  'res:energy': { color: C.energy, svg: '<path d="M13.5 2 5 13.5h6L9.5 22 19 9.5h-6.2L13.5 2Z" fill="currentColor" fill-opacity=".25"/><path d="M13.5 2 5 13.5h6L9.5 22 19 9.5h-6.2L13.5 2Z"/>' },
-  'res:metals': { color: C.metals, svg: '<path d="M3 17l3-6h12l3 6H3Z" fill="currentColor" fill-opacity=".25"/><path d="M3 17l3-6h12l3 6H3Z"/><path d="M7.5 11l2-4h5l2 4"/>' },
-  'res:science': { color: C.science, svg: '<circle cx="12" cy="12" r="2.2" fill="currentColor"/><ellipse cx="12" cy="12" rx="9.5" ry="3.8"/><ellipse cx="12" cy="12" rx="9.5" ry="3.8" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9.5" ry="3.8" transform="rotate(-60 12 12)"/>' },
-  'res:exotics': { color: C.exotics, svg: '<path d="M12 2.5l2.4 7.1 7.1 2.4-7.1 2.4L12 21.5l-2.4-7.1L2.5 12l7.1-2.4L12 2.5Z" fill="currentColor" fill-opacity=".3"/><path d="M12 2.5l2.4 7.1 7.1 2.4-7.1 2.4L12 21.5l-2.4-7.1L2.5 12l7.1-2.4L12 2.5Z"/>' },
-  'res:population': { color: C.people, svg: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c.6-3.6 2.8-5.5 5.5-5.5s4.9 1.9 5.5 5.5"/><circle cx="16.5" cy="9.5" r="2.5"/><path d="M15.6 14.4c2.6-.3 4.4 1.4 4.9 4.6"/>' },
-  'res:production': { color: C.industry, svg: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/><circle cx="12" cy="12" r="6.5"/>' },
-  'res:defense': { color: C.military, svg: '<path d="M12 2.5 20 5.5v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10v-6l8-3Z"/>' },
+  'res:energy': { color: C.energy, emoji: '⚡' },
+  'res:metals': { color: C.metals, emoji: '⛏' },
+  'res:science': { color: C.science, emoji: '🔬' },
+  'res:exotics': { color: C.exotics, emoji: '✦' },
+  'res:population': { color: C.people, emoji: '👥' },
+  'res:production': { color: C.industry, emoji: '⚙' },
+  'res:defense': { color: C.military, emoji: '🛡' },
 
   // Improvements
   'imp:mine': { color: C.metals, svg: '<path d="M4 20.5 14.5 10"/><path d="M8.5 4.5c4.2-.6 8.6 1.3 11 6.5" stroke-width="2.4"/><path d="M8.5 4.5c2 1.3 3.8 3 6 5.5" stroke-opacity=".6"/>' },
@@ -49,12 +49,12 @@ export const ICONS: Record<string, IconDef> = {
   'imp:academy': { color: C.industry, svg: '<path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 15.6l-4.9 2.6.9-5.5-4-3.9 5.5-.8L12 3Z" fill="currentColor" fill-opacity=".25"/><path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 15.6l-4.9 2.6.9-5.5-4-3.9 5.5-.8L12 3Z"/><path d="M7 21.5h10" />' },
 
   // Things in a build queue that are not improvements
-  'queue:ship': { color: C.military, svg: '<path d="M12 2.5 17 14l-5 2.5L7 14l5-11.5Z" fill="currentColor" fill-opacity=".25"/><path d="M12 2.5 17 14l-5 2.5L7 14l5-11.5Z"/><path d="M9.5 18.5 12 21.5l2.5-3"/>' },
-  'queue:develop': { color: C.growth, svg: '<circle cx="12" cy="12" r="9.5"/><path d="M12 17V7.5M7.5 11.5 12 7l4.5 4.5"/>' },
-  'queue:army': { color: C.military, svg: '<path d="M5 13c0-4.4 3.1-8 7-8s7 3.6 7 8H5Z" fill="currentColor" fill-opacity=".25"/><path d="M5 13c0-4.4 3.1-8 7-8s7 3.6 7 8"/><path d="M3.5 13h17M8 16l4 3 4-3"/>' },
-  'queue:diplomat': { color: C.trade, svg: '<path d="M6 3.5h10.5a2 2 0 0 1 2 2V18a2.5 2.5 0 0 1-2.5 2.5H7.5"/><path d="M6 3.5A2.5 2.5 0 0 0 3.5 6v1.5H6M7.5 20.5A2.5 2.5 0 0 1 5 18V3.5"/><path d="M9 9h6.5M9 12.5h6.5M9 16h4"/>' },
-  'queue:spy': { color: C.exotics, svg: '<path d="M2.5 12c2.4-4 5.6-6 9.5-6s7.1 2 9.5 6c-2.4 4-5.6 6-9.5 6s-7.1-2-9.5-6Z"/><circle cx="12" cy="12" r="3" fill="currentColor"/>' },
-  'queue:wonder': { color: C.exotics, svg: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5" stroke-dasharray="2 1.6"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/>' },
+  'queue:ship': { color: C.military, emoji: '🚀' },
+  'queue:develop': { color: C.growth, emoji: '⬆' },
+  'queue:army': { color: C.military, emoji: '🪖' },
+  'queue:diplomat': { color: C.trade, emoji: '🏛' },
+  'queue:spy': { color: C.exotics, emoji: '🕵' },
+  'queue:wonder': { color: C.exotics, emoji: '✨' },
 
   // Interface
   'ui:add': { color: C.neutral, svg: '<path d="M12 6v12M6 12h12"/>' },
@@ -88,6 +88,12 @@ export function iconElement(key: string, px = 20, title = ''): HTMLElement {
   }
   const def = ICONS[key] ?? ICONS['ui:add'];
   el.style.color = def.color;
+  if (def.emoji) {
+    el.classList.add('emoji');
+    el.style.fontSize = `${Math.round(px * 0.85)}px`;
+    el.textContent = def.emoji;
+    return el;
+  }
   el.innerHTML = `<svg viewBox="0 0 24 24" width="${px}" height="${px}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${def.svg}</svg>`;
   return el;
 }
