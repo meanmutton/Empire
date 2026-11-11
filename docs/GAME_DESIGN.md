@@ -586,9 +586,11 @@ Computer-run great powers can't read free text, but they talk, and they understa
 **They speak to you** in their own voice when something happens between you: first contact, an embassy
 opening, declaring war (or being attacked), peace, signing a pact or alliance, being betrayed, sending you
 a proposal, accepting or refusing yours, receiving a gift, your warships trespassing in their space (at
-most every 5 turns), and winning or losing a battle against you. The Concord is warm and earnest, the
-Ryn'kai formal and honor-bound, the Varrhen coldly superior, the Krasnyr full of comradely double-talk,
-the Lattice terse and numeric. Minor factions don't talk.
+most every 5 turns), and winning or losing a battle against you. They speak in the words of whoever leads
+them this game (`src/ai/leader-voices.ts`): each of the fifteen leaders has their own voice, from Sean
+Sutton's jokes and Lindqvist's bluntness to Vel'dhara quoting the Ledger, Kesh's files, Malenkai's
+figures and HALCYON's single warnings. Any occasion a leader has no line for falls back to the faction's
+voice (`src/ai/voice.ts`). Minor factions don't talk.
 
 **You can make statements** to them, on your turn. Each power answers, and acts on its answer, at the
 start of its next turn. Each kind of statement can be made to a power once every 3 turns.
