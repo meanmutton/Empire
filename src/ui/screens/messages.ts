@@ -5,6 +5,7 @@ import { relation } from '../../engine/query';
 import { button, h, toast } from '../dom';
 import { leaderInfo, portraitElement } from '../portraits';
 import type { GameUI } from '../game-ui';
+import { infoTip } from '../tooltip';
 import { dispatchesWith, lastRead, markRead, threadKey, type Messaging } from '../messaging';
 import { STATEMENTS } from '../../engine/dispatch';
 import type { Statement } from '../../engine/types';
@@ -125,7 +126,6 @@ export function aiThread(ui: GameUI, power: string, rerender: () => void): HTMLE
   return h('div', { style: 'display:flex;flex-direction:column;gap:8px;min-width:0' },
     log,
     h('div', { class: 'card' },
-      h('div', { class: 'dim', style: 'font-size:12px;margin-bottom:4px' }, 'Computer powers do not read free text. Make a statement and they will answer, and act on it, at the start of their turn.'),
-      h('div', { class: 'row wrap' }, kind, target, h('span', { class: 'grow' }),
+      h('div', { class: 'row wrap' }, kind, target, infoTip('Computer powers do not read free text. Make a statement and they will answer, and act on it, at the start of their turn.'), h('span', { class: 'grow' }),
         button('Send', send, { cls: 'primary small', disabled: !ui.myTurn, title: ui.myTurn ? '' : 'Statements are made on your turn.' }))));
 }

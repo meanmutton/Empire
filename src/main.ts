@@ -7,6 +7,7 @@ import type { GameState } from './engine/types';
 import { relayUrl } from './net/relay-client';
 import { toast } from './ui/dom';
 import { installClickSounds } from './ui/sound';
+import { installTooltips } from './ui/tooltip';
 import { showGallery } from './ui/gallery';
 import { showTitle } from './ui/screens/setup';
 import { LocalSession } from './ui/session-local';
@@ -15,6 +16,7 @@ import { deleteSave, listSaves, loadGame } from './ui/storage';
 import { injectStyles } from './ui/styles';
 
 installClickSounds();
+installTooltips();
 
 const app = document.getElementById('app')!;
 const params = new URLSearchParams(location.search);

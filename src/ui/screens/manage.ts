@@ -17,6 +17,7 @@ import type { Agent, Fleet } from '../../engine/types';
 import { bar, button, clear, h, modal } from '../dom';
 import { factionChip, num } from '../format';
 import { DEV_NAMES, type GameUI } from '../game-ui';
+import { infoTip } from '../tooltip';
 
 interface Column<T> {
   name: string;
@@ -283,6 +284,6 @@ function embassySummary(ui: GameUI): HTMLElement {
   const on = others.filter((f) => posted.has(f.id)), off = others.filter((f) => !posted.has(f.id));
   return h('div', null,
     h('div', null, h('b', null, 'Embassies: '), on.length ? '' : h('span', { class: 'dim' }, 'none yet. '), ...on.map((f) => factionChip(f.id, true))),
-    off.length ? h('div', { style: 'margin-top:2px' }, h('span', { class: 'dim' }, 'No embassy with: '), ...off.map((f) => factionChip(f.id, true))) : '',
-    h('div', { class: 'dim', style: 'font-size:12px;margin-top:2px' }, 'You need an embassy with a power to trade or sign treaties with it. Send a diplomat to its home system.'));
+    off.length ? h('div', { style: 'margin-top:2px' }, h('span', { class: 'dim' }, 'No embassy with: '), ...off.map((f) => factionChip(f.id, true)),
+      infoTip('You need an embassy with a power to trade or sign treaties with it. Send a diplomat to its home system.')) : '');
 }
