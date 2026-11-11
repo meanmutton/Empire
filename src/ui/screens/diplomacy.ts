@@ -2,7 +2,7 @@
 import { factionDef } from '../../data/factions';
 import { TECH_BY_ID } from '../../data/techs';
 import { hasEmbassy, opinionOf } from '../../engine/agents';
-import { AGREEMENTS, canPropose, proposalScore, type AgreementId } from '../../engine/diplomacy';
+import { AGREEMENTS, canPropose, proposalScore, statusObjection, type AgreementId } from '../../engine/diplomacy';
 import { relation } from '../../engine/query';
 import { getBit } from '../../engine/bitset';
 import { itemValue } from '../../engine/diplomacy';
@@ -255,8 +255,18 @@ function proposalCard(ui: GameUI, p: Proposal, rerender: () => void): HTMLElemen
     h('div', { class: 'row' }, incoming ? 'From ' : 'To ', factionChip(other), h('span', { class: 'grow' }),
       p.answer ? h('b', { class: p.answer === 'accepted' ? 'good' : 'bad' }, p.answer) : h('span', { class: 'dim' }, `turn ${p.turn}`)),
     h('div', { class: 'row', style: 'align-items:flex-start' },
-      h('div', { class: 'grow' }, h('div', { class: 'dim' }, 'You receive'), ...theyGive.map((i) => h('div', null, describeItem(ui, i))), theyGive.length ? null : h('div', { class: 'dim' }, 'nothing')),
-      h('div', { class: 'grow' }, h('div', { class: 'dim' }, 'You give'), ...youGive.map((i) => h('div', null, describeItem(ui, i))), youGive.length ? null : h('div', { class: 'dim' }, 'nothing'))));
+      ...(() => {
+        // Agreements, pacts and peace bind both sides: they are listed as shared, not as something given.
+        const shared = (i: TradeItem) => i.kind === 'agreement' || i.kind === 'status';
+        const both = [...theyGive, ...youGive].filter(shared);
+        const col = (label: string, items: TradeItem[]) => h('div', { class: 'grow' }, h('div', { class: 'dim' }, label),
+          ...items.map((i) => h('div', null, describeItem(ui, i))), items.length ? null : h('div', { class: 'dim' }, 'nothing'));
+        return [
+          ...(both.length ? [col('Both sides agree to', both)] : []),
+          col('You receive', theyGive.filter((i) => !shared(i))),
+          col('You give', youGive.filter((i) => !shared(i))),
+        ];
+      })()));
   if (incoming && !p.answer && ui.myTurn) {
     card.append(h('div', { class: 'row' }, h('span', { class: 'grow' }),
       button('Reject', () => { if (ui.act({ type: 'reject', proposal: p.id }, true)) rerender(); }, { cls: 'small' }),
@@ -287,8 +297,11 @@ function openProposal(ui: GameUI, to: FactionId, done: () => void): void {
     const preview: Proposal = { id: 'preview', from: me, to, turn: g.turn, give, receive, answer: null };
     const ai = g.factions[to].controller === 'ai';
     const score = give.length + receive.length ? proposalScore(g, preview) : 0;
+    // A pact, alliance or vassalage they won't accept at any price says why.
+    const objection = ai && (give.length || receive.length) ? statusObjection(g, preview) : null;
     body.append(h('div', { class: 'row' },
-      ai && (give.length || receive.length)
+      objection ? h('span', { class: 'bad' }, `They will refuse whatever you add: ${objection}`)
+      : ai && (give.length || receive.length)
         ? h('span', { class: score > 0 ? 'good' : 'bad' }, score > 0 ? 'They will probably accept' : 'They will probably refuse',
           receive.some((i) => i.kind === 'anyTech') && score > 0 ? ', if they know a technology you lack.' : '.')
         : h('span', { class: 'dim' }, ai ? 'Add something to trade.' : 'They will answer on their turn.'),
