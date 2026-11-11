@@ -168,8 +168,11 @@ function leaderStrip(faction: string, seat: { leader?: string } | undefined, rer
   for (const l of LEADERS[faction] ?? []) {
     const info = leaderById(faction, l.id);
     const on = seat?.leader === l.id;
+    // The portrait opens large (with a button to lead as them); the name below picks them directly.
+    const choose = () => { if (seat) { seat.leader = l.id; rerender(); } };
     const item = h('div', { class: `leader-pick ${on ? 'on' : ''} ${seat ? 'can' : ''}`, title: `${info.full}: ${l.text}` },
-      portraitElement(faction, info.portrait, 52, info.full), h('div', { class: 'leader-name' }, l.name));
+      portraitElement(faction, info.portrait, 52, info.full, { text: l.text, action: seat ? { label: `Lead as ${info.full}`, run: choose } : undefined }),
+      h('div', { class: 'leader-name' }, l.name));
     if (seat) item.addEventListener('click', () => { seat.leader = on ? undefined : l.id; rerender(); });
     strip.append(item);
   }

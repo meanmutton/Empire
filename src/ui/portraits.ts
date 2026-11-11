@@ -6,7 +6,7 @@
 import { factionDef } from '../data/factions';
 import { defaultLeader, LEADER_TITLES, LEADERS, SELF_LEADER } from '../data/leaders';
 import type { FactionId, GameState } from '../engine/types';
-import { h } from './dom';
+import { button, h, modal } from './dom';
 import { crestElement } from './crests';
 import { revealingPortraits } from './screens/options';
 
@@ -60,7 +60,7 @@ export function hasPortrait(key: string | undefined): boolean {
  * A portrait frame: `size` is the width in pixels (height is 5/4 of it), or 'avatar' for a small round face.
  * Falls back to the faction emblem.
  */
-export function portraitElement(faction: FactionId, key: string | undefined, size: number | 'avatar', title = ''): HTMLElement {
+export function portraitElement(faction: FactionId, key: string | undefined, size: number | 'avatar', title = '', zoom?: PortraitZoom): HTMLElement {
   const def = factionDef(faction);
   const avatar = size === 'avatar';
   const w = avatar ? 34 : size;
@@ -69,7 +69,28 @@ export function portraitElement(faction: FactionId, key: string | undefined, siz
     style: `width:${w}px;height:${avatar ? w : Math.round(w * 1.25)}px;border-color:${def.color}`,
   });
   const url = key ? IMAGES[pick(key)] : undefined;
-  if (url) frame.append(h('img', { src: url, alt: title, draggable: false }));
-  else frame.append(crestElement(faction, Math.round(w * (avatar ? 0.78 : 0.7))));
+  if (url) {
+    frame.append(h('img', { src: url, alt: title, draggable: false }));
+    // Click (or tap) a portrait to see it large.
+    frame.classList.add('zoomable');
+    frame.title = title ? `${title} (click to enlarge)` : 'Click to enlarge';
+    frame.addEventListener('click', (e) => { e.stopPropagation(); openPortrait(faction, url, title, zoom); });
+  } else frame.append(crestElement(faction, Math.round(w * (avatar ? 0.78 : 0.7))));
   return frame;
+}
+
+/** Extra for the enlarged view: a line of text under the picture, and a button (e.g. "Lead as …" at setup). */
+export interface PortraitZoom {
+  text?: string;
+  action?: { label: string; run: () => void };
+}
+
+/** A portrait shown large, with its name. */
+export function openPortrait(faction: FactionId, url: string, title: string, zoom?: PortraitZoom): void {
+  const def = factionDef(faction);
+  const body = h('div', { class: 'portrait-zoom' },
+    h('img', { src: url, alt: title, style: `border-color:${def.color}` }),
+    zoom?.text ? h('div', { class: 'dim', style: 'max-width:360px;text-align:center' }, zoom.text) : null);
+  const m = modal(title || def.name, body);
+  if (zoom?.action) body.append(button(zoom.action.label, () => { m.close(); zoom.action!.run(); }, { cls: 'primary' }));
 }

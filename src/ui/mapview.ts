@@ -356,6 +356,16 @@ export class MapView {
       const crest = major ? crestImage(r.faction, () => { this.dirty = true; }) : null;
       if (crest) ctx.drawImage(crest, x + 8 - w / 2 - 30, y - 13, 26, 26);
       else drawGlyph(ctx, r.faction, x + 8 - w / 2 - 10, y, size, def.color);
+      // Vassals say whose they are under their name.
+      const overlord = this.state.factions[r.faction].overlord;
+      if (overlord) {
+        const sub = overlord === this.viewer ? 'YOUR VASSAL' : `VASSAL OF ${factionDef(overlord).short.toUpperCase()}`;
+        ctx.font = '600 10px system-ui, sans-serif';
+        ctx.lineWidth = 3;
+        ctx.strokeText(sub, x + 8, y + size);
+        ctx.fillStyle = shade(factionDef(overlord).color, 0.35);
+        ctx.fillText(sub, x + 8, y + size);
+      }
     }
     ctx.restore();
   }
@@ -517,7 +527,11 @@ export class MapView {
         // Edge facing direction d: corners at angles (−60d + 30) and (−60d − 30) degrees for pointy-top axial dirs.
         const angle = (-60 * d * Math.PI) / 180;
         const a1 = angle - Math.PI / 6, a2 = angle + Math.PI / 6;
-        for (const [r, w, c] of [[HEX - 0.6, 4.2, 'rgba(4, 6, 13, 0.85)'], [HEX - 2.2, 2.4, color]] as const) {
+        // A vassal's border carries a second line in its overlord's colour.
+        const overlord = this.state.factions[hx.owner]?.overlord;
+        const lines: [number, number, string][] = [[HEX - 0.6, 4.2, 'rgba(4, 6, 13, 0.85)'], [HEX - 2.2, 2.4, color]];
+        if (overlord) lines.push([HEX - 4.4, 2, this.borderColor(overlord)]);
+        for (const [r, w, c] of lines) {
           ctx.strokeStyle = c;
           ctx.lineWidth = w;
           ctx.beginPath();
