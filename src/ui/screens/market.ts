@@ -11,6 +11,8 @@ import { relation } from '../../engine/query';
 import { costText, factionChip } from '../format';
 import type { StockpileKind } from '../../engine/types';
 import { button, h, toast } from '../dom';
+import { infoTip } from '../tooltip';
+import { collapsibleUnavailable } from '../collapse';
 import { ICON, num } from '../format';
 import type { GameUI } from '../game-ui';
 
@@ -28,6 +30,11 @@ export function marketPane(ui: GameUI, tab: MarketTab, pick: (t: MarketTab) => v
   body.append(h('div', { class: 'tabs' }, ...tabs.map(([k, label]) => button(label, () => pick(k), { cls: `small ${tab === k ? 'on' : ''}` }))));
   body.append(tab === 'exchange' ? exchangeTab(ui, rerender) : tab === 'routes' ? routesTab(ui, rerender) : tab === 'mercenaries' ? mercenaryTab(ui, rerender) : contractTab(ui, rerender));
   return body;
+}
+
+/** A tab's opening: one short line, with the full explanation behind an ⓘ. */
+function lead(line: string, more: string): HTMLElement {
+  return h('div', { class: 'row', style: 'margin-bottom:8px;gap:2px' }, h('span', { class: 'dim' }, line), infoTip(more));
 }
 
 function exchangeTab(ui: GameUI, rerender: () => void): HTMLElement {
@@ -52,7 +59,7 @@ function exchangeTab(ui: GameUI, rerender: () => void): HTMLElement {
   for (const el of [sell, buy, amount]) el.addEventListener('input', update);
   update();
   return h('div', null,
-    h('div', { class: 'dim', style: 'margin-bottom:8px' }, 'Swap resources with the whole galaxy, no partner needed. Selling lowers a price and buying raises it; prices drift back each round. For a better deal, trade one-on-one with another empire (Diplomacy → Swap resources).'),
+    lead('Swap resources with the whole galaxy.', 'No partner needed. Selling lowers a price and buying raises it; prices drift back each round. For a better deal, trade one-on-one with another empire (Diplomacy → Swap resources).'),
     table,
     h('h3', null, 'Trade'),
     h('div', { class: 'row wrap' }, 'Sell', amount, sell, 'for', buy, preview),
@@ -65,29 +72,34 @@ function exchangeTab(ui: GameUI, rerender: () => void): HTMLElement {
 function mercenaryTab(ui: GameUI, rerender: () => void): HTMLElement {
   const g = ui.game;
   const list = offersFor(g, ui.viewer);
-  const wrap = h('div', null, h('div', { class: 'dim', style: 'margin-bottom:8px' },
+  const wrap = h('div', null, lead('Hire ships, armies and services from mercenary factions.',
     'Mercenary factions sell their services to anyone at peace with them. New offers arrive every round. Ships wait at the seller’s home system; hired armies report to your home for 10 turns.'));
   if (!list.length) wrap.append(h('div', { class: 'dim' }, 'No mercenary factions are in this galaxy, or none are selling this round.'));
+  const blocked: HTMLElement[] = [];
   for (const { offer: o, check } of list) {
     const met = g.relations[[ui.viewer, o.seller].sort().join('|')]?.contact;
     const what = o.kind === 'ship'
       ? `${design(o.design).name}: ${CLASSES[design(o.design).cls].name} ${ROLES[design(o.design).role].name}`
       : o.kind === 'army' ? `Veteran army, strength ${o.strength}, for ${o.turns} turns` : 'Star charts: everything they have explored';
-    wrap.append(h('div', { class: 'card row wrap' },
+    const card = h('div', { class: 'card row wrap' },
       met ? factionChip(o.seller, true) : h('span', { class: 'dim' }, 'Unknown seller'),
       h('span', { class: 'grow' }, what),
       h('span', null, `${ICON.energy}${o.price}`),
       button('Buy', () => { if (ui.act({ type: 'buyOffer', offer: o.id })) rerender(); },
-        { cls: 'small primary', disabled: !check.ok || !ui.myTurn, title: check.ok ? '' : (check as { reason: string }).reason })));
+        { cls: 'small primary', disabled: !check.ok || !ui.myTurn, title: check.ok ? '' : (check as { reason: string }).reason }));
+    if (check.ok) wrap.append(card);
+    else { card.title = (check as { reason: string }).reason; blocked.push(card); }
   }
+  // Offers you can't take up (at war with the seller, can't afford, …) are tucked away.
+  wrap.append(...collapsibleUnavailable(blocked, rerender, 'offers you can’t take'));
   return wrap;
 }
 
 function contractTab(ui: GameUI, rerender: () => void): HTMLElement {
   const g = ui.game;
   const sellers = Object.keys(g.factions).filter((f) => f !== ui.viewer && contractTerms(g, ui.viewer, f).ok);
-  const wrap = h('div', null, h('div', { class: 'dim', style: 'margin-bottom:8px' },
-    'Have your own ship designs built at another empire’s shipyard: the Forgeborn Anvil builds for anyone at peace with them (20% cheaper), and partners in a Manufacturing Agreement build for each other (10% cheaper). Ships are delivered at their shipyard. If war breaks out, they keep the ship.'));
+  const wrap = h('div', null, lead('Have your designs built at another empire’s shipyard.',
+    'The Forgeborn Anvil builds for anyone at peace with them (20% cheaper), and partners in a Manufacturing Agreement build for each other (10% cheaper). Ships are delivered at their shipyard. If war breaks out, they keep the ship.'));
   if (!sellers.length) wrap.append(h('div', { class: 'dim' }, 'No one will build for you yet. Sign a Manufacturing Agreement, or find the Forgeborn Anvil.'));
   for (const seller of sellers) {
     const designs = DESIGNS_BY_FACTION[ui.viewer].filter((d) => d.cls !== 'fighter' && (!d.tech || g.factions[ui.viewer].research.known.includes(d.tech)));
@@ -111,8 +123,7 @@ function routesTab(ui: GameUI, rerender: () => void): HTMLElement {
   const me = ui.viewer;
   const mine = (g.routes ?? []).filter((r) => r.owner === me || r.partner === me);
   const wrap = h('div', null,
-    h('div', { class: 'dim', style: 'margin-bottom:8px' },
-      `Send a cargo ship to another empire's settled system (you need a Trade Agreement with them; the Haldane trade with anyone) and choose "Open trade route" there. The ship becomes a route back to your nearest settled system, and both of you earn energy every turn. You can also link two of your own systems at least ${DOMESTIC_MIN_DISTANCE} hexes apart. Enemy warships on the route, or a blockade at either end, cut it off that turn; war ends it.`),
+    lead('Cargo ships run trade routes that pay energy every turn.', `Send a cargo ship to another empire's settled system (you need a Trade Agreement with them; the Haldane trade with anyone) and choose "Open trade route" there. The ship becomes a route back to your nearest settled system, and both of you earn energy every turn. You can also link two of your own systems at least ${DOMESTIC_MIN_DISTANCE} hexes apart. Enemy warships on the route, or a blockade at either end, cut it off that turn; war ends it.`),
     h('div', null, `You run ${routesOf(g, me).length} of ${routeCapacity(g, me)} routes (each Trade Port adds one).`));
   if (!mine.length) wrap.append(h('div', { class: 'dim', style: 'margin-top:8px' }, 'No trade routes yet.'));
   const table = h('table', { class: 't', style: 'margin-top:8px' }, h('tr', null, h('th', null, 'Route'), h('th', null, 'With'), h('th', null, 'Per turn'), h('th', null, 'Status'), h('th', null, '')));

@@ -5,6 +5,7 @@ import { intelLevel, intelScore, rivalReport, spyQuality } from '../../engine/in
 import { availableVictories, presetOf, progress } from '../../engine/victory';
 import { bar, h } from '../dom';
 import { factionChip } from '../format';
+import { infoTip } from '../tooltip';
 import type { GameUI } from '../game-ui';
 
 const LEVEL_TEXT = [
@@ -32,8 +33,8 @@ export function victoryView(ui: GameUI): HTMLElement {
   }
   body.append(h('h3', null, 'Rival great powers'));
   const guards = Object.values(g.agents).filter((a) => a.owner === me && a.kind === 'spy' && a.hex === g.factions[me].home && !a.mission && !a.ship && !a.capturedBy).length;
-  body.append(h('div', { class: 'dim', style: 'font-size:12px;margin-bottom:6px' },
-    `Spies stationed at a rival's home system reveal its progress: 1 point of intelligence shows its victories, 2 a rough range, 3 the exact figures. Each spy is worth ${spyQuality(g, me)} point${spyQuality(g, me) === 1 ? '' : 's'} for you. Their own idle spies at home, counter-intelligence tech and Court Intrigue take points away. You have ${guards} ${guards === 1 ? 'spy' : 'spies'} guarding your own home.`));
+  body.append(h('div', { class: 'row dim', style: 'font-size:12px;margin-bottom:6px;gap:2px' }, 'Spies at a rival’s capital reveal its progress.', infoTip(
+    `Spies stationed at a rival's home system reveal its progress: 1 point of intelligence shows its victories, 2 a rough range, 3 the exact figures. Each spy is worth ${spyQuality(g, me)} point${spyQuality(g, me) === 1 ? '' : 's'} for you. Their own idle spies at home, counter-intelligence tech and Court Intrigue take points away. You have ${guards} ${guards === 1 ? 'spy' : 'spies'} guarding your own home.`)));
   for (const f of Object.values(g.factions)) {
     if (f.kind !== 'major' || f.id === me) continue;
     const met = g.relations[[me, f.id].sort().join('|')]?.contact;

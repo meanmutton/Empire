@@ -1,5 +1,5 @@
 /**
- * Turn briefing: what happened since your last turn, as a drawer beside the map (full screen on phones)
+ * Turn briefing: what happened since your last turn, as a dialog like the other screens
  * rather than a dialog in the way. Counters at the top (battles, wars, proposals, builds, idle colonies and
  * fleets) jump to the right place; events are grouped into Military, Diplomacy, Empire and Galaxy, each
  * line jumps to the map, and battles link to their reports.
@@ -10,8 +10,9 @@
 import { factionDef } from '../../data/factions';
 import type { GameEvent, GameState } from '../../engine/types';
 import { eventsFor } from '../../engine/events';
-import { button, clear, h, isTouch, onEscape } from '../dom';
+import { button, clear, h, isTouch, modal } from '../dom';
 import { sfx } from '../sound';
+import { infoTip } from '../tooltip';
 import type { GameUI } from '../game-ui';
 import { openBattle } from './battle';
 import { victoryView } from './victory';
@@ -85,7 +86,7 @@ function sync(game: string, g: GameState, viewer: string, newBriefing: boolean):
 }
 
 // -------------------------------------------------------------------------------------------------------
-// The drawer
+// The dialog
 
 let current: { close: () => void } | null = null;
 
@@ -104,32 +105,29 @@ export function openBriefing(ui: GameUI, opts: { auto?: boolean; tab?: 'turn' | 
   current?.close();
   let tab: 'turn' | 'history' | 'victory' = opts.tab ?? 'turn';
   let page = 0;
-  const drawer = h('div', { class: 'briefing' });
-  const close = () => { drawer.remove(); offEsc(); if (current?.close === close) current = null; };
-  const offEsc = onEscape(close);
+  // A dialog like the other screens (also when it opens by itself at the start of your turn).
+  const body = h('div', { class: 'briefing-body' });
+  const m = modal('Briefing', body, { wide: true, onClose: () => { if (current?.close === close) current = null; } });
+  const close = () => m.close();
   current = { close };
-  const phone = () => window.innerWidth <= 760;
+  // Showing something on the map closes the briefing, so the map can be seen.
   const jump = (hex: number | undefined) => {
     if (hex === undefined) return;
-    if (phone()) close();
+    close();
     ui.view.centerOn(hex);
     ui.select(hex);
   };
   const render = () => {
-    clear(drawer);
+    clear(body);
     const turnLabel = a.lastTurn ? `Turn ${a.lastTurn}` : `Turn ${g.turn}`;
-    const tabs: ['turn' | 'history' | 'victory', string][] = [['turn', 'This turn'], ['history', 'History'], ['victory', 'Victory']];
-    drawer.append(h('div', { class: 'briefing-head' },
-      h('div', { class: 'row' }, h('b', { style: 'font-size:16px' }, tab === 'turn' ? `${turnLabel} briefing` : tab === 'history' ? 'History' : 'Victory'), h('span', { class: 'grow' }),
-        button('✕', close, { cls: 'small ghost', title: 'Close (Esc)' })),
-      h('div', { class: 'tabs', style: 'margin:6px 0 0' }, ...tabs.map(([k, label]) =>
-        button(label, () => { tab = k; page = 0; render(); }, { cls: `small ${tab === k ? 'on' : ''}` })))));
-    drawer.append(tab === 'turn' ? turnView(ui, items, pending, jump, close)
+    const tabs: ['turn' | 'history' | 'victory', string][] = [['turn', turnLabel], ['history', 'History'], ['victory', 'Victory']];
+    body.append(h('div', { class: 'tabs', style: 'margin:0 0 8px' }, ...tabs.map(([k, label]) =>
+      button(label, () => { tab = k; page = 0; render(); }, { cls: `small ${tab === k ? 'on' : ''}` }))));
+    body.append(tab === 'turn' ? turnView(ui, items, pending, jump, close)
       : tab === 'history' ? historyView(ui, a, page, (p) => { page = p; render(); }, jump)
       : victoryView(ui));
   };
   render();
-  ui.overlayRoot.append(drawer);
 }
 
 /** Closes the briefing if it is open (e.g. when the turn passes to another player). */
@@ -202,8 +200,8 @@ function turnView(ui: GameUI, items: Entry[], pending: number, jump: (hex?: numb
     wrap.append(h('h3', { 'data-section': s }, SECTION_NAMES[s]));
     for (const e of s === 'empire' ? collapseBuilds(list) : list) wrap.append(lineFor(ui, e, jump));
   }
-  wrap.append(h('div', { class: 'dim', style: 'font-size:11px;margin-top:10px' },
-    `${isTouch() ? 'Tap' : 'Click'} a line to see it on the map. Your ${factionDef(ui.viewer).short} history is kept in this browser: see History.`));
+  wrap.append(h('div', { class: 'dim', style: 'font-size:11px;margin-top:10px' }, `${isTouch() ? 'Tap' : 'Click'} a line to see it on the map.`,
+    infoTip(`Your ${factionDef(ui.viewer).short} history is kept in this browser: see History.`)));
   void g;
   return wrap;
 }

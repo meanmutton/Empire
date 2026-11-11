@@ -35,6 +35,8 @@ import { unreadAi, unreadChat, type Messaging } from './messaging';
 import { routeCapacity, routeIncome, routesOf } from '../engine/routes';
 import { tokenElement } from './tokens';
 import { sfx, type Sfx } from './sound';
+import { setTip, infoTip } from './tooltip';
+import { collapsibleUnavailable } from './collapse';
 
 export interface GameHost {
   /** The viewer pressed End Turn (after the engine processed it). */
@@ -330,7 +332,6 @@ export class GameUI {
   }
 
   /** Build item whose details are open (ⓘ). */
-  private buildInfo: string | null = null;
   /** Fleet whose name is being edited. */
   private renaming: string | null = null;
   /** Fleet whose "Add fleet…" menu is open. */
@@ -850,9 +851,9 @@ export class GameUI {
       }
       const myFleets = fleets.filter((f) => f.owner === this.viewer);
       if (myFleets.length > 1 && this.myTurn) {
-        s.append(h('div', { class: 'row', style: 'margin:6px 0 2px' }, h('span', { class: 'dim grow', style: 'font-size:11px' }, isTouch()
+        s.append(h('div', { class: 'row', style: 'margin:6px 0 2px' }, h('span', { class: 'dim grow', style: 'font-size:11px' }, 'Joining fleets', infoTip(isTouch()
           ? 'To join fleets, select one and press Add fleet, or press Combine all.'
-          : 'Drag a fleet, or a single ship, onto another fleet to join them. Or select a fleet and press Add fleet.'),
+          : 'Drag a fleet, or a single ship, onto another fleet to join them. Or select a fleet and press Add fleet.')),
           button('Combine all', () => this.act({ type: 'combine', hex }), {
             cls: 'small', title: 'Pack your fleets here into as few battle groups (up to 6 ships) as possible: warships with warships, support ships with support ships',
           })));
@@ -924,10 +925,10 @@ export class GameUI {
       wrap.append(h('h3', null, `Idle systems (${idleSystems.length})`));
       for (const { x, i } of idleSystems) wrap.append(button(x.system!.name, () => { this.view.centerOn(i); this.select(i); }, { cls: 'list-btn small' }));
     }
-    wrap.append(h('h3', null, 'Tips'), h('div', { class: 'dim' },
+    wrap.append(h('div', { class: 'row dim', style: 'font-size:12px;margin-top:10px;gap:2px' }, 'Tips', infoTip(
       isTouch()
         ? 'Tap a hex or fleet to select it. To move, tap Move, then tap the destination and Confirm. Ships that end a turn alone in a hex claim it at the start of your next turn. Colonies, Fleets and Agents (top bar, swipe it sideways) list everything you run.'
-        : 'Tap a hex or fleet to select it. To move, press Move (M, or right-click), then tap the destination twice. Ships that end a turn alone in a hex claim it at the start of your next turn. Press N for the next idle fleet. Colonies, Fleets and Agents (top bar) list everything you run.'));
+        : 'Tap a hex or fleet to select it. To move, press Move (M, or right-click), then tap the destination twice. Ships that end a turn alone in a hex claim it at the start of your next turn. Press N for the next idle fleet. Colonies, Fleets and Agents (top bar) list everything you run.')));
     return wrap;
   }
 
@@ -986,57 +987,48 @@ export class GameUI {
     const prod = Math.max(0.1, productionOf(g, hex));
     const ahead = sys.queue.reduce((n, q) => n + q.remaining, 0);
     /**
-     * One buildable item: tap to queue it. Shows when it would be ready (after what is already queued), the
-     * reason in plain words when it can't be built now, and an ⓘ toggle with its details (no hover needed).
+     * One buildable item, on one line: name, turns until ready, cost. Its details, and why it can't be
+     * built when it can't, are in its tooltip (hover; press and hold on touch screens). Items that can't be
+     * built here at all go into a collapsible "unavailable" group under the list; ones that are only
+     * waiting for resources stay in the list, dimmed.
      */
-    const opt = (key: string, label: string, cost: string, check: { ok: boolean; reason?: string; cost?: { metals: number; energy: number; exotics: number; points?: number } }, action: Action, details?: string) => {
-      // Buildable here but too expensive right now: disabled too, with what is missing.
+    const available: HTMLElement[] = [];
+    const unavailable: HTMLElement[] = [];
+    const opt = (label: string, cost: string, check: { ok: boolean; reason?: string; cost?: { metals: number; energy: number; exotics: number; points?: number } }, action: Action, details?: string) => {
       const short = check.ok && check.cost
         ? (['metals', 'energy', 'exotics'] as const).filter((k) => stock[k] < check.cost![k]).map((k) => `${Math.ceil(check.cost![k] - stock[k])} more ${k}`)
         : [];
       const ok = check.ok && short.length === 0;
       const why = !check.ok ? (check as { reason: string }).reason : short.length ? `Needs ${short.join(', ')}.` : '';
       const turns = check.ok && check.cost?.points ? Math.ceil((ahead + check.cost.points) / prod) : 0;
-      const open = this.buildInfo === key;
-      const row = h('div', { class: `build-row ${ok ? '' : 'off'}` });
-      row.append(h('div', { class: 'row', style: 'gap:4px' },
+      const row = h('div', { class: `build-row ${ok ? '' : 'off'}` },
         button(h('span', { class: 'row grow', style: 'gap:6px' }, h('span', { class: 'grow' }, label),
-          turns ? h('span', { class: 'dim', style: 'font-size:11px', title: 'Turns until it is ready, after what is already queued here' }, `${turns}t`) : '',
+          turns ? h('span', { class: 'dim', style: 'font-size:11px' }, `${turns}t`) : '',
           h('span', { class: short.length ? 'bad' : 'dim' }, cost)), () => this.act(action),
-          { cls: 'list-btn small grow', disabled: !ok || !this.myTurn, title: ok ? 'Add to the build queue' : why }),
-        details ? button('ⓘ', () => { this.buildInfo = open ? null : key; this.rerender(); }, { cls: `small ghost ${open ? 'on' : ''}`, title: 'Details' }) : null));
-      if (!ok && why) row.append(h('div', { class: 'build-why' }, why));
-      if (open && details) row.append(h('div', { class: 'build-details' }, details));
-      return row;
+          { cls: 'list-btn small grow', disabled: !ok || !this.myTurn }));
+      setTip(row, () => h('div', null,
+        h('b', null, label), turns ? h('span', { class: 'dim' }, ` · ready in ${turns} turn${turns > 1 ? 's' : ''}`) : '',
+        why ? h('div', { class: 'bad', style: 'margin:3px 0' }, why) : null,
+        details ? h('div', { style: 'margin-top:3px' }, details) : null,
+        ok && this.myTurn ? h('div', { class: 'dim', style: 'margin-top:4px;font-size:11px' }, 'Click to add it to the build queue.') : null));
+      (check.ok ? available : unavailable).push(row);
     };
-    // Things you can't build until you research something are left out; a line says how many are waiting.
     const known = new Set(g.factions[this.viewer].research.known);
-    const locked = (n: number) => {
-      if (n) wrap.append(h('div', { class: 'dim', style: 'font-size:12px;margin-top:6px' }, `${n} more ${n === 1 ? 'unlocks' : 'unlock'} with research. `,
-        h('a', { href: '#', style: 'color:var(--accent)', onclick: (e: Event) => { e.preventDefault(); openResearch(this); } }, 'Research')));
-    };
     if (this.buildTab === 'ships') {
-      const all = [...DESIGNS_BY_FACTION[this.viewer]].filter((d) => d.cls !== 'fighter').sort((a, b) => CLASSES[a.cls].size - CLASSES[b.cls].size);
-      const designs = all.filter((d) => !d.tech || known.has(d.tech));
+      const designs = [...DESIGNS_BY_FACTION[this.viewer]].filter((d) => d.cls !== 'fighter').sort((a, b) => CLASSES[a.cls].size - CLASSES[b.cls].size);
       for (const d of designs) {
         const c = checkBuild(g, this.viewer, hex, 'ship', d.id);
         const s = d.stats;
-        const title = `${CLASSES[d.cls].name} · ${ROLES[d.role].name}. ${ROLES[d.role].text}\nHull ${s.hull} · shields ${s.shields} · beams ${s.energy} · missiles ${s.missile} · point defense ${s.pd} · hangar ${s.hangar} · cargo ${s.cargo} · speed ${s.speed} · sensors ${s.sensors}\nUpkeep ${d.upkeep} energy per turn`;
-        wrap.append(opt(`ship:${d.id}`, `${d.name} · ${CLASSES[d.cls].name} ${ROLES[d.role].name}`, costText(c.ok ? c.cost : d.cost), c, { type: 'build', hex, kind: 'ship', item: d.id }, title));
+        const details = `${CLASSES[d.cls].name} · ${ROLES[d.role].name}. ${ROLES[d.role].text}\nHull ${s.hull} · shields ${s.shields} · beams ${s.energy} · missiles ${s.missile} · point defense ${s.pd} · hangar ${s.hangar} · cargo ${s.cargo} · speed ${s.speed} · sensors ${s.sensors}\nUpkeep ${d.upkeep} energy per turn`;
+        opt(`${d.name} · ${CLASSES[d.cls].name} ${ROLES[d.role].name}`, costText(c.ok ? c.cost : d.cost), c, { type: 'build', hex, kind: 'ship', item: d.id }, details);
       }
-      locked(all.length - designs.length);
     } else if (this.buildTab === 'improvements') {
-      let waiting = 0;
       for (const [id, imp] of Object.entries(IMPROVEMENTS)) {
-        if (imp.tech && !known.has(imp.tech)) { waiting++; continue; }
         const c = checkBuild(g, this.viewer, hex, 'improvement', id);
-        // Unique improvements already here, and ones this world can never have, are left out too.
-        if (!c.ok && (c.reason === 'Already built.' || c.reason === 'No exotic source here.')) continue;
         const copies = sys.improvements.filter((x) => x === id).length + sys.queue.filter((q) => q.kind === 'improvement' && q.item === id).length;
-        const repeat = copies && (imp.yields || imp.production) ? ` Another one here yields ${Math.round(Math.pow(REPEAT_FALLOFF, copies) * 100)}% (each repeat on the same world yields 20% less).` : '';
-        wrap.append(opt(`imp:${id}`, copies ? `${imp.name} (${copies + 1}${copies === 1 ? 'nd' : copies === 2 ? 'rd' : 'th'})` : imp.name, costText(imp.cost), c, { type: 'build', hex, kind: 'improvement', item: id }, imp.text + repeat));
+        const repeat = copies && (imp.yields || imp.production) ? `\nAnother one here yields ${Math.round(Math.pow(REPEAT_FALLOFF, copies) * 100)}% (each repeat on the same world yields 20% less).` : '';
+        opt(copies && c.ok ? `${imp.name} (${copies + 1}${copies === 1 ? 'nd' : copies === 2 ? 'rd' : 'th'})` : imp.name, costText(imp.cost), c, { type: 'build', hex, kind: 'improvement', item: id }, imp.text + repeat);
       }
-      locked(waiting);
     } else {
       const items: [string, Parameters<typeof checkBuild>[3], string, string][] = [
         ['Develop to next level', 'develop', '', `Raises ${sys.name} to ${DEV_NAMES[Math.min(5, sys.development + 1)]}: higher yields, more population and more improvement slots.`],
@@ -1048,9 +1040,12 @@ export class GameUI {
       for (const [label, kind, item, text] of items) {
         if (kind === 'wonder' && !known.has('ascension')) continue;
         const c = checkBuild(g, this.viewer, hex, kind, item);
-        wrap.append(opt(`other:${kind}`, label, c.ok ? costText(c.cost) : '', c, { type: 'build', hex, kind, item }, text));
+        opt(label, c.ok ? costText(c.cost) : '', c, { type: 'build', hex, kind, item }, text);
       }
     }
+    wrap.append(...available);
+    if (!available.length) wrap.append(h('div', { class: 'dim', style: 'font-size:12px;margin:4px 0' }, 'Nothing here can be built yet.'));
+    wrap.append(...collapsibleUnavailable(unavailable, () => this.rerender()));
     return wrap;
   }
 
@@ -1159,14 +1154,16 @@ export class GameUI {
       }
       card.append(menu);
     }
-    if (this.splitSet.size === 0 && f.ships.length > 1) card.append(h('div', { class: 'dim', style: 'font-size:11px;margin-top:4px' }, 'Tap ships to pick some, then Split them into a new fleet.'));
+    if (this.splitSet.size === 0 && f.ships.length > 1) card.append(h('div', { class: 'dim', style: 'font-size:11px;margin-top:4px' }, 'Splitting', infoTip('Tap ships to pick some, then press Split to move them into a new fleet.')));
     const rynkai = hasAbility(f.owner, 'wayOfTheBlade');
     const doctrine = h('select', {
       title: DOCTRINES[f.doctrine].text,
       onchange: (e: Event) => this.act({ type: 'doctrine', fleet: f.id, doctrine: (e.target as HTMLSelectElement).value as DoctrineId }),
     }, ...DOCTRINE_IDS.filter((d) => !(rynkai && DOCTRINES[d].withdrawAt === 0)).map((d) => h('option', { value: d, selected: f.doctrine === d }, DOCTRINES[d].name)));
-    card.append(h('div', { class: 'row', style: 'margin-top:6px' }, h('span', { class: 'dim' }, 'Battle orders'), doctrine),
-      h('div', { class: 'dim', style: 'font-size:11px' }, DOCTRINES[f.doctrine].text, rynkai ? " The Ryn'kai never withdraw, whatever the orders." : ''));
+    card.append(h('div', { class: 'row', style: 'margin-top:6px' }, h('span', { class: 'dim' }, 'Battle orders'), doctrine,
+      infoTip(() => h('div', null, ...DOCTRINE_IDS.filter((d) => !(rynkai && DOCTRINES[d].withdrawAt === 0)).map((d) =>
+        h('div', { style: `margin:2px 0;${d === f.doctrine ? '' : 'opacity:.7'}` }, h('b', null, DOCTRINES[d].name), `: ${DOCTRINES[d].text}`)),
+        rynkai ? h('div', { style: 'margin-top:4px' }, "The Ryn'kai never withdraw, whatever the orders.") : null))));
     // Agents aboard
     const agentsAboard = f.ships.flatMap((s) => g.ships[s].cargo).filter((c) => g.agents[c]);
     for (const a of agentsAboard) card.append(h('div', { class: 'row' }, `${g.agents[a].kind} aboard`, button('Disembark', () => this.act({ type: 'disembark', agent: a }), { cls: 'small' })));
@@ -1219,13 +1216,13 @@ export class GameUI {
           const odds = Math.round(successChance(g, this.viewer, target, k) * 100);
           list.append(h('div', { class: 'mission-row' },
             button(MISSIONS[k].name, () => this.act({ type: 'mission', agent: id, mission: k }), { cls: 'small', title: MISSIONS[k].text }),
-            h('span', { class: 'dim grow', style: 'font-size:11px' }, `${MISSIONS[k].text} ${MISSIONS[k].turns} turn${MISSIONS[k].turns > 1 ? 's' : ''}, ${odds}% success.`)));
+            h('span', { class: 'dim grow', style: 'font-size:11px' }, `${odds}% · ${MISSIONS[k].turns} turn${MISSIONS[k].turns > 1 ? 's' : ''}`)));
         }
-        card.append(h('div', { style: 'margin-top:6px;font-size:12px' }, h('b', null, `Missions against the ${factionDef(target).short} here`), list,
-          h('div', { class: 'dim', style: 'font-size:11px' }, 'A failed mission can get the spy caught.')));
+        card.append(h('div', { style: 'margin-top:6px;font-size:12px' }, h('b', null, `Missions against the ${factionDef(target).short} here`),
+          infoTip('Each mission shows its chance of success and how many turns it takes. Hover a mission for what it does. A failed mission can get the spy caught.'), list));
       } else if (!a.mission) {
-        acts.append(h('div', { class: 'dim', style: 'font-size:12px' },
-          `Move this spy into a rival’s star system to run a mission there: ${usable.filter((k) => k !== 'assassinate').map((k) => MISSIONS[k].name).join(', ')}; at a capital, also ${MISSIONS.assassinate.name}. A spy left at a rival’s capital gathers intelligence instead; one at your own capital guards it.`));
+        acts.append(h('div', { class: 'dim', style: 'font-size:12px' }, 'Move into a rival’s system to run missions.', infoTip(
+          `Missions: ${usable.filter((k) => k !== 'assassinate').map((k) => MISSIONS[k].name).join(', ')}; at a capital, also ${MISSIONS.assassinate.name}. A spy left at a rival’s capital gathers intelligence instead; one at your own capital guards it.`)));
       }
     }
     const ships = Object.values(g.fleets).filter((f) => f.owner === this.viewer && f.hex === a.hex).flatMap((f) => f.ships).filter((s) => cargoFree(g, s) > 0);
