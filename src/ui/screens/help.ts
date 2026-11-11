@@ -15,6 +15,7 @@ const SECTIONS: [string, string[]][] = [
   ['Economy', [
     'Systems produce energy ⚡, metals ⛏, science 🔬 and exotics ✦. Population 👥 grows on habitable worlds and crews big ships.',
     'Found colonies with colony ships and outposts with constructors. Develop systems to raise yields and unlock improvement slots and shipyards.',
+    'Select one of your systems to see its planet with its improvement slots around it: built improvements show their icon, ones being built show their progress, a + is an empty slot (click it to build there), and a lock is a slot the next development level opens. Ships and everything else are built from the Ships and Other tabs below.',
     'Builds are paid up front. Each system then works on its own queue. Rush with energy. Cancelling gives everything back until work on it begins, and half once it is under way.',
     'Ships, starbases, agents and armies cost energy upkeep. Running out of energy weakens your fleets.',
   ]],

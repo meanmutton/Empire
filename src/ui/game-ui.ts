@@ -15,7 +15,7 @@ import { applyAction, type Action } from '../engine/actions';
 import { getBit } from '../engine/bitset';
 import { cargoFree } from '../engine/ground';
 import { blockadersAt } from '../engine/blockade';
-import { checkBuild, factionIncome, popCapOf, productionOf, REPEAT_FALLOFF, rushCost, slotsOf, systemYield } from '../engine/economy';
+import { checkBuild, factionIncome, popCapOf, productionOf, rushCost, systemYield } from '../engine/economy';
 import { MISSIONS, successChance, type MissionId } from '../engine/espionage';
 import { groupSize, planPath, reachableThisTurn } from '../engine/movement';
 import { activeFaction, relation } from '../engine/query';
@@ -37,6 +37,8 @@ import { tokenElement } from './tokens';
 import { sfx, type Sfx } from './sound';
 import { setTip, infoTip } from './tooltip';
 import { collapsibleUnavailable } from './collapse';
+import { colonyView, yieldChips } from './colony-view';
+import { iconElement } from './icons';
 
 export interface GameHost {
   /** The viewer pressed End Turn (after the engine processed it). */
@@ -83,7 +85,7 @@ export class GameUI {
   selAgent: string | null = null;
   private splitSet = new Set<string>();
   private pendingDest: number | null = null;
-  private buildTab: 'ships' | 'improvements' | 'other' = 'ships';
+  private buildTab: 'ships' | 'other' = 'ships';
 
   /** Where panels that sit over the map (the turn briefing) are attached. */
   overlayRoot: HTMLElement;
@@ -949,16 +951,18 @@ export class GameUI {
     const blockers = blockadersAt(g, hex);
     if (blockers.length) kv.append(h('span', { class: 'k' }, 'Blockaded'), h('span', { class: 'bad' }, `by ${blockers.map((b) => factionDef(b).short).join(', ')}: output halved, shipyard idle`));
     if (hx.owner && sys.development > 0) {
-      const y = systemYield(g, hex);
-      kv.append(h('span', { class: 'k' }, 'Yields'), h('span', null, `${ICON.energy}${num(y.energy)} ${ICON.metals}${num(y.metals)} ${ICON.science}${num(y.science)} ${ICON.exotics}${num(y.exotics)}`));
-      kv.append(h('span', { class: 'k' }, 'Production'), h('span', null, `${num(productionOf(g, hex))} per turn`));
+      // Yields and production as icon chips under the planet (below).
     } else if (sys.development === 0) {
       kv.append(h('span', { class: 'k' }, 'Potential'), h('span', null, `${ICON.energy}${p.energy + st.energy} ${ICON.metals}${p.metals} ${ICON.science}${p.science + st.science} ${ICON.exotics}${p.exotics + st.exotics} · pop ${p.popCap}`));
     }
     card.append(kv);
-    if (sys.improvements.length || sys.development > 0) {
-      card.append(h('div', { class: 'dim', style: 'margin-top:4px' }, `Improvements (${sys.improvements.length}/${slotsOf(sys)}): `,
-        [...new Set(sys.improvements)].map((i) => { const n = sys.improvements.filter((x) => x === i).length; return `${IMPROVEMENTS[i]?.name ?? i}${n > 1 ? ` ×${n}` : ''}`; }).join(', ') || 'none'));
+    // The planet with its improvement slots, and its yields.
+    if (sys.development > 0) {
+      card.append(h('div', { class: 'colony-wrap' }, colonyView(this, hex)));
+      if (hx.owner) {
+        const y = systemYield(g, hex);
+        card.append(yieldChips(y, [['res:production', num(productionOf(g, hex)), 'Production per turn: how fast this system builds']]));
+      }
     }
     if (mine && sys.development > 0) card.append(this.buildPanel(hex));
     return card;
@@ -973,15 +977,17 @@ export class GameUI {
     sys.queue.forEach((q, i) => {
       const label = q.kind === 'ship' ? design(q.item).name + ` (${CLASSES[design(q.item).cls].name})` : q.kind === 'improvement' ? IMPROVEMENTS[q.item]?.name : q.kind === 'develop' ? 'Develop' : q.kind === 'wonder' ? 'Ascension Gate' : q.kind[0].toUpperCase() + q.kind.slice(1);
       const turns = Math.ceil(q.remaining / Math.max(0.1, productionOf(g, hex)));
-      wrap.append(h('div', { class: 'queue-item' }, h('span', { class: 'grow' }, label), h('span', { class: 'dim' }, i === 0 ? `${turns} turns` : `${num(q.remaining)} pts`),
+      const icon = q.kind === 'improvement' ? `imp:${q.item}` : `queue:${q.kind}`;
+      wrap.append(h('div', { class: 'queue-item' }, iconElement(icon, 18), h('span', { class: 'grow' }, label), h('span', { class: 'dim' }, i === 0 ? `${turns} turn${turns === 1 ? '' : 's'}` : `${num(q.remaining)} pts`),
         i === 0 ? button(`Rush ${ICON.energy}${rushCost(g, hex)}`, () => this.act({ type: 'rush', hex }), { cls: 'small', disabled: !this.myTurn }) : null,
         button('✕', () => this.act({ type: 'cancelBuild', hex, index: i }), {
           cls: 'small ghost', disabled: !this.myTurn,
           title: buildStarted(q) ? `Cancel: under way, so half back (${refundText(refundFor(q))})` : `Cancel: not started, so everything back (${refundText(refundFor(q))})`,
         })));
     });
+    // Improvements are built from the empty slots around the planet; these tabs cover the rest.
     const tabs = h('div', { class: 'tabs' },
-      ...(['ships', 'improvements', 'other'] as const).map((t) => button(t[0].toUpperCase() + t.slice(1), () => { this.buildTab = t; this.rerender(); }, { cls: `small ${this.buildTab === t ? 'on' : ''}` })));
+      ...(['ships', 'other'] as const).map((t) => button(t[0].toUpperCase() + t.slice(1), () => { this.buildTab = t; this.rerender(); }, { cls: `small ${this.buildTab === t ? 'on' : ''}` })));
     wrap.append(tabs);
     const stock = g.factions[this.viewer].stock;
     const prod = Math.max(0.1, productionOf(g, hex));
@@ -1021,13 +1027,6 @@ export class GameUI {
         const s = d.stats;
         const details = `${CLASSES[d.cls].name} · ${ROLES[d.role].name}. ${ROLES[d.role].text}\nHull ${s.hull} · shields ${s.shields} · beams ${s.energy} · missiles ${s.missile} · point defense ${s.pd} · hangar ${s.hangar} · cargo ${s.cargo} · speed ${s.speed} · sensors ${s.sensors}\nUpkeep ${d.upkeep} energy per turn`;
         opt(`${d.name} · ${CLASSES[d.cls].name} ${ROLES[d.role].name}`, costText(c.ok ? c.cost : d.cost), c, { type: 'build', hex, kind: 'ship', item: d.id }, details);
-      }
-    } else if (this.buildTab === 'improvements') {
-      for (const [id, imp] of Object.entries(IMPROVEMENTS)) {
-        const c = checkBuild(g, this.viewer, hex, 'improvement', id);
-        const copies = sys.improvements.filter((x) => x === id).length + sys.queue.filter((q) => q.kind === 'improvement' && q.item === id).length;
-        const repeat = copies && (imp.yields || imp.production) ? `\nAnother one here yields ${Math.round(Math.pow(REPEAT_FALLOFF, copies) * 100)}% (each repeat on the same world yields 20% less).` : '';
-        opt(copies && c.ok ? `${imp.name} (${copies + 1}${copies === 1 ? 'nd' : copies === 2 ? 'rd' : 'th'})` : imp.name, costText(imp.cost), c, { type: 'build', hex, kind: 'improvement', item: id }, imp.text + repeat);
       }
     } else {
       const items: [string, Parameters<typeof checkBuild>[3], string, string][] = [
