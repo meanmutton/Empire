@@ -5,7 +5,7 @@
  * are shown locked. Icons come from icons.ts, so any can be swapped for artwork.
  */
 import { IMPROVEMENTS, PLANET_YIELDS, STAR_YIELDS } from '../data/improvements';
-import { checkBuild, productionOf, REPEAT_FALLOFF, slotsOf } from '../engine/economy';
+import { checkBuild, productionOf, REPEAT_FALLOFF, slotsOf, systemYield } from '../engine/economy';
 import type { PlanetKind, StarKind } from '../engine/types';
 import { collapsibleUnavailable } from './collapse';
 import { h, modal } from './dom';
@@ -84,7 +84,7 @@ type Slot =
   | { kind: 'locked' };
 
 /** The view for one system; `canBuild` adds the empty "+" slots and the queue's progress. */
-export function colonyView(ui: GameUI, hex: number): HTMLElement {
+export function colonyView(ui: GameUI, hex: number, opts: { inPicker?: boolean } = {}): HTMLElement {
   const g = ui.game;
   const hx = g.map.hexes[hex];
   const sys = hx.system!;
@@ -131,9 +131,15 @@ export function colonyView(ui: GameUI, hex: number): HTMLElement {
       }
     } else if (s.kind === 'empty') {
       el.append(iconElement('ui:add', Math.round(tile * 0.5)));
-      el.disabled = !ui.myTurn;
-      setTip(el, ui.myTurn ? 'Empty slot: click to build an improvement here.' : 'Empty slot.');
-      el.addEventListener('click', () => openImprovementPicker(ui, hex));
+      if (opts.inPicker) {
+        // In the picker the slots only show where things go: the tiles do the building.
+        el.tabIndex = -1;
+        setTip(el, 'Empty slot. Pick an improvement on the right to build here.');
+      } else {
+        el.disabled = !ui.myTurn;
+        setTip(el, ui.myTurn ? 'Empty slot: click to build an improvement here.' : 'Empty slot.');
+        el.addEventListener('click', () => openImprovementPicker(ui, hex));
+      }
     } else {
       el.append(iconElement('ui:locked', Math.round(tile * 0.42)));
       el.disabled = true;
@@ -161,7 +167,7 @@ export function openImprovementPicker(ui: GameUI, hex: number): void {
       const ok = c.ok && !short.length && ui.myTurn;
       const turns = c.ok && c.cost.points ? Math.ceil((ahead + c.cost.points) / prod) : 0;
       const copies = sys.improvements.filter((x) => x === id).length + sys.queue.filter((q) => q.kind === 'improvement' && q.item === id).length;
-      const tile = h('button', { class: `imp-tile ${ok ? '' : 'off'}`, disabled: !ok, onclick: () => { if (ui.act({ type: 'build', hex, kind: 'improvement', item: id })) m.close(); } },
+      const tile = h('button', { class: `imp-tile ${ok ? '' : 'off'}`, disabled: !ok, 'data-imp': id, onclick: () => { if (ui.act({ type: 'build', hex, kind: 'improvement', item: id })) m.close(); } },
         h('span', { class: 'imp-tile-icon', style: `--accent-c:${iconColor(`imp:${id}`)}` }, iconElement(`imp:${id}`, 30)),
         h('span', { class: 'imp-tile-name' }, imp.name),
         h('span', { class: `imp-tile-cost ${short.length ? 'bad' : 'dim'}` }, costText(imp.cost), turns ? ` · ${turns}t` : ''));
@@ -170,10 +176,28 @@ export function openImprovementPicker(ui: GameUI, hex: number): void {
         copies && (imp.yields || imp.production) ? h('div', { class: 'dim' }, `Another one here yields ${Math.round(Math.pow(REPEAT_FALLOFF, copies) * 100)}%.`) : null));
       (c.ok ? ready : blocked).push(tile);
     }
-    body.replaceChildren(
+    // The planet on the left: hovering a tile shows it in the first free slot.
+    const view = colonyView(ui, hex, { inPicker: true });
+    const next = view.querySelector<HTMLElement>('.colony-slot.empty');
+    const preview = (id: string | null) => {
+      if (!next) return;
+      next.replaceChildren(id ? iconElement(`imp:${id}`, Math.round(next.offsetWidth * 0.58) || 24) : iconElement('ui:add', Math.round(next.offsetWidth * 0.5) || 20));
+      next.classList.toggle('preview', !!id);
+      if (id) next.style.setProperty('--accent-c', iconColor(`imp:${id}`)); else next.style.removeProperty('--accent-c');
+    };
+    for (const t of [...ready, ...blocked]) {
+      const id = t.dataset.imp!;
+      t.addEventListener('mouseenter', () => preview(id));
+      t.addEventListener('mouseleave', () => preview(null));
+      t.addEventListener('focus', () => preview(id));
+      t.addEventListener('blur', () => preview(null));
+    }
+    const tiles = h('div', { class: 'picker-tiles' },
       h('div', { class: 'imp-grid' }, ...ready),
       ...(ready.length ? [] : [h('div', { class: 'dim' }, 'Nothing can be built here right now.')]),
       ...collapsibleUnavailable(blocked, render, 'unavailable', 'imp-grid'));
+    body.replaceChildren(h('div', { class: 'picker-layout' }, h('div', { class: 'picker-planet' }, view, yieldChips(systemYield(g, hex),
+      [['res:production', num(productionOf(g, hex)), 'Production per turn: how fast this system builds']])), tiles));
   };
   render();
 }

@@ -137,6 +137,15 @@ h3 { margin:12px 0 6px; font-size:12px; letter-spacing:.08em; text-transform:upp
 .imp-tile-name { font-size:12px; font-weight:600; text-align:center; line-height:1.2; }
 .imp-tile-cost { font-size:11px; }
 .unavail-list.imp-grid { opacity:.85; }
+.picker-layout { display:grid; grid-template-columns:300px minmax(0, 1fr); gap:18px; align-items:start; }
+.picker-planet { display:flex; flex-direction:column; align-items:center; gap:6px; position:sticky; top:0; }
+.picker-tiles { min-width:0; }
+.colony-slot.preview { border-style:solid; background:radial-gradient(circle at 40% 35%, #26335c, #101833); box-shadow:0 0 14px color-mix(in srgb, var(--accent-c) 55%, transparent); }
+.colony-slot.preview .icon { opacity:.85; }
+@media (max-width: 760px) {
+  .picker-layout { grid-template-columns:1fr; }
+  .picker-planet { position:static; }
+}
 .guide-grid { display:grid; grid-template-columns:minmax(170px, 230px) minmax(0, 1fr); gap:14px; min-height:420px; }
 .guide-grid > * { min-width:0; }
 .guide-list { display:flex; flex-direction:column; max-height:70vh; overflow:auto; padding-right:4px; }
