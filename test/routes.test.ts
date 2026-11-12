@@ -1,4 +1,6 @@
 import { DESIGNS } from '../src/data/designs';
+import { MAJOR_IDS } from '../src/data/factions';
+import { checkBuild } from '../src/engine/economy';
 import { relationKey } from '../src/engine/ids';
 import { establishRoute, routeCapacity, routeDisruptors, routeOptions, routeValue, runTradeRoutes } from '../src/engine/routes';
 import type { GameState } from '../src/engine/types';
@@ -102,5 +104,25 @@ describe('route options', () => {
     for (let i = 1; i < after.length; i++) expect(after[i - 1].value).toBeGreaterThanOrEqual(after[i].value);
     setStatus(g, 'concord', other, 'war');
     expect(routeOptions(g, 'concord').some((o) => o.partner === other)).toBe(false);
+  });
+});
+
+describe('every great power can run trade routes', () => {
+  it('can queue a cargo ship at its home shipyard', () => {
+    const g = newGame('routes-all');
+    for (const id of MAJOR_IDS) {
+      const d = firstDesign(id, (x) => x.role === 'cargo');
+      g.factions[id].stock.metals = g.factions[id].stock.energy = 500;
+      expect(checkBuild(g, id, g.factions[id].home, 'ship', d.id).ok, id).toBe(true);
+    }
+  });
+
+  it('a Ryn’kai cargo ship opens a route at a trade partner', () => {
+    const g = newGame('routes-rynkai');
+    const r = g.relations[relationKey('concord', 'rynkai')];
+    r.contact = true; r.status = 'relations'; r.agreements.push('trade');
+    const fid = fleetOf(g, 'rynkai', firstDesign('rynkai', (d) => d.role === 'cargo'), g.factions.concord.home);
+    expect(establishRoute(g, fid).ok).toBe(true);
+    expect(g.routes![0].owner).toBe('rynkai');
   });
 });

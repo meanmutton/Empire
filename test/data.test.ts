@@ -104,3 +104,13 @@ describe('improvements', () => {
     }
   });
 });
+
+describe('cargo ships', () => {
+  it('every faction can build a cargo ship, with no technology needed', () => {
+    for (const f of FACTIONS) {
+      const cargo = DESIGNS_BY_FACTION[f.id].filter((d) => d.role === 'cargo');
+      expect(cargo.length, f.id).toBeGreaterThan(0);
+      expect(cargo.some((d) => !d.tech), f.id).toBe(true);
+    }
+  });
+});

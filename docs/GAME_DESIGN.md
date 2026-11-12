@@ -89,7 +89,7 @@ portraits** in Options (title screen or in-game Menu; off by default, saved per 
   ship in the same battle may capture it instead of destroying it (chance based on army strength).
 - **Honor Bound**: the Ryn'kai never break a treaty first. Allies who break one with them suffer a permanent
   −50 opinion with the Dominion, and the Dominion gets +10% attack against them for the rest of the game.
-- Roster: every class; ships are heavily armed with thin shields; no Science Vessel role.
+- Roster: every class; ships are heavily armed with thin shields; no Science Vessel role. Their Cargo Vessel is the Tallyman.
 - AI personality: Aggressive conqueror. Attacks the weakest neighbor; allies with whoever shares its
   strongest enemy; keeps its word.
 
