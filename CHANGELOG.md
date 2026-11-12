@@ -12,6 +12,8 @@ for each release, a **minor** (0.3.0) for a milestone. Add an entry here with th
   pay up to 35% less, enemies up to 50% more, and a seller who thinks too little of you won't deal).
 - **Terms**: some offers need an embassy, a Trade Agreement, a trade route, a pact or an alliance with the seller. Offers
   you can't take are tucked away with the reason.
+- **Faction guide: Trade**: every faction's page now has a Trade section: its cargo ship(s) for trade routes and, for the
+  minor powers, exactly what they sell on the mercenary market and what they need from you first.
 - **Wormholes connect territory**: a wormhole a power owns both ends of now links its two hexes for connectivity, so
   territory beyond it isn't treated as disconnected or cut off.
 

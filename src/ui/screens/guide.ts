@@ -4,7 +4,7 @@
  * in-game Menu (More on phones) and each power's page in Diplomacy.
  */
 import { ABILITIES } from '../../data/abilities';
-import { FACTIONS, factionDef, MAJOR_IDS, MINOR_IDS } from '../../data/factions';
+import { FACTIONS, factionDef, hasAbility, MAJOR_IDS, MINOR_IDS } from '../../data/factions';
 import { LEADER_TITLES, LEADERS } from '../../data/leaders';
 import { AVAILABILITY, PRESETS, VICTORIES } from '../../data/victories';
 import type { GameState } from '../../engine/types';
@@ -15,6 +15,7 @@ import { rosterStrip } from '../gallery';
 import { lore, type LoreBlock, type LoreItem } from '../lore';
 import { leaderById, portraitElement } from '../portraits';
 import { crestElement } from '../crests';
+import { cargoShips, saleLines } from '../trade-text';
 
 const REACH = 'reach';
 
@@ -139,6 +140,28 @@ function factionPane(id: string, game?: GameState): HTMLElement[] {
   } else {
     out.push(h('div', { class: 'dim', style: 'margin-top:4px;font-size:12px' }, 'Minor factions never expand far from home, are always played by the computer, and can become a great power’s vassal.'));
   }
+  out.push(...tradeSection(id, def.kind === 'major'));
   out.push(h('div', { style: 'margin-top:8px' }, h('b', null, 'Ships')), rosterStrip(id, 34));
+  return out;
+}
+
+/** What the faction trades: its cargo ships and trade routes, and (minors) what it sells on the mercenary market. */
+function tradeSection(id: string, major: boolean): HTMLElement[] {
+  const out: HTMLElement[] = [h('h3', null, 'Trade')];
+  const cargo = cargoShips(id);
+  out.push(h('div', { style: 'margin:3px 0' }, h('b', null, 'Trade routes: '), cargo.length
+    ? h('span', { class: 'dim' }, `its cargo ${cargo.length > 1 ? 'ships are' : 'ship is'} the ${cargo.join(' and the ')}. Cargo ships open trade routes that pay energy to both sides.`)
+    : h('span', { class: 'dim' }, 'no cargo ship.')));
+  if (major) {
+    out.push(h('div', { style: 'margin:3px 0' }, h('b', null, 'On the market: '), h('span', { class: 'dim' }, 'nothing. A great power trades by proposal (Diplomacy → Propose a deal): resources, technologies, territory, agreements and more.')));
+    return out;
+  }
+  out.push(h('div', { style: 'margin:3px 0' }, h('b', null, 'Sells on the mercenary market:')));
+  const lines = saleLines(id);
+  out.push(h('ul', { class: 'guide-ul' }, ...lines.map((l) => h('li', null,
+    h('b', null, l.what), l.ships.length ? ` (${l.ships.join(', ')})` : '', l.perRound > 1 ? ` · ${l.perRound} each round` : '',
+    ' · ', l.needs ? h('span', { style: 'color:var(--accent)' }, `needs ${l.needs}`) : h('span', { class: 'good' }, 'sold to anyone at peace with them')))));
+  if (hasAbility(id, 'masterShipwrights')) out.push(h('div', { style: 'margin:3px 0' }, h('b', null, 'Shipyard contracts: '), h('span', { class: 'dim' }, 'builds any of your own ship designs to order, 20% cheaper, for anyone at peace with them (Diplomacy → Market → Shipyard contracts).')));
+  out.push(h('div', { class: 'dim', style: 'font-size:12px' }, 'Prices are high and follow their opinion of you: friends pay up to 35% less, and a power that thinks too little of you won’t deal. Buy in Diplomacy → Market → Mercenaries & services.'));
   return out;
 }
