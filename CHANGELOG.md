@@ -8,6 +8,9 @@ for each release, a **minor** (0.3.0) for a milestone. Add an entry here with th
 - **Cargo ships for every power**: the Ryn'kai had no cargo ship, so they could not run trade routes. They now have
   the *Tallyman*, and each of the 22 minor factions that lacked one has a cargo vessel of its own, so every faction
   can build cargo ships and open routes.
+- **Embassies during a war**: a diplomat that reaches an enemy capital now opens an embassy even while the two powers
+  are at war (before, it arrived and just waited). The embassy doesn't end the war; it lets you send a peace
+  proposal. The risk is the journey, since enemy ships can capture the diplomat on the way.
 
 ## 0.2.1 Beta
 

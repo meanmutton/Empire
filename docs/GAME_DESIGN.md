@@ -539,7 +539,9 @@ Techs can be traded, stolen by spies, and shared through research agreements (§
 - To open **relations**, send a **Diplomat** to the target's home system. While traveling, a diplomat can be
   **captured** by any ship of a faction at war with (or hostile to) the sender that ends its turn in the
   diplomat's hex. Captured diplomats can be returned, ransomed, or executed (large opinion penalty).
-- When the diplomat arrives, an **embassy** is founded. Embassies enable all proposals below, and the diplomat
+- When the diplomat arrives, an **embassy** is founded, **even if the two powers are at war**: that is how you get
+  to the table to ask for peace. The embassy doesn't end the war, and the danger is the journey, since a
+  posted (resident) diplomat can't be captured. Embassies enable all proposals below, and the diplomat
   stays resident (it can be expelled, which downgrades relations).
 
 ### 9.2 Relation states

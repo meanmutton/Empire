@@ -80,10 +80,12 @@ function arrive(state: GameState, a: Agent): void {
   if (a.kind !== 'diplomat' || !a.target || a.path.length > 0) return;
   const target = state.factions[a.target];
   if (!target || a.hex !== target.home) return;
-  if (relation(state, a.owner, a.target).status === 'war') return;
+  // An embassy can be opened in a war too: it is how you get to the table to ask for peace. It doesn't end the
+  // war, and the danger is the journey: enemy ships can capture the diplomat on the way, but not once it is posted.
+  const atWar = relation(state, a.owner, a.target).status === 'war';
   a.resident = true;
   setEmbassy(state, a.owner, a.target, true);
-  log(state, [a.owner, a.target], 'embassy', `${a.owner} opened an embassy with ${a.target}.`, a.hex);
+  log(state, [a.owner, a.target], 'embassy', `${a.owner} opened an embassy with ${a.target}${atWar ? ', despite the war' : ''}.`, a.hex);
 }
 
 /** Continues agent travel at the start of the owner's turn. */

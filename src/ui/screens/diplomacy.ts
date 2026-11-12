@@ -259,7 +259,10 @@ function embassyCard(ui: GameUI, o: FactionId, rerender: () => void): HTMLElemen
     card.append(h('div', null, h('b', null, '⚑ No embassy yet. '), enRoute.ship ? 'A diplomat is on the way aboard a ship.' : `A diplomat is on the way: ${enRoute.path.length} hexes to go.`));
     return card;
   }
-  card.append(h('div', null, h('b', null, '⚑ No embassy. '), 'You need one to trade or sign treaties. Send a diplomat to their home system; through hostile space it may be captured.'));
+  const atWar = relation(g, me, o).status === 'war';
+  card.append(h('div', null, h('b', null, '⚑ No embassy. '), atWar
+    ? 'You are at war, but a diplomat can still open an embassy and get you to the table to ask for peace. Their ships may capture it on the way; once it is posted, it is safe.'
+    : 'You need one to trade or sign treaties. Send a diplomat to their home system; through hostile space it may be captured.'));
   const free = mine.filter((a) => !a.resident && !a.ship && a.path.length === 0)
     .map((a) => ({ a, d: hexDistance(g.map, a.hex, home) })).sort((x, y) => x.d - y.d);
   if (!ui.myTurn) return card;
