@@ -10,7 +10,7 @@ const SECTIONS: [string, string[]][] = [
     'A ship that ends your turn alone in a hex claims it at the start of your next turn, which gives enemies one round to contest it.',
     'Only empty hexes are claimed this way. Settled planets must be invaded with armies once their planetary defense is down, and enemy starbases must be destroyed first.',
     'Enemy territory can only be claimed while at war.',
-    'Territory cut off from your home produces half as much.',
+    'Territory cut off from your home produces half as much. A wormhole you own both ends of keeps the territory beyond it connected.',
     'Territory with no planet, outpost or starbase of its owner connected to it for 10 turns passes to a power that completely surrounds it (one power on every side). Select such a hex to see the countdown.',
     'Outposts, built by constructors in your territory or empty space, hold a hex and watch around it as far as your scouts see. They produce nothing. Enemy warships destroy them.',
     'Select a hex where your ships are to see whether they will claim it, and if not, why not.',
@@ -42,7 +42,7 @@ const SECTIONS: [string, string[]][] = [
   ]],
   ['Diplomacy and spies', [
     'Send a diplomat to another empire’s home system to open an embassy. You need one to trade or sign treaties. Diplomats travelling through hostile space can be captured.',
-    'The Market is in Diplomacy too: swap resources on the galactic exchange, run trade routes, hire mercenaries and order ships from other shipyards.',
+    'The Market is in Diplomacy too: swap resources on the galactic exchange, run trade routes, buy ships, spies and armies from the minor powers (dear, and cheaper from those who like you; some want an embassy, a trade agreement or an alliance first) and order ships from other shipyards.',
     'Trade routes: Diplomacy → Market → Trade routes lists every system you could open one to, what it would pay, and sends your nearest cargo ship there. A cargo ship’s Where to trade button opens the same list.',
     'Trade resources, technology, fleets, territory and star charts, or sign trade, research, economic and manufacturing agreements, pacts and alliances.',
     'Minor factions can become your vassals: they pay tribute and join your wars. A vassal’s border carries a second line in its overlord’s colour, and the map, Diplomacy and the hover card all say whose vassal it is.',

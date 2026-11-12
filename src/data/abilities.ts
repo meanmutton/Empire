@@ -28,7 +28,7 @@ export const ABILITIES = {
   harmonicCalm: { name: 'Harmonic Calm', text: 'Enemies deal −20% damage in the first round of a battle against them.' },
   salvagers: { name: 'Salvagers', text: 'Gain metals equal to 25% of the cost of every ship destroyed in their battles.' },
   tradeHub: { name: 'Trade Hub', text: 'Trade agreements with them are worth +50% to both sides.' },
-  mercenaryContracts: { name: 'Mercenary Contracts', text: 'Sells warships on the mercenary market; they are delivered at the Thessic home system.' },
+  mercenaryContracts: { name: 'Mercenary Contracts', text: 'Sells warships and cargo ships on the mercenary market; they are delivered at the Thessic home system.' },
   raiders: { name: 'Raiders', text: 'Fleets sitting in an enemy system steal 10% of its energy and metal output every turn.' },
   ambush: { name: 'Ambush', text: '+30% attack in nebulae and asteroid fields.' },
   swarmTactics: { name: 'Swarm Tactics', text: 'Fighters and Corvettes cost 30% less.' },

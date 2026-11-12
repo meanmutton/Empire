@@ -25,7 +25,7 @@ import { anyTechChoice, canPropose, itemValue, militaryStrength, proposalScore, 
 import { checkBuild, factionIncome, rushCost, slotsOf } from '../engine/economy';
 import { cargoFree } from '../engine/ground';
 import { hexDistance, hexesWithin, neighbors } from '../engine/hex';
-import { outpostBlocker, planPath } from '../engine/movement';
+import { isWarship, outpostBlocker, planPath } from '../engine/movement';
 import { atWar, ownedHexes, relation } from '../engine/query';
 import { availableTechs, techCost } from '../engine/research';
 import { Rng } from '../engine/rng';
@@ -399,13 +399,14 @@ function trade(ctx: Ctx): void {
   }
   if (!ctx.major) return;
   // Mercenaries: ships and armies in wartime, star charts now and then.
-  const offers = offersFor(ctx.state, ctx.me).filter((x) => x.check.ok).map((x) => x.offer).sort((a, b) => a.price - b.price);
+  const offers = offersFor(ctx.state, ctx.me).filter((x) => x.check.ok).sort((a, b) => a.price - b.price);
   const armies = Object.values(ctx.state.armies).filter((a) => a.owner === ctx.me).length;
-  for (const o of offers) {
+  for (const { offer: o, price } of offers) {
     const energy = ctx.state.factions[ctx.me].stock.energy;
-    if (o.kind === 'ship' && ctx.enemies.length && energy - o.price > spare) act(ctx, { type: 'buyOffer', offer: o.id });
-    else if (o.kind === 'army' && ctx.enemies.length && armies < 3 && energy - o.price > 150) act(ctx, { type: 'buyOffer', offer: o.id });
-    else if (o.kind === 'charts' && energy - o.price > spare && ctx.state.turn % 15 === 0) act(ctx, { type: 'buyOffer', offer: o.id });
+    // Only warships, armies and charts: the computer has its own shipyards for the rest.
+    if (o.kind === 'ship' && ctx.enemies.length && isWarship(design(o.design)) && energy - price > spare + 100) act(ctx, { type: 'buyOffer', offer: o.id });
+    else if (o.kind === 'army' && ctx.enemies.length && armies < 3 && energy - price > 250) act(ctx, { type: 'buyOffer', offer: o.id });
+    else if (o.kind === 'charts' && energy - price > spare + 100 && ctx.state.turn % 15 === 0) act(ctx, { type: 'buyOffer', offer: o.id });
   }
 }
 

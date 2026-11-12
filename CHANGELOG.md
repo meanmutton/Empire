@@ -3,6 +3,18 @@
 Every release bumps the version in `package.json` (the game reads it from there): a **patch** (0.2.1, 0.2.2…)
 for each release, a **minor** (0.3.0) for a milestone. Add an entry here with the bump.
 
+## 0.2.3 Beta
+
+- **Every minor power sells something**: the mercenary market now covers all 30 minor factions. Traders sell cargo
+  ships, soldiers sell warships and armies, scholars sell science ships, scouts and charts, builders sell colony
+  ships and constructors, and the secretive sell spies.
+- **Dearer, and it depends on opinion**: prices are much higher, and move with the seller's opinion of you (friends
+  pay up to 35% less, enemies up to 50% more, and a seller who thinks too little of you won't deal).
+- **Terms**: some offers need an embassy, a Trade Agreement, a trade route, a pact or an alliance with the seller. Offers
+  you can't take are tucked away with the reason.
+- **Wormholes connect territory**: a wormhole a power owns both ends of now links its two hexes for connectivity, so
+  territory beyond it isn't treated as disconnected or cut off.
+
 ## 0.2.2 Beta
 
 - **Cargo ships for every power**: the Ryn'kai had no cargo ship, so they could not run trade routes. They now have

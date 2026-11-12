@@ -5,6 +5,7 @@
 import type { RngState } from './rng';
 import type { DoctrineId, RangeBand } from '../data/doctrines';
 import type { PresetId } from '../data/victories';
+import type { SaleReq } from '../data/sales';
 
 export const STATE_SCHEMA_VERSION = 1;
 
@@ -307,10 +308,15 @@ export interface BattleRecord {
   winner?: FactionId | null;
 }
 
+/**
+ * A mercenary market offer. `price` is the list price in energy; what a buyer pays moves with the seller's opinion
+ * of them (offerPrice). `req` is the relationship a buyer needs with the seller, if any.
+ */
 export type Offer =
-  | { id: Id; seller: FactionId; kind: 'ship'; design: string; price: number }
-  | { id: Id; seller: FactionId; kind: 'army'; strength: number; xp: number; turns: number; price: number }
-  | { id: Id; seller: FactionId; kind: 'charts'; price: number };
+  | { id: Id; seller: FactionId; kind: 'ship'; design: string; price: number; req?: SaleReq }
+  | { id: Id; seller: FactionId; kind: 'army'; strength: number; xp: number; turns: number; price: number; req?: SaleReq }
+  | { id: Id; seller: FactionId; kind: 'spy'; price: number; req?: SaleReq }
+  | { id: Id; seller: FactionId; kind: 'charts'; price: number; req?: SaleReq };
 
 export interface TradeRoute {
   id: Id;

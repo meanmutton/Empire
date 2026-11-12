@@ -50,7 +50,16 @@ export function ownedSystems(state: GameState, faction: FactionId): number[] {
   return out;
 }
 
-/** Owned hexes connected to the faction's home through a chain of owned hexes. */
+/**
+ * The hex at the other end of a wormhole in `hex`, when `faction` owns both ends: territory is connected through
+ * a wormhole its owner holds at both ends, as if the two hexes were neighbours. Null otherwise.
+ */
+export function ownedWormholeTwin(state: GameState, faction: FactionId, hex: number): number | null {
+  const twin = state.map.hexes[hex].wormhole;
+  return twin !== null && state.map.hexes[hex].owner === faction && state.map.hexes[twin].owner === faction ? twin : null;
+}
+
+/** Owned hexes connected to the faction's home through a chain of owned hexes (and wormholes it holds at both ends). */
 export function connectedHexes(state: GameState, faction: FactionId): Set<number> {
   const home = state.factions[faction].home;
   const seen = new Set<number>();
@@ -59,7 +68,8 @@ export function connectedHexes(state: GameState, faction: FactionId): Set<number
   seen.add(home);
   while (stack.length) {
     const h = stack.pop()!;
-    for (const n of neighbors(state.map, h)) {
+    const link = ownedWormholeTwin(state, faction, h);
+    for (const n of link === null ? neighbors(state.map, h) : [...neighbors(state.map, h), link]) {
       if (!seen.has(n) && state.map.hexes[n].owner === faction) {
         seen.add(n);
         stack.push(n);

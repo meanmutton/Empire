@@ -3,6 +3,7 @@ import { design, DESIGNS_BY_FACTION } from '../../data/designs';
 import { factionDef } from '../../data/factions';
 import { CLASSES, ROLES } from '../../data/ships';
 import { BASE_PRICES, exchangeFee, prices, quote } from '../../engine/market';
+import { SALE_REQ_TEXT } from '../../data/sales';
 import { contractCost, contractTerms, offersFor } from '../../engine/mercenaries';
 import { canTradeWith, DOMESTIC_MIN_DISTANCE, routeCapacity, routeDisruptors, routeOptions, routesOf, routeValue } from '../../engine/routes';
 import { getBit } from '../../engine/bitset';
@@ -72,25 +73,33 @@ function exchangeTab(ui: GameUI, rerender: () => void): HTMLElement {
 function mercenaryTab(ui: GameUI, rerender: () => void): HTMLElement {
   const g = ui.game;
   const list = offersFor(g, ui.viewer);
-  const wrap = h('div', null, lead('Hire ships, armies and services from mercenary factions.',
-    'Mercenary factions sell their services to anyone at peace with them. New offers arrive every round. Ships wait at the seller’s home system; hired armies report to your home for 10 turns.'));
-  if (!list.length) wrap.append(h('div', { class: 'dim' }, 'No mercenary factions are in this galaxy, or none are selling this round.'));
+  const wrap = h('div', null, lead('Hire ships, spies, armies and charts from the minor powers.',
+    'Every minor power sells something that suits it: traders sell cargo ships, soldiers sell warships and armies, scholars sell science ships and charts, builders sell colony ships and constructors, and the secretive sell spies. Prices are high, and move with how they feel about you: friends charge up to 35% less, and those who dislike you charge more or refuse. Some only sell to those with an embassy, a Trade Agreement, a trade route, a pact or an alliance. Ships wait at the seller’s home system; spies and hired armies report to your home. New offers arrive every round.'));
+  if (!list.length) wrap.append(h('div', { class: 'dim' }, 'No minor powers are in this galaxy, or none are selling this round.'));
   const blocked: HTMLElement[] = [];
-  for (const { offer: o, check } of list) {
+  const order = [...list].sort((a, b) => a.offer.seller.localeCompare(b.offer.seller));
+  for (const { offer: o, check, price } of order) {
     const met = g.relations[[ui.viewer, o.seller].sort().join('|')]?.contact;
-    const what = o.kind === 'ship'
-      ? `${design(o.design).name}: ${CLASSES[design(o.design).cls].name} ${ROLES[design(o.design).role].name}`
-      : o.kind === 'army' ? `Veteran army, strength ${o.strength}, for ${o.turns} turns` : 'Star charts: everything they have explored';
+    const d = o.kind === 'ship' ? design(o.design) : null;
+    const what = d
+      ? `${d.name}: ${CLASSES[d.cls].name} ${ROLES[d.role].name}`
+      : o.kind === 'army' ? `Veteran army, strength ${o.strength}, for ${o.turns} turns`
+      : o.kind === 'spy' ? 'A spy, reporting to your home system' : 'Star charts: everything they have explored';
+    const delta = Math.round((price / o.price - 1) * 100);
+    const priceEl = h('span', { title: `List price ${o.price}. They charge ${delta === 0 ? 'the list price' : `${Math.abs(delta)}% ${delta < 0 ? 'less' : 'more'}`} because of how they feel about you.` },
+      `${ICON.energy}${price}`, delta ? h('span', { class: delta < 0 ? 'good' : 'bad', style: 'font-size:11px;margin-left:4px' }, `${delta > 0 ? '+' : ''}${delta}%`) : '');
+    const need = o.req ? h('div', { class: 'dim', style: 'font-size:11px;flex-basis:100%' }, `Needs ${SALE_REQ_TEXT[o.req]}`) : null;
     const card = h('div', { class: 'card row wrap' },
       met ? factionChip(o.seller, true) : h('span', { class: 'dim' }, 'Unknown seller'),
       h('span', { class: 'grow' }, what),
-      h('span', null, `${ICON.energy}${o.price}`),
+      priceEl,
       button('Buy', () => { if (ui.act({ type: 'buyOffer', offer: o.id })) rerender(); },
-        { cls: 'small primary', disabled: !check.ok || !ui.myTurn, title: check.ok ? '' : (check as { reason: string }).reason }));
+        { cls: 'small primary', disabled: !check.ok || !ui.myTurn, title: check.ok ? '' : (check as { reason: string }).reason }),
+      need);
     if (check.ok) wrap.append(card);
     else { card.title = (check as { reason: string }).reason; blocked.push(card); }
   }
-  // Offers you can't take up (at war with the seller, can't afford, …) are tucked away.
+  // Offers you can't take up (at war with the seller, missing an embassy or agreement, can't afford, …) are tucked away.
   wrap.append(...collapsibleUnavailable(blocked, rerender, 'offers you can’t take'));
   return wrap;
 }

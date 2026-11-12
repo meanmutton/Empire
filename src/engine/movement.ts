@@ -8,7 +8,7 @@ import { log } from './events';
 import { hexesWithin, neighbors } from './hex';
 import { newId } from './ids';
 import { findPath, reachable } from './path';
-import { atWar, fleetSpeed, friendly } from './query';
+import { atWar, fleetSpeed, friendly, ownedWormholeTwin } from './query';
 import { Rng } from './rng';
 import { techEffects } from './research';
 import type { FactionId, Fleet, GameState } from './types';
@@ -316,7 +316,8 @@ export function territoryPiece(state: GameState, hex: number): { hexes: number[]
     const i = stack.pop()!;
     part.push(i);
     if (!anchored && anchors(state, i)) anchored = true;
-    for (const n of neighbors(state.map, i)) if (!seen.has(n) && hexes[n].owner === owner) { seen.add(n); stack.push(n); }
+    const link = ownedWormholeTwin(state, owner, i);
+    for (const n of link === null ? neighbors(state.map, i) : [...neighbors(state.map, i), link]) if (!seen.has(n) && hexes[n].owner === owner) { seen.add(n); stack.push(n); }
   }
   return { hexes: part, anchored };
 }
