@@ -3,6 +3,12 @@
 Every release bumps the version in `package.json` (the game reads it from there): a **patch** (0.2.1, 0.2.2…)
 for each release, a **minor** (0.3.0) for a milestone. Add an entry here with the bump.
 
+## 0.2.2 Beta
+
+- **Cargo ships for every power**: the Ryn'kai had no cargo ship, so they could not run trade routes. They now have
+  the *Tallyman*, and each of the 22 minor factions that lacked one has a cargo vessel of its own, so every faction
+  can build cargo ships and open routes.
+
 ## 0.2.1 Beta
 
 - **Victory and defeat screens**: when a game ends, a full-screen splash shows "Victory" or "Defeat" over key art
@@ -15,9 +21,6 @@ for each release, a **minor** (0.3.0) for a milestone. Add an entry here with th
 - **Map scrolling**: the map could not be scrolled far enough right (or, on phones, down) because its limit ignored
   the part of the screen covered by the side panel or selection sheet, so the edge column of hexes stayed hidden.
   It now scrolls until the edge is fully visible.
-- **Cargo ships for every power**: the Ryn'kai had no cargo ship, so they could not run trade routes. They now have
-  the *Tallyman*, and each of the 22 minor factions that lacked one has a cargo vessel of its own, so every faction
-  can build cargo ships and open routes.
 
 ## 0.2.0 Beta — the official Beta
 
