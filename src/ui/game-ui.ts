@@ -39,6 +39,8 @@ import { setTip, infoTip } from './tooltip';
 import { collapsibleUnavailable } from './collapse';
 import { colonyView, yieldChips } from './colony-view';
 import { iconElement } from './icons';
+import { endingOf } from './ending-text';
+import { showEnding } from './screens/ending';
 
 export interface GameHost {
   /** The viewer pressed End Turn (after the engine processed it). */
@@ -53,6 +55,10 @@ export interface GameHost {
   messaging?: Messaging;
   /** A key unique to this game on this device (save id, or online game code), for its local history. */
   gameKey?: string;
+  /** Several people share this screen (hot seat): a win by any of them is a victory. */
+  shared?: boolean;
+  /** Leaves the game for the title screen. */
+  quit?(): void;
 }
 
 export const DEV_NAMES = ['Unsettled', 'Foothold', 'Colony', 'Settlement', 'Industrial World', 'Core World'];
@@ -404,6 +410,17 @@ export class GameUI {
     this.renderSide();
     this.mini.draw();
     this.runHooks();
+    this.showEndingOnce();
+  }
+
+  /** The victory or defeat screen, shown once per game when it ends (and again if a finished game is reopened). */
+  private endingShown = false;
+  private showEndingOnce(): void {
+    if (this.endingShown) return;
+    const ending = endingOf(this.game, this.viewer, this.host.shared);
+    if (!ending) return;
+    this.endingShown = true;
+    showEnding(this.root, ending, () => undefined, this.host.quit ? () => this.host.quit!() : undefined);
   }
 
   /** Ends the turn; with nothing being researched (and something to research), opens Research first. */

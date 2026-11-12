@@ -3,6 +3,14 @@
 Every release bumps the version in `package.json` (the game reads it from there): a **patch** (0.2.1, 0.2.2…)
 for each release, a **minor** (0.3.0) for a milestone. Add an entry here with the bump.
 
+## 0.2.1 Beta
+
+- **Victory and defeat screens**: when a game ends, a full-screen splash shows "Victory" or "Defeat" over key art
+  of the command hall (lit gold when you win, dark and cracked when you lose), with who won or why you lost and
+  the turn it ended. "See the galaxy" returns to the final map; "Leave to title" quits. On a shared (hot seat)
+  screen a win by any human is a victory. The pictures are in `art/endings/`; `python3 scripts/endings.py` packs
+  them into the game.
+
 ## 0.2.0 Beta — the official Beta
 
 The first release we call Beta: the whole game is playable end to end, alone against the computer, hotseat or
