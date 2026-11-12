@@ -94,12 +94,48 @@ export function refreshOffers(state: GameState): void {
   state.offers = offers;
 }
 
-/** Offers this faction could buy right now (with the reason when it can't). */
-export function offersFor(state: GameState, buyer: FactionId): { offer: Offer; check: Result; price: number }[] {
-  return (state.offers ?? []).map((offer) => ({ offer, check: checkOffer(state, buyer, offer), price: offerPrice(state, buyer, offer) }));
+/** Most mercenary offers a buyer is shown (and can take) each round. */
+export const OFFERS_PER_ROUND = 5;
+
+/** A stable pseudo-random number for a buyer and an offer: the same on every client, new every round. */
+function shuffleKey(buyer: FactionId, o: Offer): number {
+  let hash = 2166136261;
+  for (const c of `${o.id}:${buyer}`) hash = Math.imul(hash ^ c.charCodeAt(0), 16777619) >>> 0;
+  return hash;
+}
+/** Whether the seller would deal with the buyer at all on these terms (met, at peace, liked well enough); price aside. */
+function reachable(state: GameState, buyer: FactionId, o: Offer): boolean {
+  if (!canDeal(state, buyer, o.seller).ok) return false;
+  return !o.req || meetsRequirement(state, buyer, o.seller, o.req);
 }
 
-function checkOffer(state: GameState, buyer: FactionId, o: Offer): Result {
+function boughtThisRound(state: GameState, buyer: FactionId): number {
+  const f = state.factions[buyer].flags;
+  return f['merc:turn'] === state.turn ? f['merc:n'] ?? 0 : 0;
+}
+
+/**
+ * The offers a buyer is shown this round: at most OFFERS_PER_ROUND, picked at random (the same pick for everyone,
+ * every round) from the ones it could actually take up (sellers it has met and isn't at war with, on terms it
+ * meets). Each purchase uses up one of the five.
+ */
+export function visibleOffers(state: GameState, buyer: FactionId): Offer[] {
+  const slots = Math.max(0, OFFERS_PER_ROUND - boughtThisRound(state, buyer));
+  return (state.offers ?? []).filter((o) => reachable(state, buyer, o))
+    .sort((a, b) => shuffleKey(buyer, a) - shuffleKey(buyer, b) || a.id.localeCompare(b.id)).slice(0, slots);
+}
+
+/** How many offers from sellers you have met are held back because you don't meet their terms (for a hint). */
+export function lockedOfferCount(state: GameState, buyer: FactionId): number {
+  return (state.offers ?? []).filter((o) => canDeal(state, buyer, o.seller).ok && o.req && !meetsRequirement(state, buyer, o.seller, o.req)).length;
+}
+
+/** The offers this faction is shown now, each with whether it could buy it and the price it would pay. */
+export function offersFor(state: GameState, buyer: FactionId): { offer: Offer; check: Result; price: number }[] {
+  return visibleOffers(state, buyer).map((offer) => ({ offer, check: checkOffer(state, buyer, offer), price: offerPrice(state, buyer, offer) }));
+}
+
+export function checkOffer(state: GameState, buyer: FactionId, o: Offer): Result {
   const deal = canDeal(state, buyer, o.seller);
   if (!deal.ok) return deal;
   if (o.req && !meetsRequirement(state, buyer, o.seller, o.req)) return { ok: false, reason: `They only sell this to those with ${SALE_REQ_TEXT[o.req]}.` };
@@ -117,8 +153,11 @@ export function buyOffer(state: GameState, buyer: FactionId, offerId: string): R
   if (!o) return { ok: false, reason: 'That offer is gone.' };
   const check = checkOffer(state, buyer, o);
   if (!check.ok) return check;
+  if (!visibleOffers(state, buyer).includes(o)) return { ok: false, reason: `They are not offering that to you this round (you are shown at most ${OFFERS_PER_ROUND} a round).` };
   const price = offerPrice(state, buyer, o);
   const b = state.factions[buyer];
+  b.flags['merc:n'] = boughtThisRound(state, buyer) + 1;
+  b.flags['merc:turn'] = state.turn;
   b.stock.energy = Math.round((b.stock.energy - price) * 10) / 10;
   state.factions[o.seller].stock.energy += price;
   const seller = state.factions[o.seller];

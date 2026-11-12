@@ -162,6 +162,6 @@ function tradeSection(id: string, major: boolean): HTMLElement[] {
     h('b', null, l.what), l.ships.length ? ` (${l.ships.join(', ')})` : '', l.perRound > 1 ? ` · ${l.perRound} each round` : '',
     ' · ', l.needs ? h('span', { style: 'color:var(--accent)' }, `needs ${l.needs}`) : h('span', { class: 'good' }, 'sold to anyone at peace with them')))));
   if (hasAbility(id, 'masterShipwrights')) out.push(h('div', { style: 'margin:3px 0' }, h('b', null, 'Shipyard contracts: '), h('span', { class: 'dim' }, 'builds any of your own ship designs to order, 20% cheaper, for anyone at peace with them (Diplomacy → Market → Shipyard contracts).')));
-  out.push(h('div', { class: 'dim', style: 'font-size:12px' }, 'Prices are high and follow their opinion of you: friends pay up to 35% less, and a power that thinks too little of you won’t deal. Buy in Diplomacy → Market → Mercenaries & services.'));
+  out.push(h('div', { class: 'dim', style: 'font-size:12px' }, 'Prices are high and follow their opinion of you: friends pay up to 35% less, and a power that thinks too little of you won’t deal. Buy in Diplomacy → Market → Mercenaries & services, where you are shown five offers a round, picked at random.'));
   return out;
 }

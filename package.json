@@ -1,7 +1,7 @@
 {
   "name": "empire",
   "private": true,
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Online asynchronous turn-based 4X space strategy game",
   "type": "module",
   "scripts": {

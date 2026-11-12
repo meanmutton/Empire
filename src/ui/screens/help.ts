@@ -42,7 +42,7 @@ const SECTIONS: [string, string[]][] = [
   ]],
   ['Diplomacy and spies', [
     'Send a diplomat to another empire’s home system to open an embassy. You need one to trade or sign treaties. Diplomats travelling through hostile space can be captured.',
-    'The Market is in Diplomacy too: swap resources on the galactic exchange, run trade routes, buy ships, spies and armies from the minor powers (dear, and cheaper from those who like you; some want an embassy, a trade agreement or an alliance first) and order ships from other shipyards.',
+    'The Market is in Diplomacy too: swap resources on the galactic exchange, run trade routes, buy ships, spies and armies from the minor powers (five offers a round, dear, and cheaper from those who like you; some want an embassy, a trade agreement or an alliance first) and order ships from other shipyards.',
     'Trade routes: Diplomacy → Market → Trade routes lists every system you could open one to, what it would pay, and sends your nearest cargo ship there. A cargo ship’s Where to trade button opens the same list.',
     'Trade resources, technology, fleets, territory and star charts, or sign trade, research, economic and manufacturing agreements, pacts and alliances.',
     'Minor factions can become your vassals: they pay tribute and join your wars. A vassal’s border carries a second line in its overlord’s colour, and the map, Diplomacy and the hover card all say whose vassal it is.',
