@@ -5,7 +5,7 @@ import { hexDistance, neighbors } from '../src/engine/hex';
 import { outpostRange, visibleHexes } from '../src/engine/visibility';
 import { factionIncome, SCIENCE_SHIP, scienceShipYield, studySite } from '../src/engine/economy';
 import { propose } from '../src/engine/diplomacy';
-import { relation } from '../src/engine/query';
+import { connectedHexes, relation } from '../src/engine/query';
 import { PLANET_YIELDS } from '../src/data/improvements';
 import { TECHS } from '../src/data/techs';
 import { emptyHex, firstDesign, fleetOf, newGame, setStatus } from './helpers';
@@ -229,5 +229,33 @@ describe('wormholes', () => {
     expect(f.hex).toBe(twin);
     expect(f.movesLeft).toBe(2);
     expect(wormholeCost(g, 'tal')).toBe(0);
+  });
+});
+
+describe('territory through wormholes', () => {
+  it('a wormhole a power owns both ends of connects its territory', () => {
+    const g = newGame('worm-conn');
+    const a = g.map.hexes.findIndex((h) => h.terrain === 'wormhole' && h.wormhole !== null);
+    const b = g.map.hexes[a].wormhole!;
+    for (const h of g.map.hexes) if (h.owner === 'concord' && h.system === null) h.owner = null; // keep only the core
+    const far = (i: number) => g.map.hexes[i];
+    far(a).owner = 'concord';
+    far(b).owner = 'concord';
+    const near = neighbors(g.map, b).find((n) => g.map.hexes[n].terrain === 'space' && !g.map.hexes[n].owner)!;
+    far(near).owner = 'concord';
+    // Joined to the home territory by hand at one end only.
+    let cur = a;
+    const home = g.factions.concord.home;
+    while (hexDistance(g.map, cur, home) > 1) {
+      const next = neighbors(g.map, cur).filter((n) => !g.map.hexes[n].owner || g.map.hexes[n].owner === 'concord')
+        .sort((x, y) => hexDistance(g.map, x, home) - hexDistance(g.map, y, home))[0];
+      g.map.hexes[next].owner = 'concord';
+      cur = next;
+    }
+    expect(connectedHexes(g, 'concord').has(a)).toBe(true);
+    expect(connectedHexes(g, 'concord').has(near)).toBe(true);
+    // Without owning the far end, the territory beyond is cut off.
+    g.map.hexes[b].owner = null;
+    expect(connectedHexes(g, 'concord').has(near)).toBe(false);
   });
 });

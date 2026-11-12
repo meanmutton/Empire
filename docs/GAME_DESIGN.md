@@ -285,7 +285,8 @@ one before (100%, 80%, 64%, …), so a mix pays better than a stack.
   else's territory doesn't count. Inside it, settled independent worlds, black holes and hexes with other
   powers' ships stay unclaimed.
 - An owned hex not connected to your home by a chain of owned hexes is **disconnected**: −50% yields
-  *(tunable)*.
+  *(tunable)*. A **wormhole you own both ends of** links its two hexes, so territory on the far side counts as
+  connected (and isn't "cut off" below).
 - **Cut-off territory changes hands**: owned hexes with none of their owner's planets, outposts or starbases
   connected to them (through the owner's territory) for **10 turns** pass to the power that **completely
   engulfs** them: every hex bordering the piece belongs to that one power, and it doesn't touch the map edge.
@@ -656,12 +657,22 @@ going through these rules.)*
 
 ### 9.9 Mercenaries and shipyard contracts
 Opened from **Diplomacy → Market**. Buyers need contact with the seller and must not be at war with it.
-- **Thessic Banking Houses** (Mercenary Contracts) offer two of their warships every round, for energy.
-  The ship waits at the Thessic home system for its new owner.
-- **Grendis Iron Legion** (For Hire) offer two veteran armies (strength 15, elite) every round. A hired army
-  reports to your home system and goes home after 10 turns. It can't be traded on.
-- **Zenith Observatory** (Star Charts) sell a copy of everything they have explored, at most once every 10
-  turns per buyer.
+- **Every minor power sells something** (`src/data/sales.ts`), new offers every round, paid for in energy to the
+  seller. What they sell suits them: traders and scavengers sell **cargo ships**; soldiers, raiders and
+  warrior-priests sell **warships** and **veteran armies**; scholars sell **science ships**, **scouts** and **star
+  charts**; builders and gardeners sell **constructors** and **colony ships**; the secretive and the criminal
+  sell **spies**. A ship waits at the seller's home system for its new owner; a spy or a hired army (strength 15,
+  veteran, 10 turns, can't be traded on) reports to your home system. Star charts (a copy of everything the
+  seller has explored) can be bought at most once every 10 turns per buyer.
+- **Prices are high**: a ship's list price is three times its build cost plus a flat 30 energy; a spy lists at
+  150 energy and a hired army at 200. The seller then scales that by **its opinion of you**: ×0.65 at best
+  friends, ×1 at neutral, up to ×1.5 at the worst, and a seller whose opinion of you is **−60 or lower**
+  won't deal at all.
+- **Some offers have requirements**, shown on the offer: an **embassy** with the seller, a **Trade Agreement**,
+  a **trade route** running between you, a **pact** (non-aggression or alliance) or an **alliance**. Warlike
+  or insular powers (Ixxi, Morrow, Cryx) sell warships only to allies; scholars and spymasters want an
+  embassy; builders want a Trade Agreement. Offers you can't take are tucked away with the reason.
+- The great powers don't sell on the market.
 - **Shipyard contracts**: the **Forgeborn Anvil** (Master Shipwrights) build any of your own designs to
   order, 20% cheaper, for anyone at peace with them. Partners in a **Manufacturing Agreement** do the same
   for each other, 10% cheaper. The builder keeps a 15% fee. The ship is built alongside the builder's own

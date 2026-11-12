@@ -1,15 +1,19 @@
 /**
  * The mercenary market and shipyard contracts (§9.6).
- * - Thessic Banking Houses (Mercenary Contracts) sell warships, delivered at their home.
- * - Grendis Iron Legion (For Hire) rent out veteran armies for 10 turns.
- * - Zenith Observatory (Star Charts) sell copies of their charts.
+ * - Every minor faction sells something (src/data/sales.ts): ships of the roles that suit it, delivered at its
+ *   home system; spies, who report to your home; veteran armies hired for 10 turns; or copies of its star charts.
+ *   Some offers need a relationship with the seller: an embassy, a Trade Agreement, a trade route, a pact or an alliance.
+ * - Prices are high, and move with the seller's opinion of the buyer: friends pay less, and a seller that
+ *   dislikes you enough won't deal at all. They are paid in energy to the seller.
  * - Forgeborn Anvil (Master Shipwrights) build any ship to order for empires at peace with them, 20% cheaper;
  *   partners in a Manufacturing Agreement can likewise build at each other's shipyards, 10% cheaper.
- * Buyers need contact with the seller and must not be at war with it. Prices are paid in energy to the seller.
+ * Buyers need contact with the seller and must not be at war with it.
  */
 import { design, DESIGNS, DESIGNS_BY_FACTION } from '../data/designs';
 import { hasAbility } from '../data/factions';
+import { SALE_REQ_TEXT, SALES, type SaleReq } from '../data/sales';
 import { CLASSES } from '../data/ships';
+import { hasEmbassy, opinionOf } from './agents';
 import { setBits } from './bitset';
 import { blockadersAt } from './blockade';
 import { shipyardOf, productionOf } from './economy';
@@ -25,44 +29,82 @@ export type Result = { ok: true; text?: string } | { ok: false; reason: string }
 export const ARMY_RENT_TURNS = 10;
 export const CHARTS_COOLDOWN = 10;
 
+/** Opinion at or below which a seller won't deal with you at all. */
+export const REFUSE_BELOW = -60;
+
+/** List price of a ship, in energy: three times its build cost plus a flat mercenary fee. */
+export function shipListPrice(d: { cost: { metals: number; energy: number; exotics: number } }): number {
+  return Math.round((d.cost.metals * 1.2 + d.cost.energy + d.cost.exotics * 4) * 3 + 30);
+}
+export const SPY_LIST_PRICE = 150;
+export const ARMY_LIST_PRICE = 200;
+
+/** What a seller charges relative to its list price, from its opinion of the buyer: 0.65 at best friends, 1.5 at the worst. */
+export function priceFactor(opinion: number): number {
+  return Math.max(0.65, Math.min(1.5, 1 - opinion / 200));
+}
+
+/** What `buyer` actually pays for an offer: the list price scaled by the seller's opinion of them. */
+export function offerPrice(state: GameState, buyer: FactionId, o: Offer): number {
+  return Math.round(o.price * priceFactor(opinionOf(state, o.seller, buyer)));
+}
+
 function canDeal(state: GameState, buyer: FactionId, seller: FactionId): Result {
   if (buyer === seller) return { ok: false, reason: 'You cannot buy from yourself.' };
   if (!state.factions[seller]?.alive) return { ok: false, reason: 'They are gone.' };
   const r = relation(state, buyer, seller);
   if (!r.contact) return { ok: false, reason: 'You have not met them.' };
   if (r.status === 'war') return { ok: false, reason: 'They will not deal with an enemy.' };
+  if (opinionOf(state, seller, buyer) <= REFUSE_BELOW) return { ok: false, reason: 'They think too little of you to deal.' };
   return { ok: true };
 }
 
-/** New offers each round from every mercenary faction (old unsold offers lapse). */
+/** Whether `buyer` has the relationship `req` with `seller`. */
+export function meetsRequirement(state: GameState, buyer: FactionId, seller: FactionId, req: SaleReq): boolean {
+  const r = relation(state, buyer, seller);
+  switch (req) {
+    case 'embassy': return hasEmbassy(state, buyer, seller) || hasEmbassy(state, seller, buyer);
+    case 'trade': return r.agreements.includes('trade');
+    case 'route': return (state.routes ?? []).some((x) => (x.owner === buyer && x.partner === seller) || (x.owner === seller && x.partner === buyer));
+    case 'pact': return r.status === 'nap' || r.status === 'alliance' || state.factions[seller].overlord === buyer;
+    case 'alliance': return r.status === 'alliance' || state.factions[seller].overlord === buyer;
+  }
+}
+
+/** New offers each round from every minor faction (old unsold offers lapse). */
 export function refreshOffers(state: GameState): void {
   const rng = new Rng(state.rng);
   const offers: Offer[] = [];
   for (const f of Object.values(state.factions)) {
     if (!f.alive) continue;
-    if (hasAbility(f.id, 'mercenaryContracts')) {
-      const warships = DESIGNS_BY_FACTION[f.id].filter((d) => d.stats.energy + d.stats.missile + d.stats.hangar > 0 && d.cls !== 'fighter');
-      for (const d of rng.shuffle(warships).slice(0, 2)) {
-        offers.push({ id: newId(state, 'o'), seller: f.id, kind: 'ship', design: d.id, price: Math.round((d.cost.metals * 1.2 + d.cost.energy + d.cost.exotics * 4) * 1.3) });
+    for (const spec of SALES[f.id] ?? []) {
+      const base = { seller: f.id, req: spec.req };
+      if (spec.kind === 'ship') {
+        const pool = DESIGNS_BY_FACTION[f.id].filter((d) => d.cls !== 'fighter' && spec.roles.includes(d.role));
+        for (const d of rng.shuffle(pool).slice(0, spec.count ?? 1)) offers.push({ id: newId(state, 'o'), ...base, kind: 'ship', design: d.id, price: shipListPrice(d) });
+      } else if (spec.kind === 'spy') {
+        for (let i = 0; i < (spec.count ?? 1); i++) offers.push({ id: newId(state, 'o'), ...base, kind: 'spy', price: SPY_LIST_PRICE });
+      } else if (spec.kind === 'army') {
+        for (let i = 0; i < (spec.count ?? 1); i++) offers.push({ id: newId(state, 'o'), ...base, kind: 'army', strength: 15, xp: 3, turns: ARMY_RENT_TURNS, price: ARMY_LIST_PRICE });
+      } else {
+        offers.push({ id: newId(state, 'o'), ...base, kind: 'charts', price: (60 + Math.floor(state.turn / 2)) * 2 });
       }
     }
-    if (hasAbility(f.id, 'forHire')) {
-      for (let i = 0; i < 2; i++) offers.push({ id: newId(state, 'o'), seller: f.id, kind: 'army', strength: 15, xp: 3, turns: ARMY_RENT_TURNS, price: 70 });
-    }
-    if (hasAbility(f.id, 'starCharts')) offers.push({ id: newId(state, 'o'), seller: f.id, kind: 'charts', price: 60 + Math.floor(state.turn / 2) });
   }
   state.offers = offers;
 }
 
 /** Offers this faction could buy right now (with the reason when it can't). */
-export function offersFor(state: GameState, buyer: FactionId): { offer: Offer; check: Result }[] {
-  return (state.offers ?? []).map((offer) => ({ offer, check: checkOffer(state, buyer, offer) }));
+export function offersFor(state: GameState, buyer: FactionId): { offer: Offer; check: Result; price: number }[] {
+  return (state.offers ?? []).map((offer) => ({ offer, check: checkOffer(state, buyer, offer), price: offerPrice(state, buyer, offer) }));
 }
 
 function checkOffer(state: GameState, buyer: FactionId, o: Offer): Result {
   const deal = canDeal(state, buyer, o.seller);
   if (!deal.ok) return deal;
-  if (state.factions[buyer].stock.energy < o.price) return { ok: false, reason: `Costs ${o.price} energy.` };
+  if (o.req && !meetsRequirement(state, buyer, o.seller, o.req)) return { ok: false, reason: `They only sell this to those with ${SALE_REQ_TEXT[o.req]}.` };
+  const price = offerPrice(state, buyer, o);
+  if (state.factions[buyer].stock.energy < price) return { ok: false, reason: `Costs ${price} energy.` };
   if (o.kind === 'charts' && state.turn - (state.factions[buyer].flags[`charts:${o.seller}`] ?? -999) < CHARTS_COOLDOWN) {
     return { ok: false, reason: 'You bought their charts recently.' };
   }
@@ -75,9 +117,10 @@ export function buyOffer(state: GameState, buyer: FactionId, offerId: string): R
   if (!o) return { ok: false, reason: 'That offer is gone.' };
   const check = checkOffer(state, buyer, o);
   if (!check.ok) return check;
+  const price = offerPrice(state, buyer, o);
   const b = state.factions[buyer];
-  b.stock.energy = Math.round((b.stock.energy - o.price) * 10) / 10;
-  state.factions[o.seller].stock.energy += o.price;
+  b.stock.energy = Math.round((b.stock.energy - price) * 10) / 10;
+  state.factions[o.seller].stock.energy += price;
   const seller = state.factions[o.seller];
   if (o.kind === 'ship') {
     const fid = spawnShip(state, buyer, DESIGNS[o.design], seller.home);
@@ -86,6 +129,13 @@ export function buyOffer(state: GameState, buyer: FactionId, offerId: string): R
     state.offers = offers.filter((x) => x !== o);
     log(state, [buyer, o.seller], 'mercenary', `Bought a ${design(o.design).name} from the ${o.seller}; it waits at their home system.`, seller.home);
     return { ok: true, text: 'The ship is waiting at their home system.' };
+  }
+  if (o.kind === 'spy') {
+    const id = newId(state, 'a');
+    state.agents[id] = { id, owner: buyer, kind: 'spy', hex: b.home, ship: null, path: [], target: null, mission: null, progress: 0, resident: false, capturedBy: null };
+    state.offers = offers.filter((x) => x !== o);
+    log(state, [buyer, o.seller], 'mercenary', `Hired a spy from the ${o.seller}; it reports to your home system.`, b.home);
+    return { ok: true, text: 'The spy reports to your home system.' };
   }
   if (o.kind === 'army') {
     const id = newId(state, 'r');

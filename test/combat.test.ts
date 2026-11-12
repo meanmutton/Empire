@@ -179,6 +179,7 @@ describe('planets, invasion, retreat, repair', () => {
 
   it('fleets on Retreat break away; the Ryn\'kai refuse the order', () => {
     const g = newGame('ret');
+    g.rng = seedRng('ret');
     const hex = emptyHex(g);
     clear(g, hex);
     setStatus(g, 'concord', 'krasnyr', 'war');
