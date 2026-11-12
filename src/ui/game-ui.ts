@@ -17,7 +17,7 @@ import { cargoFree } from '../engine/ground';
 import { blockadersAt } from '../engine/blockade';
 import { checkBuild, factionIncome, popCapOf, productionOf, rushCost, SCIENCE_SHIP, studySite, systemYield } from '../engine/economy';
 import { MISSIONS, successChance, type MissionId } from '../engine/espionage';
-import { claimBlocker, engulfer, groupSize, ORPHAN_TURNS, OUTPOST_COST, outpostBlocker, planPath, reachableThisTurn, territoryPiece } from '../engine/movement';
+import { claimBlocker, engulfer, groupSize, wormholeCost, wormholeExit, ORPHAN_TURNS, OUTPOST_COST, outpostBlocker, planPath, reachableThisTurn, territoryPiece } from '../engine/movement';
 import { activeFaction, relation } from '../engine/query';
 import { availableTechs, techCost } from '../engine/research';
 import type { Fleet, GameState } from '../engine/types';
@@ -1162,6 +1162,20 @@ export class GameUI {
     if (f.path.length) A('Stop', { type: 'stop', fleet: f.id });
     A(f.hold ? 'Stop holding' : 'Hold', { type: 'hold', fleet: f.id, hold: !f.hold },
       f.hold ? 'It counts as waiting for orders again' : 'Hold position on purpose: it won’t count as waiting for orders (N skips it) until you move it');
+    // On a wormhole: jump to its twin in one click.
+    const twin = wormholeExit(g, f.hex);
+    if (twin !== null) {
+      const cost = wormholeCost(g, this.viewer);
+      const short = f.movesLeft < cost;
+      acts.append(button('Enter wormhole', () => {
+        const fid = f.id;
+        if (this.act({ type: 'move', fleet: fid, to: twin }, true)) {
+          const after = this.game.fleets[fid];
+          this.select(after ? after.hex : twin, after ? fid : null);
+        }
+      }, { cls: `small${f.movesLeft >= cost && !f.path.length ? ' primary' : ''}`, disabled: short,
+        title: short ? 'No movement left this turn: the jump costs 1.' : `Jump to the other end of this wormhole (${cost ? `costs ${cost} movement` : 'costs no movement'}).` }));
+    }
     if (roles.includes('colony') && hx.system && hx.system.development === 0) A('Colonize', { type: 'colonize', fleet: f.id });
     if (roles.includes('constructor') && (!hx.owner || hx.owner === this.viewer) && !hx.outpost && hx.terrain !== 'blackHole') {
       const why = outpostBlocker(g, this.viewer, f.hex) ?? (f.movesLeft <= 0 ? 'The constructor has already moved this turn.' : null);

@@ -35,10 +35,20 @@ export function wormholeLinks(state: GameState): (hex: number) => number[] {
   };
 }
 
+/** Movement a jump through a wormhole costs `faction`: 1, or nothing with Wormhole Navigation or Stabilization. */
+export function wormholeCost(state: GameState, faction: FactionId): number {
+  return hasAbility(faction, 'wormholeNavigation') || techEffects(state, faction).wormholeFree ? 0 : 1;
+}
+
+/** The hex at the other end of the wormhole this hex holds, or null if it holds none. */
+export function wormholeExit(state: GameState, hex: number): number | null {
+  return state.map.hexes[hex].wormhole;
+}
+
 function stepCost(state: GameState, faction: FactionId) {
   return (from: number, to: number) => {
     const fw = state.map.hexes[from].wormhole;
-    if (fw === to) return hasAbility(faction, 'wormholeNavigation') || techEffects(state, faction).wormholeFree ? 0 : 1;
+    if (fw === to) return wormholeCost(state, faction);
     return enterCost(state, faction, to);
   };
 }

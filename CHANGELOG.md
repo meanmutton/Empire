@@ -10,6 +10,11 @@ for each release, a **minor** (0.3.0) for a milestone. Add an entry here with th
   the turn it ended. "See the galaxy" returns to the final map; "Leave to title" quits. On a shared (hot seat)
   screen a win by any human is a victory. The pictures are in `art/endings/`; `python3 scripts/endings.py` packs
   them into the game.
+- **Enter wormhole**: a fleet standing on a wormhole now has an *Enter wormhole* button beside Move and Hold
+  that jumps it to the twin (1 movement, none for the Tal or with Wormhole Stabilization) and follows it there.
+- **Map scrolling**: the map could not be scrolled far enough right (or, on phones, down) because its limit ignored
+  the part of the screen covered by the side panel or selection sheet, so the edge column of hexes stayed hidden.
+  It now scrolls until the edge is fully visible.
 
 ## 0.2.0 Beta — the official Beta
 

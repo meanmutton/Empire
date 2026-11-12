@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildOutpost, claimBlocker, colonize, markClaims, moveFleet, ORPHAN_TURNS, razeOutposts, releaseOrphans } from '../src/engine/movement';
+import { buildOutpost, claimBlocker, colonize, markClaims, moveFleet, ORPHAN_TURNS, razeOutposts, releaseOrphans, wormholeCost, wormholeExit } from '../src/engine/movement';
 import { endTurn, startTurn } from '../src/engine/turn';
 import { hexDistance, neighbors } from '../src/engine/hex';
 import { outpostRange, visibleHexes } from '../src/engine/visibility';
@@ -212,3 +212,22 @@ function firstDesignAll(faction: string, role: string) {
   try { out.push(firstDesign(faction, (d) => d.role === role)); } catch { /* none */ }
   return out;
 }
+
+describe('wormholes', () => {
+  it('a fleet on a wormhole can jump to its twin for 1 movement (none for wormhole navigators)', () => {
+    const g = newGame('worm1');
+    const a = g.map.hexes.findIndex((h) => h.terrain === 'wormhole' && h.wormhole !== null);
+    expect(a).toBeGreaterThanOrEqual(0);
+    const twin = wormholeExit(g, a)!;
+    expect(wormholeExit(g, twin)).toBe(a);
+    expect(wormholeExit(g, g.factions.concord.home)).toBeNull();
+    const fid = fleetOf(g, 'concord', firstDesign('concord', (d) => d.role === 'scout'), a);
+    const f = g.fleets[fid];
+    f.movesLeft = 3;
+    expect(wormholeCost(g, 'concord')).toBe(1);
+    expect(moveFleet(g, fid, twin).ok).toBe(true);
+    expect(f.hex).toBe(twin);
+    expect(f.movesLeft).toBe(2);
+    expect(wormholeCost(g, 'tal')).toBe(0);
+  });
+});

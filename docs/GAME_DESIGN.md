@@ -187,7 +187,7 @@ in open space, an asteroid field, a nebula, or beside a neutron star or pulsar.
 | Pulsar | 1 | −1 sensor range for ships inside; systems here orbit a pulsar (exotics, science). |
 | Ion storm | 2 | No shields inside. *(Later: drifts 1 hex every few turns.)* |
 | Black hole | — | Impassable. |
-| Wormhole | 1 | Paired; jumping to the twin costs 1 movement (0 for the Tal or with Wormhole Stabilization). |
+| Wormhole | 1 | Paired; jumping to the twin costs 1 movement (0 for the Tal or with Wormhole Stabilization). A fleet standing on one has an **Enter wormhole** button on its card that makes the jump. |
 
 **Star systems** have a star (yellow, orange, red dwarf, blue giant, white, neutron, pulsar), a **planet
 type**, a size (1–5) and a development level (§5.2).
