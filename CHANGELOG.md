@@ -3,6 +3,12 @@
 Every release bumps the version in `package.json` (the game reads it from there): a **patch** (0.2.1, 0.2.2…)
 for each release, a **minor** (0.3.0) for a milestone. Add an entry here with the bump.
 
+## 0.2.4 Beta
+
+- **Fewer mercenary offers**: the mercenary market now shows each buyer at most five offers a round, picked at random from the
+  ones they could actually take up (sellers they have met, at peace, on terms they meet). Each purchase uses one of the
+  five, and a line says how many more are held back for lack of an embassy, agreement or alliance.
+
 ## 0.2.3 Beta
 
 - **Every minor power sells something**: the mercenary market now covers all 30 minor factions. Traders sell cargo

@@ -1,12 +1,12 @@
 import { DESIGNS, DESIGNS_BY_FACTION } from '../src/data/designs';
 import { propose } from '../src/engine/diplomacy';
 import { relationKey } from '../src/engine/ids';
-import { advanceContracts, buyOffer, contractCost, contractTerms, expireRentals, offerPrice, offersFor, orderShip, priceFactor, refreshOffers, REFUSE_BELOW, shipListPrice } from '../src/engine/mercenaries';
+import { advanceContracts, buyOffer, checkOffer, contractCost, lockedOfferCount, OFFERS_PER_ROUND, visibleOffers, contractTerms, expireRentals, offerPrice, offersFor, orderShip, priceFactor, refreshOffers, REFUSE_BELOW, shipListPrice } from '../src/engine/mercenaries';
 import { MINOR_IDS } from '../src/data/factions';
 import { SALES } from '../src/data/sales';
 import { countBits } from '../src/engine/bitset';
 import { createGame } from '../src/engine/setup';
-import type { GameState } from '../src/engine/types';
+import type { GameState, Offer } from '../src/engine/types';
 import { setStatus } from './helpers';
 
 const MINORS = ['thessic', 'grendis', 'zenith', 'forgeborn', 'myrr', 'quorr', 'ixxi', 'nhar', 'tal', 'skarn'];
@@ -19,6 +19,8 @@ function game(): GameState {
   return g;
 }
 const offer = (g: GameState, seller: string, kind: string) => g.offers!.find((o) => o.seller === seller && o.kind === kind)!;
+/** Leaves only these offers on the market, so they are certainly among the few a buyer is shown. */
+const keep = (g: GameState, ...os: Offer[]) => { g.offers = os; };
 
 describe('mercenary market', () => {
   it('offers ships, armies and star charts from the mercenary factions', () => {
@@ -37,6 +39,7 @@ describe('mercenary market', () => {
     const g = game();
     const o = offer(g, 'thessic', 'ship');
     const e0 = g.factions.thessic.stock.energy;
+    keep(g, o);
     expect(buyOffer(g, 'concord', o.id).ok).toBe(true);
     const f = Object.values(g.fleets).find((x) => x.owner === 'concord' && x.hex === g.factions.thessic.home)!;
     expect(f).toBeDefined();
@@ -56,7 +59,8 @@ describe('mercenary market', () => {
 
   it('rents armies that go home when the contract ends, and cannot be traded on', () => {
     const g = game();
-    expect(buyOffer(g, 'concord', offer(g, 'grendis', 'army').id).ok).toBe(true);
+    keep(g, offer(g, 'grendis', 'army'));
+    expect(buyOffer(g, 'concord', g.offers![0].id).ok).toBe(true);
     const a = Object.values(g.armies).find((x) => x.rentedFrom === 'grendis')!;
     expect(a.owner).toBe('concord');
     expect(a.hex).toBe(g.factions.concord.home);
@@ -75,6 +79,7 @@ describe('mercenary market', () => {
     const g = game();
     const before = countBits(g.factions.concord.explored);
     const o = offer(g, 'zenith', 'charts');
+    keep(g, o);
     expect(buyOffer(g, 'concord', o.id).ok).toBe(true);
     expect(countBits(g.factions.concord.explored)).toBeGreaterThan(before);
     expect(buyOffer(g, 'concord', o.id).ok).toBe(false);
@@ -119,6 +124,7 @@ describe('what the minor powers sell', () => {
   it('charges according to the seller’s opinion of you, and refuses when it is low', () => {
     const g = game();
     const o = offer(g, 'thessic', 'ship');
+    const other = g.offers!.find((x) => x.seller === 'thessic' && x.kind === 'ship' && x !== o)!;
     setOpinion(g, 'thessic', 'concord', 0);
     expect(offerPrice(g, 'concord', o)).toBe(o.price);
     setOpinion(g, 'thessic', 'concord', 60);
@@ -131,44 +137,53 @@ describe('what the minor powers sell', () => {
     expect(priceFactor(-100)).toBeCloseTo(1.5);
     // Pays the price its opinion sets.
     const before = g.factions.concord.stock.energy;
+    keep(g, o);
     expect(buyOffer(g, 'concord', o.id).ok).toBe(true);
     expect(before - g.factions.concord.stock.energy).toBeCloseTo(foe, 0);
     setOpinion(g, 'thessic', 'concord', REFUSE_BELOW);
-    const other = offer(g, 'thessic', 'ship');
     expect(buyOffer(g, 'concord', other.id).ok).toBe(false);
   });
 
   it('some offers need an embassy, a Trade Agreement, a pact or an alliance', () => {
     const g = game();
+    const transport = g.offers!.find((o) => o.seller === 'grendis' && o.kind === 'ship')!;
+    const hive = g.offers!.find((o) => o.seller === 'ixxi' && o.kind === 'ship')!;
     // Nhar spies: embassy.
     const spy = offer(g, 'nhar', 'spy');
     expect(spy.req).toBe('embassy');
     expect(buyOffer(g, 'concord', spy.id).ok).toBe(false);
     giveEmbassy(g, 'concord', 'nhar');
     const agents0 = Object.keys(g.agents).length;
+    keep(g, spy);
     expect(buyOffer(g, 'concord', spy.id).ok).toBe(true);
     expect(Object.keys(g.agents).length).toBe(agents0 + 1);
     const hired = Object.values(g.agents).find((a) => a.owner === 'concord' && a.kind === 'spy' && a.hex === g.factions.concord.home && !g.agents[a.id].mission && a.id !== undefined)!;
     expect(hired).toBeDefined();
     // Grendis transports: Trade Agreement.
-    const transport = g.offers!.find((o) => o.seller === 'grendis' && o.kind === 'ship')!;
+    g.offers = [transport, hive];
     expect(transport.req).toBe('trade');
     expect(buyOffer(g, 'concord', transport.id).ok).toBe(false);
     g.relations[relationKey('concord', 'grendis')].agreements.push('trade');
+    keep(g, transport);
     expect(buyOffer(g, 'concord', transport.id).ok).toBe(true);
     // Ixxi warships: alliance only.
-    const hive = g.offers!.find((o) => o.seller === 'ixxi' && o.kind === 'ship')!;
+    g.offers = [hive];
     expect(hive.req).toBe('alliance');
     expect(buyOffer(g, 'concord', hive.id).ok).toBe(false);
     g.relations[relationKey('concord', 'ixxi')].status = 'alliance';
+    keep(g, hive);
     expect(buyOffer(g, 'concord', hive.id).ok).toBe(true);
   });
 
   it('says why an offer is out of reach', () => {
     const g = game();
-    const row = offersFor(g, 'concord').find((x) => x.offer.seller === 'ixxi')!;
-    expect(row.check.ok).toBe(false);
-    expect((row.check as { reason: string }).reason).toMatch(/alliance/);
+    const hive = g.offers!.find((x) => x.seller === 'ixxi')!;
+    const check = checkOffer(g, 'concord', hive);
+    expect(check.ok).toBe(false);
+    expect((check as { reason: string }).reason).toMatch(/alliance/);
+    // And it isn't among the offers shown while the terms aren't met.
+    expect(offersFor(g, 'concord').some((x) => x.offer.seller === 'ixxi')).toBe(false);
+    expect(lockedOfferCount(g, 'concord')).toBeGreaterThan(0);
   });
 
   it('a trade route unlocks route-only offers', () => {
@@ -177,7 +192,61 @@ describe('what the minor powers sell', () => {
     expect(tal.req).toBe('route');
     expect(buyOffer(g, 'concord', tal.id).ok).toBe(false);
     g.routes = [{ id: 'rt', owner: 'concord', partner: 'tal', from: g.factions.concord.home, to: g.factions.tal.home, path: [], since: 1 } as never];
+    keep(g, tal);
     expect(buyOffer(g, 'concord', tal.id).ok).toBe(true);
+  });
+});
+
+describe('at most five offers a round', () => {
+  it('shows each buyer no more than five, from what they could take up', () => {
+    const g = game();
+    expect(g.offers!.length).toBeGreaterThan(OFFERS_PER_ROUND);
+    const shown = visibleOffers(g, 'concord');
+    expect(shown.length).toBe(OFFERS_PER_ROUND);
+    expect(offersFor(g, 'concord').length).toBe(OFFERS_PER_ROUND);
+    // Only sellers they could deal with, on terms they meet.
+    for (const o of shown) expect(checkOffer(g, 'concord', o).ok || /Costs/.test((checkOffer(g, 'concord', o) as { reason: string }).reason)).toBe(true);
+    // The same five every time it is asked, and a different five on another round.
+    expect(visibleOffers(g, 'concord').map((o) => o.id)).toEqual(shown.map((o) => o.id));
+    const label = (o: Offer) => `${o.seller}:${o.kind}:${(o as { design?: string }).design ?? ''}`;
+    const now = shown.map(label).sort().join();
+    const picks = new Set<string>([now]);
+    for (let round = 1; round <= 4; round++) {
+      const later = structuredClone(g);
+      later.turn += round;
+      refreshOffers(later);
+      const next = visibleOffers(later, 'concord');
+      expect(next.length).toBe(OFFERS_PER_ROUND);
+      picks.add(next.map(label).sort().join());
+    }
+    expect(picks.size).toBeGreaterThan(1);
+  });
+
+  it('won’t sell an offer that is not one of the five, and each purchase uses one up', () => {
+    const g = game();
+    const shown = visibleOffers(g, 'concord');
+    const hidden = g.offers!.find((o) => !shown.includes(o) && checkOffer(g, 'concord', o).ok)!;
+    expect(hidden).toBeDefined();
+    expect(buyOffer(g, 'concord', hidden.id).ok).toBe(false);
+    // Buy two of the five: three remain, and they are three of the original five.
+    expect(buyOffer(g, 'concord', shown[0].id).ok).toBe(true);
+    expect(buyOffer(g, 'concord', shown[1].id).ok).toBe(true);
+    const left = visibleOffers(g, 'concord');
+    expect(left.length).toBe(OFFERS_PER_ROUND - 2);
+    expect(left.map((o) => o.id)).toEqual(shown.slice(2).map((o) => o.id));
+    // A new round gives a new allowance.
+    g.turn += 1;
+    refreshOffers(g);
+    expect(visibleOffers(g, 'concord').length).toBe(OFFERS_PER_ROUND);
+  });
+
+  it('each buyer is shown their own five', () => {
+    const g = game();
+    const mine = visibleOffers(g, 'concord').map((o) => o.id);
+    for (const m of MINORS) g.relations[relationKey('lattice', m)].contact = true;
+    const theirs = visibleOffers(g, 'lattice').map((o) => o.id);
+    expect(theirs.length).toBe(OFFERS_PER_ROUND);
+    expect(theirs).not.toEqual(mine);
   });
 });
 

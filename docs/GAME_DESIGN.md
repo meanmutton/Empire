@@ -672,6 +672,10 @@ Opened from **Diplomacy → Market**. Buyers need contact with the seller and mu
   a **trade route** running between you, a **pact** (non-aggression or alliance) or an **alliance**. Warlike
   or insular powers (Ixxi, Morrow, Cryx) sell warships only to allies; scholars and spymasters want an
   embassy; builders want a Trade Agreement. Offers you can't take are tucked away with the reason.
+- **Five a round**: each round a buyer is shown at most **five** offers, picked at random (the same five on
+  every screen, new ones each round) from the ones it could take up: sellers it has met and is not at war with,
+  that like it well enough, on terms it meets. Each purchase uses one of the five. A line under them says how
+  many more offers are held back for lack of an embassy, agreement or alliance.
 - The great powers don't sell on the market.
 - **Shipyard contracts**: the **Forgeborn Anvil** (Master Shipwrights) build any of your own designs to
   order, 20% cheaper, for anyone at peace with them. Partners in a **Manufacturing Agreement** do the same

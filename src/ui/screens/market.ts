@@ -4,7 +4,7 @@ import { factionDef } from '../../data/factions';
 import { CLASSES, ROLES } from '../../data/ships';
 import { BASE_PRICES, exchangeFee, prices, quote } from '../../engine/market';
 import { SALE_REQ_TEXT } from '../../data/sales';
-import { contractCost, contractTerms, offersFor } from '../../engine/mercenaries';
+import { contractCost, contractTerms, lockedOfferCount, OFFERS_PER_ROUND, offersFor } from '../../engine/mercenaries';
 import { canTradeWith, DOMESTIC_MIN_DISTANCE, routeCapacity, routeDisruptors, routeOptions, routesOf, routeValue } from '../../engine/routes';
 import { getBit } from '../../engine/bitset';
 import { hexDistance } from '../../engine/hex';
@@ -74,8 +74,11 @@ function mercenaryTab(ui: GameUI, rerender: () => void): HTMLElement {
   const g = ui.game;
   const list = offersFor(g, ui.viewer);
   const wrap = h('div', null, lead('Hire ships, spies, armies and charts from the minor powers.',
-    'Every minor power sells something that suits it: traders sell cargo ships, soldiers sell warships and armies, scholars sell science ships and charts, builders sell colony ships and constructors, and the secretive sell spies. Prices are high, and move with how they feel about you: friends charge up to 35% less, and those who dislike you charge more or refuse. Some only sell to those with an embassy, a Trade Agreement, a trade route, a pact or an alliance. Ships wait at the seller’s home system; spies and hired armies report to your home. New offers arrive every round.'));
-  if (!list.length) wrap.append(h('div', { class: 'dim' }, 'No minor powers are in this galaxy, or none are selling this round.'));
+    'Every minor power sells something that suits it: traders sell cargo ships, soldiers sell warships and armies, scholars sell science ships and charts, builders sell colony ships and constructors, and the secretive sell spies. Prices are high, and move with how they feel about you: friends charge up to 35% less, and those who dislike you charge more or refuse. Some only sell to those with an embassy, a Trade Agreement, a trade route, a pact or an alliance. Ships wait at the seller’s home system; spies and hired armies report to your home. Each round you are shown at most ' + OFFERS_PER_ROUND + ' offers, picked at random from what you could take up, and each purchase uses one up. See the Faction guide for what each power sells.'));
+  if (!list.length) wrap.append(h('div', { class: 'dim' }, 'Nothing on offer to you this round. Meet more minor powers (their sellers must not be at war with you), or come back next round.'));
+  else wrap.append(h('div', { class: 'dim', style: 'font-size:12px;margin-bottom:6px' }, `${list.length} offer${list.length > 1 ? 's' : ''} this round.`));
+  const locked = lockedOfferCount(g, ui.viewer);
+  if (locked) wrap.append(h('div', { class: 'dim', style: 'font-size:12px;margin-bottom:6px' }, `${locked} more offer${locked > 1 ? 's' : ''} from powers you have met need an embassy, a Trade Agreement or similar first (see the Faction guide).`));
   const blocked: HTMLElement[] = [];
   const order = [...list].sort((a, b) => a.offer.seller.localeCompare(b.offer.seller));
   for (const { offer: o, check, price } of order) {
