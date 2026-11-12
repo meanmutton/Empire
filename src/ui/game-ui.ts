@@ -17,7 +17,7 @@ import { cargoFree } from '../engine/ground';
 import { blockadersAt } from '../engine/blockade';
 import { checkBuild, factionIncome, popCapOf, productionOf, rushCost, SCIENCE_SHIP, studySite, systemYield } from '../engine/economy';
 import { MISSIONS, successChance, type MissionId } from '../engine/espionage';
-import { claimBlocker, engulfer, groupSize, ORPHAN_TURNS, OUTPOST_COST, outpostBlocker, planPath, reachableThisTurn, territoryPiece } from '../engine/movement';
+import { claimBlocker, engulfer, groupSize, wormholeCost, wormholeExit, ORPHAN_TURNS, OUTPOST_COST, outpostBlocker, planPath, reachableThisTurn, territoryPiece } from '../engine/movement';
 import { activeFaction, relation } from '../engine/query';
 import { availableTechs, techCost } from '../engine/research';
 import type { Fleet, GameState } from '../engine/types';
@@ -39,6 +39,8 @@ import { setTip, infoTip } from './tooltip';
 import { collapsibleUnavailable } from './collapse';
 import { colonyView, yieldChips } from './colony-view';
 import { iconElement } from './icons';
+import { endingOf } from './ending-text';
+import { showEnding } from './screens/ending';
 
 export interface GameHost {
   /** The viewer pressed End Turn (after the engine processed it). */
@@ -53,6 +55,10 @@ export interface GameHost {
   messaging?: Messaging;
   /** A key unique to this game on this device (save id, or online game code), for its local history. */
   gameKey?: string;
+  /** Several people share this screen (hot seat): a win by any of them is a victory. */
+  shared?: boolean;
+  /** Leaves the game for the title screen. */
+  quit?(): void;
 }
 
 export const DEV_NAMES = ['Unsettled', 'Foothold', 'Colony', 'Settlement', 'Industrial World', 'Core World'];
@@ -404,6 +410,17 @@ export class GameUI {
     this.renderSide();
     this.mini.draw();
     this.runHooks();
+    this.showEndingOnce();
+  }
+
+  /** The victory or defeat screen, shown once per game when it ends (and again if a finished game is reopened). */
+  private endingShown = false;
+  private showEndingOnce(): void {
+    if (this.endingShown) return;
+    const ending = endingOf(this.game, this.viewer, this.host.shared);
+    if (!ending) return;
+    this.endingShown = true;
+    showEnding(this.root, ending, () => undefined, this.host.quit ? () => this.host.quit!() : undefined);
   }
 
   /** Ends the turn; with nothing being researched (and something to research), opens Research first. */
@@ -1145,6 +1162,20 @@ export class GameUI {
     if (f.path.length) A('Stop', { type: 'stop', fleet: f.id });
     A(f.hold ? 'Stop holding' : 'Hold', { type: 'hold', fleet: f.id, hold: !f.hold },
       f.hold ? 'It counts as waiting for orders again' : 'Hold position on purpose: it won’t count as waiting for orders (N skips it) until you move it');
+    // On a wormhole: jump to its twin in one click.
+    const twin = wormholeExit(g, f.hex);
+    if (twin !== null) {
+      const cost = wormholeCost(g, this.viewer);
+      const short = f.movesLeft < cost;
+      acts.append(button('Enter wormhole', () => {
+        const fid = f.id;
+        if (this.act({ type: 'move', fleet: fid, to: twin }, true)) {
+          const after = this.game.fleets[fid];
+          this.select(after ? after.hex : twin, after ? fid : null);
+        }
+      }, { cls: `small${f.movesLeft >= cost && !f.path.length ? ' primary' : ''}`, disabled: short,
+        title: short ? 'No movement left this turn: the jump costs 1.' : `Jump to the other end of this wormhole (${cost ? `costs ${cost} movement` : 'costs no movement'}).` }));
+    }
     if (roles.includes('colony') && hx.system && hx.system.development === 0) A('Colonize', { type: 'colonize', fleet: f.id });
     if (roles.includes('constructor') && (!hx.owner || hx.owner === this.viewer) && !hx.outpost && hx.terrain !== 'blackHole') {
       const why = outpostBlocker(g, this.viewer, f.hex) ?? (f.movesLeft <= 0 ? 'The constructor has already moved this turn.' : null);

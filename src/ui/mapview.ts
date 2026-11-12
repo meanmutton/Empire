@@ -177,7 +177,9 @@ export class MapView {
   private clampCamera(): void {
     if (!this.state) return;
     const { w, h } = this.size();
-    const vw = w / this.zoom, vh = h / this.zoom;
+    // The part of the canvas you can actually see: the side panel (desktop) and the selection sheet (phone) cover
+    // the rest, so the edge of the map has to be able to reach the visible part, not slide in under them.
+    const vw = Math.max(100, w - this.rightInset) / this.zoom, vh = Math.max(100, h - this.bottomInset) / this.zoom;
     const margin = HEX * 3;
     this.camX = Math.max(-margin, Math.min(this.worldWidth - vw + margin, this.camX));
     this.camY = Math.max(-margin, Math.min(this.worldHeight - vh + margin, this.camY));

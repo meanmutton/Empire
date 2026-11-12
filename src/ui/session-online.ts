@@ -140,6 +140,7 @@ export class OnlineSession {
       canAct: () => !this.busy && !!this.lobby && this.lobby.version === this.version && this.lobby.active === this.you,
       afterEndTurn: () => void this.afterEndTurn(),
       openMenu: (ui) => this.menu(ui),
+      quit: () => this.quit(),
       waitingText: () => this.waitingText(),
     });
     this.ui.setGame(this.game, this.you, first);

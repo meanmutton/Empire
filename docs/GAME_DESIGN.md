@@ -187,7 +187,7 @@ in open space, an asteroid field, a nebula, or beside a neutron star or pulsar.
 | Pulsar | 1 | −1 sensor range for ships inside; systems here orbit a pulsar (exotics, science). |
 | Ion storm | 2 | No shields inside. *(Later: drifts 1 hex every few turns.)* |
 | Black hole | — | Impassable. |
-| Wormhole | 1 | Paired; jumping to the twin costs 1 movement (0 for the Tal or with Wormhole Stabilization). |
+| Wormhole | 1 | Paired; jumping to the twin costs 1 movement (0 for the Tal or with Wormhole Stabilization). A fleet standing on one has an **Enter wormhole** button on its card that makes the jump. |
 
 **Star systems** have a star (yellow, orange, red dwarf, blue giant, white, neutron, pulsar), a **planet
 type**, a size (1–5) and a development level (§5.2).
@@ -745,6 +745,13 @@ The game also ends:
 - won by the **last great power standing**.
 
 A human who is eliminated can keep watching. A human who leaves is replaced by the computer.
+
+**The ending screen.** When a game ends, every human sees a full-screen **Victory** or **Defeat** splash once:
+Victory if their power won, Defeat otherwise (including when their power has fallen, or the game ended with no
+winner). It names the winner and how they won, or says the player's empire has fallen, and gives the turn the
+game ended on. "See the galaxy" returns to the final map and "Leave to title" quits. On a shared hot-seat screen
+a win by any human power is a Victory. The artwork is `art/endings/`, packed into the game by
+`scripts/endings.py`.
 
 ## 10.5 How computer powers play (summary)
 - **Campaigns**: at war, a computer power concentrates on one target system at a time (rescuing an ally's

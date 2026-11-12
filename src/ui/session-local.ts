@@ -28,6 +28,8 @@ export class LocalSession {
   private host(): GameHost {
     return {
       canAct: () => true,
+      shared: this.hotseat,
+      quit: () => { this.ui?.destroy(); this.onQuit(); },
       afterEndTurn: () => this.afterEndTurn(),
       openMenu: (ui) => this.menu(ui),
       messaging: this.messaging,
@@ -54,9 +56,7 @@ export class LocalSession {
       this.ui.setGame(g, who, true);
       this.ui.refresh();
       if (!first || this.hotseat) openBriefing(this.ui, { auto: true });
-      if (g.winner) toast(`${factionDef(g.winner).name} won the game!`);
-      else if (g.over) toast(`The game is over: ${g.over.reason}.`);
-      else if (!g.factions[who].research.current) toast('Pick a research project.');
+      if (!g.over && !g.winner && !g.factions[who].research.current) toast('Pick a research project.');
     };
     if (!this.hotseat || g.winner || g.over) { show(); return; }
     // Hot seat: hide the board until the right player has the device.

@@ -235,6 +235,21 @@ table.manage td { white-space:nowrap; }
 .splash-name { display:inline-block; font-size:clamp(52px, 11vw, 150px); font-weight:200; letter-spacing:.32em; padding-left:.32em; line-height:1;
   background:linear-gradient(#fff8e2 10%, #f2c46d 60%, #b9772c); -webkit-background-clip:text; background-clip:text; color:transparent;
   filter:drop-shadow(0 0 22px rgba(255, 186, 90, 0.45)); }
+.ending { position:fixed; inset:0; z-index:2000; overflow:hidden; background:#04060d; animation:splash-in 1.1s ease both; }
+.ending.leaving { opacity:0; transition:opacity .25s ease; }
+.ending-art { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 55%; }
+.ending-shade { position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(ellipse 62% 34% at 50% 24%, rgba(4, 6, 13, 0.62), transparent 72%),
+    linear-gradient(to bottom, transparent 66%, rgba(4, 6, 13, 0.82)); }
+.ending-title { position:absolute; left:0; right:0; top:13%; padding:0 16px; text-align:center; animation:splash-rise 1.3s .35s ease both; }
+.ending-word { display:inline-block; font-size:clamp(34px, 9.5vw, 128px); font-weight:200; letter-spacing:.32em; padding-left:.32em; line-height:1; text-transform:uppercase;
+  background:linear-gradient(#fff8e2 10%, #f2c46d 60%, #b9772c); -webkit-background-clip:text; background-clip:text; color:transparent;
+  filter:drop-shadow(0 0 22px rgba(255, 186, 90, 0.45)); }
+.ending.defeat .ending-word { background:linear-gradient(#f1f8f8 10%, #9dbcc0 60%, #4d6c72); -webkit-background-clip:text; background-clip:text;
+  filter:drop-shadow(0 0 18px rgba(120, 190, 200, 0.28)); }
+.ending-tag { margin-top:12px; font-size:clamp(11px, 1.5vw, 17px); letter-spacing:.34em; padding-left:.34em; text-transform:uppercase; color:#d6def7; opacity:.9; text-shadow:0 1px 6px #000; }
+.ending-detail { margin-top:8px; font-size:clamp(10px, 1.2vw, 14px); letter-spacing:.3em; padding-left:.3em; text-transform:uppercase; color:#aab4d6; opacity:.8; text-shadow:0 1px 6px #000; }
+.ending-actions { position:absolute; left:0; right:0; bottom:7%; display:flex; flex-wrap:wrap; justify-content:center; gap:12px; padding:0 16px; animation:splash-rise 1s 1s ease both; }
 .splash-tag { margin-top:10px; font-size:clamp(11px, 1.5vw, 17px); letter-spacing:.42em; padding-left:.42em; text-transform:uppercase; color:#d6def7; opacity:.88; }
 .splash-actions { position:absolute; left:0; right:0; bottom:6%; display:flex; flex-direction:column; align-items:center; gap:10px; animation:splash-rise 1s .8s ease both; }
 .btn.splash-play { font-size:20px; padding:13px 70px; letter-spacing:.32em; text-transform:uppercase; border-radius:2px;
