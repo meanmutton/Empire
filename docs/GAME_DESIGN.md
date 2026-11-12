@@ -575,7 +575,7 @@ anyone 3 turns into a Grand Alliance streak. The Ryn'kai never break an alliance
 | Economic Agreement | Each side gets +10% metals; resources can be gifted at 1:1 |
 | Manufacturing Agreement | Ships cost 10% less, and each side can order ships built at the other's shipyard (§9.9) |
 | Technology Exchange | One-time swap of specific techs |
-| Open Borders | Ships may pass through each other's territory without incident |
+| Open Borders | Ships may pass through each other's territory without incident, and never blockade each other's systems (war ends every agreement) |
 | Non-Aggression Pact | No war without a 3-turn notice; breaking it = −opinion with everyone |
 | Alliance | Shared vision, joint wars, combined battles |
 

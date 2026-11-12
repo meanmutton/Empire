@@ -20,7 +20,7 @@ export const AGREEMENTS = {
   research: { name: 'Research Agreement', text: 'Each side gets 10% of the other’s science.' },
   economic: { name: 'Economic Agreement', text: 'Each side gets +10% metals.' },
   manufacturing: { name: 'Manufacturing Agreement', text: 'Ships cost 10% less for both sides.' },
-  openBorders: { name: 'Open Borders', text: 'Fleets may pass through each other’s territory without tension.' },
+  openBorders: { name: 'Open Borders', text: 'Fleets may pass through each other’s territory without tension, and never blockade each other’s systems. War ends it.' },
 } as const;
 export type AgreementId = keyof typeof AGREEMENTS;
 

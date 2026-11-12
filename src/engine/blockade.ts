@@ -2,10 +2,11 @@
  * Blockades (§7.6). A settled system is blockaded while armed warships of a faction at war with its owner sit
  * in its hex and the owner has no armed ships or starbase there to contest them. A blockaded system produces
  * half as much and its shipyard can't finish ships or armies. Haldane systems (Smugglers) can't be blockaded.
+ * A power that holds an Open Borders agreement with the owner never blockades it, whatever else is true.
  */
 import { design } from '../data/designs';
 import { hasAbility } from '../data/factions';
-import { atWar } from './query';
+import { atWar, relation } from './query';
 import type { FactionId, Fleet, GameState } from './types';
 
 function armed(state: GameState, f: Fleet): boolean {
@@ -23,7 +24,7 @@ export function blockadersAt(state: GameState, hex: number): FactionId[] {
   const here = Object.values(state.fleets).filter((f) => f.hex === hex && armed(state, f));
   if (here.some((f) => f.owner === owner)) return [];
   if (Object.values(state.starbases).some((b) => b.hex === hex && b.owner === owner)) return [];
-  return [...new Set(here.filter((f) => atWar(state, f.owner, owner)).map((f) => f.owner))];
+  return [...new Set(here.filter((f) => atWar(state, f.owner, owner) && !relation(state, f.owner, owner).agreements.includes('openBorders')).map((f) => f.owner))];
 }
 
 /** Every blockaded system (optionally only those owned by one faction), computed in one pass over fleets. */

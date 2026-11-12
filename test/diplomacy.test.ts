@@ -285,3 +285,24 @@ describe('a technology of their choice', () => {
     expect(acceptProposal(g, r2.id!).ok).toBe(false);
   });
 });
+
+describe('open borders and blockades', () => {
+  it('war ends Open Borders, and a power with Open Borders never blockades you', async () => {
+    const { blockadersAt } = await import('../src/engine/blockade');
+    const { DESIGNS } = await import('../src/data/designs');
+    const g = newGame('ob');
+    const r = relation(g, 'concord', 'lattice');
+    r.contact = true; r.status = 'relations'; r.agreements = ['openBorders'];
+    declareWar(g, 'lattice', 'concord');
+    expect(r.status).toBe('war');
+    expect(r.agreements).toEqual([]);
+    // A blockade by an enemy works...
+    const home = g.factions.concord.home;
+    for (const f of Object.values(g.fleets)) if (f.hex === home && f.owner === 'concord') f.hex = g.map.hexes.findIndex((h) => h.terrain === 'space' && !h.owner);
+    fleetOf(g, 'lattice', DESIGNS['lattice:tensor'], home);
+    expect(blockadersAt(g, home)).toEqual(['lattice']);
+    // ...but never by a power the owner has Open Borders with, even if a broken state had both.
+    r.agreements = ['openBorders'];
+    expect(blockadersAt(g, home)).toEqual([]);
+  });
+});
