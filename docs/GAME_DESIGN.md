@@ -89,7 +89,7 @@ portraits** in Options (title screen or in-game Menu; off by default, saved per 
   ship in the same battle may capture it instead of destroying it (chance based on army strength).
 - **Honor Bound**: the Ryn'kai never break a treaty first. Allies who break one with them suffer a permanent
   −50 opinion with the Dominion, and the Dominion gets +10% attack against them for the rest of the game.
-- Roster: every class; ships are heavily armed with thin shields; no Science Vessel role.
+- Roster: every class; ships are heavily armed with thin shields; no Science Vessel role. Their Cargo Vessel is the Tallyman.
 - AI personality: Aggressive conqueror. Attacks the weakest neighbor; allies with whoever shares its
   strongest enemy; keeps its word.
 
@@ -539,7 +539,9 @@ Techs can be traded, stolen by spies, and shared through research agreements (§
 - To open **relations**, send a **Diplomat** to the target's home system. While traveling, a diplomat can be
   **captured** by any ship of a faction at war with (or hostile to) the sender that ends its turn in the
   diplomat's hex. Captured diplomats can be returned, ransomed, or executed (large opinion penalty).
-- When the diplomat arrives, an **embassy** is founded. Embassies enable all proposals below, and the diplomat
+- When the diplomat arrives, an **embassy** is founded, **even if the two powers are at war**: that is how you get
+  to the table to ask for peace. The embassy doesn't end the war, and the danger is the journey, since a
+  posted (resident) diplomat can't be captured. Embassies enable all proposals below, and the diplomat
   stays resident (it can be expelled, which downgrades relations).
 
 ### 9.2 Relation states

@@ -95,7 +95,7 @@ const MAJORS: FactionDef[] = [
     abilities: ['wayOfTheBlade', 'boardingActions', 'honorBound'],
     roster: [
       'fighter/line/Ryx', 'runabout/scout/Shiv', 'corvette/raider/Fang', 'corvette/line/Kethi',
-      'frigate/line/Kaithar', 'frigate/colony/Seedblade', 'frigate/constructor/Forgehand', 'frigate/transport/Spearcarrier',
+      'frigate/line/Kaithar', 'frigate/colony/Seedblade', 'frigate/constructor/Forgehand', 'frigate/transport/Spearcarrier', 'frigate/cargo/Tallyman',
       'destroyer/line/Vashra', 'destroyer/raider/Nightclaw', 'lightCruiser/line/Morrak', 'lightCruiser/carrier/Hawkmother',
       'heavyCruiser/line/Zhaldri', 'heavyCruiser/transport/Warhost', 'battleCruiser/line/Ashkai',
       'battleship/line/Tokhar', 'dreadnaught/line/Ryn-Vael',
@@ -256,9 +256,24 @@ const MINOR_SPECS: MinorSpec[] = [
     'Machines who broke free of the Lattice and will never go back.'],
 ];
 
+/**
+ * A cargo vessel for every minor faction whose own roster doesn't list one, so that every power in the game can
+ * build cargo ships and run trade routes (those with a cargo design of their own keep it).
+ */
+const MINOR_CARGO: Record<string, string> = {
+  myrr: 'runabout/cargo/Psalter', ghaltar: 'frigate/cargo/Strongbox', ixxi: 'frigate/cargo/Hive-hauler',
+  celestine: 'runabout/cargo/Pilgrim', aurelian: 'runabout/cargo/Scrivener', sylph: 'runabout/cargo/Pollinator',
+  nhar: 'runabout/cargo/Dead-drop', brakk: 'frigate/cargo/Spoil-wagon', lumen: 'runabout/cargo/Lantern',
+  cryx: 'frigate/cargo/Reliquary', taurine: 'frigate/cargo/Drover', echo: 'runabout/cargo/Cipher',
+  grendis: 'frigate/cargo/Quartermaster', pelagic: 'frigate/cargo/Current', zenith: 'runabout/cargo/Almanac',
+  morrow: 'frigate/cargo/Spore-sac', kethran: 'frigate/cargo/Lode', skarn: 'runabout/cargo/Larder',
+  forgeborn: 'frigate/cargo/Ingot', tal: 'runabout/cargo/Curio', hollowsun: 'runabout/cargo/Oblation',
+  mechanist: 'frigate/cargo/Pallet',
+};
+
 const MINORS: FactionDef[] = MINOR_SPECS.map(([id, name, short, government, strength, color, style, abilities, modifiers, roster, p, text]) => ({
   id, name, short, kind: 'minor', species: short, government, strength, text, color, style, modifiers, abilities,
-  roster: [...roster, 'frigate/constructor/Builder'],
+  roster: [...roster, 'frigate/constructor/Builder', ...(roster.some((r) => r.split('/')[1] === 'cargo') || !MINOR_CARGO[id] ? [] : [MINOR_CARGO[id]])],
   personality: { aggression: p[0], diplomacy: p[1], treachery: p[2], expansion: p[3], science: p[4], espionage: p[5] },
   systemNames: [short],
 }));

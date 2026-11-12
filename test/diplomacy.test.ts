@@ -38,6 +38,20 @@ describe('diplomats', () => {
     expect(canPropose(g, 'concord', 'lattice')).toBe(true);
   });
 
+  it('can open an embassy at an enemy capital during a war, which then lets you ask for peace', () => {
+    const g = newGame('dip-war');
+    setStatus(g, 'concord', 'rynkai', 'war');
+    const d = diplomatOf(g, 'concord');
+    expect(canPropose(g, 'concord', 'rynkai')).toBe(false);
+    expect(sendDiplomat(g, d.id, 'rynkai').ok).toBe(true);
+    for (let i = 0; i < 60 && !d.resident; i++) advanceAgents(g, 'concord');
+    expect(d.resident).toBe(true);
+    expect(hasEmbassy(g, 'concord', 'rynkai')).toBe(true);
+    expect(relation(g, 'concord', 'rynkai').status).toBe('war');
+    expect(canPropose(g, 'concord', 'rynkai')).toBe(true);
+    expect(propose(g, 'concord', 'rynkai', [{ kind: 'status', status: 'relations' }], []).ok).toBe(true);
+  });
+
   it('need contact first', () => {
     const g = newGame('dip');
     expect(sendDiplomat(g, diplomatOf(g, 'concord').id, 'lattice').ok).toBe(false);
