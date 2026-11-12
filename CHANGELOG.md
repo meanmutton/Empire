@@ -3,6 +3,11 @@
 Every release bumps the version in `package.json` (the game reads it from there): a **patch** (0.2.1, 0.2.2…)
 for each release, a **minor** (0.3.0) for a milestone. Add an entry here with the bump.
 
+## 0.2.4 Beta
+
+- **Open Borders and blockades**: a power with an Open Borders agreement can never blockade you (the rule is now explicit in the
+  blockade code; war already ended all agreements, so the two could not coexist before).
+
 ## 0.2.3 Beta
 
 - **Every minor power sells something**: the mercenary market now covers all 30 minor factions. Traders sell cargo
@@ -14,8 +19,6 @@ for each release, a **minor** (0.3.0) for a milestone. Add an entry here with th
   you can't take are tucked away with the reason.
 - **Faction guide: Trade**: every faction's page now has a Trade section: its cargo ship(s) for trade routes and, for the
   minor powers, exactly what they sell on the mercenary market and what they need from you first.
-- **Open Borders and blockades**: a power with an Open Borders agreement can never blockade you (the rule is now explicit in the
-  blockade code; war already ended all agreements, so the two could not coexist before).
 - **Wormholes connect territory**: a wormhole a power owns both ends of now links its two hexes for connectivity, so
   territory beyond it isn't treated as disconnected or cut off.
 
