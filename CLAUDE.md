@@ -2,8 +2,9 @@
 
 Online asynchronous turn-based 4X space strategy game for the browser (TypeScript, Vite, canvas).
 
-- Rules: `docs/GAME_DESIGN.md`. Work plan and priorities: `docs/ROADMAP.md` (the backlog there orders the
-  GitHub issues; take the highest item that is not done). Relay protocol: `docs/RELAY.md`. Lore: `docs/LORE.md`.
+- Rules: `docs/GAME_DESIGN.md`. Outstanding work: the GitHub issues are the source of truth (take an
+  open `P1` first; `docs/ROADMAP.md` explains the labels and how to pick up work). Relay protocol:
+  `docs/RELAY.md`. Lore: `docs/LORE.md`.
 - Layout: `src/engine` (pure deterministic rules), `src/data` (factions, ships, techs, balance), `src/ai`,
   `src/ui` (canvas + DOM client), `src/net` (relay client), `relay/` (AWS backend and local dev relay),
   `test/` (Vitest).
