@@ -327,7 +327,8 @@ energy too. Population grows 5% per turn toward capacity (faction-modified).
   at either end, stop the income that turn. Ghal'tar raiders pocket what they cut. Haldane routes can't be
   disrupted (Smugglers).
 - War between the partners, or losing either system, ends the route.
-- The Ryn'kai have no cargo ships: they don't run trade routes.
+- Every faction has a cargo ship (the Ryn'kai Tallyman, and one for each minor), so every faction can run trade
+  routes.
 
 ## 6. Units
 
@@ -519,7 +520,8 @@ view, to pick battle orders.
 
 ## 8. Research
 
-There are 6 fields with ~8 techs each (≈48 techs), plus unique techs per major. Science points fill the current
+There are 6 fields with about 8 techs each (50 techs, counting Ascension Theory). *(Later: unique techs per
+major.)* Science points fill the current
 project; overflow carries over.
 
 | Field | Examples |
